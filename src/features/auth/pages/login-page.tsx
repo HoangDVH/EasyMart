@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { FormEvent } from 'react'
+import { useForm } from 'react-hook-form'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { useLoginMutation } from '@/features/auth/hooks/use-auth'
@@ -17,26 +17,36 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Mật khẩu không được để trống.'),
 })
 
+type LoginFormValues = {
+  email: string
+  password: string
+}
+
 export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const loginMutation = useLoginMutation()
-  const [form, setForm] = useState({ email: '', password: '' })
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({})
   const [showPassword, setShowPassword] = useState(false)
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<LoginFormValues>({ defaultValues: { email: '', password: '' } })
 
-  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const parsed = loginSchema.safeParse(form)
+  const onSubmit = async (data: LoginFormValues) => {
+    const parsed = loginSchema.safeParse(data)
     if (!parsed.success) {
       const flattened = parsed.error.flatten().fieldErrors
-      setFieldErrors({
-        email: flattened.email?.[0],
-        password: flattened.password?.[0],
-      })
+      if (flattened.email?.[0]) {
+        setError('email', { type: 'manual', message: flattened.email?.[0] })
+      }
+      if (flattened.password?.[0]) {
+        setError('password', { type: 'manual', message: flattened.password?.[0] })
+      }
       return
     }
-    setFieldErrors({})
+
     try {
       await loginMutation.mutateAsync(parsed.data)
       toast.success('Đăng nhập thành công!')
@@ -44,6 +54,7 @@ export function LoginPage() {
       toast.error(getApiErrorMessage(error, 'Vui lòng kiểm tra lại email hoặc mật khẩu.'))
       return
     }
+
     const redirect = location.state?.from?.pathname ?? '/'
     navigate(redirect, { replace: true })
   }
@@ -56,17 +67,16 @@ export function LoginPage() {
         <CardDescription>Sử dụng tài khoản để truy cập hệ thống.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form className="space-y-4" onSubmit={onSubmit}>
+        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
-              value={form.email}
-              onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+              {...register('email')}
               required
             />
-            {fieldErrors.email ? <p className="text-xs text-destructive">{fieldErrors.email}</p> : null}
+            {errors.email ? <p className="text-xs text-destructive">{errors.email.message}</p> : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Mật khẩu</Label>
@@ -74,8 +84,7 @@ export function LoginPage() {
               <Input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
-                value={form.password}
-                onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                {...register('password')}
                 className="pr-10"
                 required
               />
@@ -88,7 +97,7 @@ export function LoginPage() {
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            {fieldErrors.password ? <p className="text-xs text-destructive">{fieldErrors.password}</p> : null}
+            {errors.password ? <p className="text-xs text-destructive">{errors.password.message}</p> : null}
           </div>
           <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
             {loginMutation.isPending ? 'Đang xử lý...' : 'Đăng nhập'}

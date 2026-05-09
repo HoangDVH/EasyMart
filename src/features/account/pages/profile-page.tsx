@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
+import { useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
 import { KeyRound } from 'lucide-react'
 import { useProfileQuery } from '@/features/auth/hooks/use-auth'
@@ -11,37 +12,40 @@ import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Skeleton } from '@/shared/ui/skeleton'
 
+type ProfileFormValues = {
+  password: string
+  confirm: string
+}
+
 export function ProfilePage() {
   const accessToken = useAuthStore((state) => state.accessToken)
   const profileQuery = useProfileQuery(Boolean(accessToken))
   const updateMutation = useUpdateMyInfoMutation()
   const profile = profileQuery.data
 
-  const [password, setPassword] = useState('')
-  const [confirm, setConfirm] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<ProfileFormValues>({ defaultValues: { password: '', confirm: '' } })
 
-  const passwordTooShort = password.length > 0 && password.length < 8
-  const passwordMismatch = confirm.length > 0 && confirm !== password
-  const canSubmit =
-    !submitting &&
-    !updateMutation.isPending &&
-    password.length >= 8 &&
-    confirm === password
+  const password = watch('password')
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (!canSubmit) return
-    setSubmitting(true)
+  useEffect(() => {
+    if (!updateMutation.isPending && !isSubmitting) {
+      reset({ password: '', confirm: '' })
+    }
+  }, [updateMutation.isPending, isSubmitting, reset])
+
+  const onSubmit = async (data: ProfileFormValues) => {
     try {
-      await updateMutation.mutateAsync({ password })
+      await updateMutation.mutateAsync({ password: data.password })
       toast.success('Đã cập nhật mật khẩu mới.')
-      setPassword('')
-      setConfirm('')
+      reset()
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Không cập nhật được mật khẩu.'))
-    } finally {
-      setSubmitting(false)
     }
   }
 
@@ -80,23 +84,24 @@ export function ProfilePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
             <div className="space-y-2">
               <Label htmlFor="new-password">Mật khẩu mới</Label>
               <Input
                 id="new-password"
                 type="password"
                 autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 placeholder="Tối thiểu 8 ký tự"
-                minLength={8}
-                required
+                {...register('password', {
+                  required: 'Mật khẩu mới không được để trống.',
+                  minLength: {
+                    value: 8,
+                    message: 'Mật khẩu phải có ít nhất 8 ký tự.',
+                  },
+                })}
               />
-              {passwordTooShort ? (
-                <p className="text-xs text-destructive">
-                  Mật khẩu phải có ít nhất 8 ký tự.
-                </p>
+              {errors.password ? (
+                <p className="text-xs text-destructive">{errors.password.message}</p>
               ) : null}
             </div>
             <div className="space-y-2">
@@ -105,20 +110,19 @@ export function ProfilePage() {
                 id="confirm-password"
                 type="password"
                 autoComplete="new-password"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
                 placeholder="Nhập lại mật khẩu mới"
-                minLength={8}
-                required
+                {...register('confirm', {
+                  required: 'Vui lòng xác nhận mật khẩu.',
+                  validate: (value) =>
+                    value === password || 'Mật khẩu xác nhận không khớp.',
+                })}
               />
-              {passwordMismatch ? (
-                <p className="text-xs text-destructive">
-                  Mật khẩu xác nhận không khớp.
-                </p>
+              {errors.confirm ? (
+                <p className="text-xs text-destructive">{errors.confirm.message}</p>
               ) : null}
             </div>
             <div className="flex justify-end">
-              <Button type="submit" disabled={!canSubmit}>
+              <Button type="submit" disabled={updateMutation.isPending || isSubmitting}>
                 {updateMutation.isPending ? 'Đang lưu...' : 'Cập nhật mật khẩu'}
               </Button>
             </div>
