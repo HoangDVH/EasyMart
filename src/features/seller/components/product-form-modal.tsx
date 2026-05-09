@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { z } from 'zod'
 import { X } from 'lucide-react'
 import type { Category } from '@/features/products/types/product.types'
 import { Button } from '@/shared/ui/button'
@@ -21,6 +22,37 @@ type ProductFormModalProps = {
   onClose: () => void
   onUploadFiles: (files: File[]) => Promise<void>
 }
+
+const sellerProductFormSchema = z
+  .object({
+    name: z.string().trim().min(1, 'Tên sản phẩm không được để trống.'),
+    description: z.string(),
+    price: z.coerce.number().finite().gt(0, 'Giá phải là số > 0.'),
+    discountPrice: z
+      .string()
+      .trim()
+      .transform((v) => (v.length === 0 ? null : Number(v)))
+      .refine((v) => v === null || (Number.isFinite(v) && v > 0), 'Giá khuyến mãi phải là số > 0.'),
+    stock: z.coerce.number().finite().min(0, 'Tồn kho phải là số không âm.'),
+    rating: z
+      .string()
+      .trim()
+      .transform((v) => (v.length === 0 ? null : Number(v)))
+      .refine((v) => v === null || (Number.isFinite(v) && v >= 0 && v <= 5), 'Đánh giá từ 0 đến 5.'),
+    categoryId: z.string().trim().min(1, 'Chọn danh mục (API bắt buộc categoryId).'),
+    brandId: z.string(),
+    isFeatured: z.boolean(),
+    images: z.array(z.string()),
+  })
+  .superRefine((value, ctx) => {
+    if (value.discountPrice != null && value.discountPrice >= value.price) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['discountPrice'],
+        message: 'Giá khuyến mãi phải nhỏ hơn giá gốc.',
+      })
+    }
+  })
 
 function mergeValues(
   prev: SellerProductFormValues,
@@ -47,27 +79,16 @@ export function ProductFormModal({
   if (!open) return null
 
   function validate(next: SellerProductFormValues) {
+    const parsed = sellerProductFormSchema.safeParse(next)
     const errors: Partial<Record<keyof SellerProductFormValues, string>> = {}
-    if (!next.name.trim()) errors.name = 'Tên sản phẩm không được để trống.'
-    if (!next.categoryId.trim()) errors.categoryId = 'Chọn danh mục (API bắt buộc categoryId).'
-    const price = Number(next.price)
-    if (!Number.isFinite(price) || price <= 0) errors.price = 'Giá phải là số > 0.'
-    const stock = Number(next.stock)
-    if (!Number.isFinite(stock) || stock < 0) errors.stock = 'Tồn kho phải là số không âm.'
-    const discountRaw = next.discountPrice.trim()
-    if (discountRaw.length > 0) {
-      const discount = Number(discountRaw)
-      if (!Number.isFinite(discount) || discount <= 0) {
-        errors.discountPrice = 'Giá khuyến mãi phải là số > 0.'
-      } else if (Number.isFinite(price) && discount >= price) {
-        errors.discountPrice = 'Giá khuyến mãi phải nhỏ hơn giá gốc.'
-      }
-    }
-    const ratingRaw = next.rating.trim()
-    if (ratingRaw.length > 0) {
-      const rating = Number(ratingRaw)
-      if (!Number.isFinite(rating) || rating < 0 || rating > 5) {
-        errors.rating = 'Đánh giá từ 0 đến 5.'
+    if (!parsed.success) {
+      const flattened = parsed.error.flatten().fieldErrors
+      for (const [field, messages] of Object.entries(flattened)) {
+        const first = messages?.[0]
+        if (!first) continue
+        if (field in next) {
+          errors[field as keyof SellerProductFormValues] = first
+        }
       }
     }
     return errors

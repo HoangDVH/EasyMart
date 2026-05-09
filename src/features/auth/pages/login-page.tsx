@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { z } from 'zod'
 import { useLoginMutation } from '@/features/auth/hooks/use-auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Label } from '@/shared/ui/label'
@@ -11,17 +12,33 @@ import { FullPageSpinner } from '@/shared/ui/full-page-spinner'
 import { toast } from 'react-toastify'
 import { Eye, EyeOff } from 'lucide-react'
 
+const loginSchema = z.object({
+  email: z.string().trim().email('Email không hợp lệ.'),
+  password: z.string().min(1, 'Mật khẩu không được để trống.'),
+})
+
 export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const loginMutation = useLoginMutation()
   const [form, setForm] = useState({ email: '', password: '' })
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({})
   const [showPassword, setShowPassword] = useState(false)
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    const parsed = loginSchema.safeParse(form)
+    if (!parsed.success) {
+      const flattened = parsed.error.flatten().fieldErrors
+      setFieldErrors({
+        email: flattened.email?.[0],
+        password: flattened.password?.[0],
+      })
+      return
+    }
+    setFieldErrors({})
     try {
-      await loginMutation.mutateAsync(form)
+      await loginMutation.mutateAsync(parsed.data)
       toast.success('Đăng nhập thành công!')
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Vui lòng kiểm tra lại email hoặc mật khẩu.'))
@@ -49,6 +66,7 @@ export function LoginPage() {
               onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
               required
             />
+            {fieldErrors.email ? <p className="text-xs text-destructive">{fieldErrors.email}</p> : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Mật khẩu</Label>
@@ -70,6 +88,7 @@ export function LoginPage() {
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
+            {fieldErrors.password ? <p className="text-xs text-destructive">{fieldErrors.password}</p> : null}
           </div>
           <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
             {loginMutation.isPending ? 'Đang xử lý...' : 'Đăng nhập'}

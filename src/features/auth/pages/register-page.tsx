@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { z } from 'zod'
 import { useRegisterMutation } from '@/features/auth/hooks/use-auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Label } from '@/shared/ui/label'
@@ -10,16 +11,37 @@ import { getApiErrorMessage } from '@/shared/lib/api-error'
 import { toast } from 'react-toastify'
 import { Eye, EyeOff } from 'lucide-react'
 
+const registerSchema = z.object({
+  email: z.string().trim().email('Email không hợp lệ.'),
+  password: z
+    .string()
+    .min(8, 'Mật khẩu tối thiểu 8 ký tự.')
+    .regex(/[A-Z]/, 'Mật khẩu cần ít nhất 1 chữ hoa.')
+    .regex(/[a-z]/, 'Mật khẩu cần ít nhất 1 chữ thường.')
+    .regex(/\d/, 'Mật khẩu cần ít nhất 1 chữ số.'),
+})
+
 export function RegisterPage() {
   const navigate = useNavigate()
   const registerMutation = useRegisterMutation()
   const [form, setForm] = useState({ email: '', password: '' })
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({})
   const [showPassword, setShowPassword] = useState(false)
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    const parsed = registerSchema.safeParse(form)
+    if (!parsed.success) {
+      const flattened = parsed.error.flatten().fieldErrors
+      setFieldErrors({
+        email: flattened.email?.[0],
+        password: flattened.password?.[0],
+      })
+      return
+    }
+    setFieldErrors({})
     try {
-      await registerMutation.mutateAsync(form)
+      await registerMutation.mutateAsync(parsed.data)
       toast.success('Đăng ký thành công. Đang chuyển tới đăng nhập…')
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Vui lòng kiểm tra dữ liệu đầu vào.'))
@@ -47,6 +69,7 @@ export function RegisterPage() {
               onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
               required
             />
+            {fieldErrors.email ? <p className="text-xs text-destructive">{fieldErrors.email}</p> : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Mật khẩu</Label>
@@ -68,6 +91,7 @@ export function RegisterPage() {
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
+            {fieldErrors.password ? <p className="text-xs text-destructive">{fieldErrors.password}</p> : null}
           </div>
           <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
             {registerMutation.isPending ? 'Đang xử lý...' : 'Đăng ký'}
