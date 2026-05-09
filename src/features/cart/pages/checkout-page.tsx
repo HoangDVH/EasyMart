@@ -1,36 +1,47 @@
-import { useForm } from 'react-hook-form'
-import { Link, useNavigate } from 'react-router-dom'
-import { toast } from 'react-toastify'
-import { Loader2 } from 'lucide-react'
-import { useCreateOrderMutation } from '@/features/products/hooks/use-catalog'
-import { getApiErrorMessage } from '@/shared/lib/api-error'
-import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Input } from '@/shared/ui/input'
-import { Label } from '@/shared/ui/label'
-import { calcCartSubtotal, useCartStore } from '@/shared/stores/cart-store'
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { Loader2 } from "lucide-react";
+import { useCreateOrderMutation } from "@/features/products/hooks/use-catalog";
+import { getApiErrorMessage } from "@/shared/lib/api-error";
+import { Button } from "@/shared/ui/button";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/shared/ui/card";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
+import { calcCartSubtotal, useCartStore } from "@/shared/stores/cart-store";
 
 function formatVnd(n: number) {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(n);
 }
 
 type CheckoutFormValues = {
-  customerName: string
-  phone: string
-  address: string
-}
+  customerName: string;
+  phone: string;
+  address: string;
+};
 
 export function CheckoutPage() {
-  const navigate = useNavigate()
-  const createOrder = useCreateOrderMutation()
-  const { items, clearCart } = useCartStore()
-  const subtotal = calcCartSubtotal(items)
+  const navigate = useNavigate();
+  const createOrder = useCreateOrderMutation();
+  const { items, clearCart } = useCartStore();
+  const subtotal = calcCartSubtotal(items);
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
-  } = useForm<CheckoutFormValues>({ defaultValues: { customerName: '', phone: '', address: '' } })
+  } = useForm<CheckoutFormValues>({
+    defaultValues: { customerName: "", phone: "", address: "" },
+  });
 
   if (items.length === 0) {
     return (
@@ -47,7 +58,7 @@ export function CheckoutPage() {
           </Link>
         </CardFooter>
       </Card>
-    )
+    );
   }
 
   const onSubmit = async (data: CheckoutFormValues) => {
@@ -57,18 +68,23 @@ export function CheckoutPage() {
           productId: item.productId,
           quantity: item.quantity,
         })),
-      })
-      clearCart()
-      toast.success('Đặt hàng thành công. Đơn của bạn đang được xử lý.')
-      reset()
-      navigate('/')
+      });
+      clearCart();
+      toast.success("Đặt hàng thành công. Đơn của bạn đang được xử lý.");
+      reset();
+      navigate("/");
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không thể thanh toán. Vui lòng thử lại.'))
+      toast.error(
+        getApiErrorMessage(error, "Không thể thanh toán. Vui lòng thử lại."),
+      );
     }
-  }
+  };
 
   return (
-    <form className="grid gap-4 lg:grid-cols-3" onSubmit={handleSubmit(onSubmit)}>
+    <form
+      className="grid gap-4 lg:grid-cols-3"
+      onSubmit={handleSubmit(onSubmit)}
+    >
       <div className="lg:col-span-2">
         <Card>
           <CardHeader>
@@ -77,23 +93,44 @@ export function CheckoutPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="checkout-name">Họ và tên</Label>
-              <Input id="checkout-name" {...register('customerName', { required: 'Vui lòng nhập họ và tên.' })} />
+              <Input
+                id="checkout-name"
+                {...register("customerName", {
+                  required: "Vui lòng nhập họ và tên.",
+                })}
+              />
               {errors.customerName ? (
-                <p className="text-xs text-destructive">{errors.customerName.message}</p>
+                <p className="text-xs text-destructive">
+                  {errors.customerName.message}
+                </p>
               ) : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="checkout-phone">Số điện thoại</Label>
-              <Input id="checkout-phone" {...register('phone', { required: 'Vui lòng nhập số điện thoại.' })} />
+              <Input
+                id="checkout-phone"
+                {...register("phone", {
+                  required: "Vui lòng nhập số điện thoại.",
+                })}
+              />
               {errors.phone ? (
-                <p className="text-xs text-destructive">{errors.phone.message}</p>
+                <p className="text-xs text-destructive">
+                  {errors.phone.message}
+                </p>
               ) : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="checkout-address">Địa chỉ nhận hàng</Label>
-              <Input id="checkout-address" {...register('address', { required: 'Vui lòng nhập địa chỉ nhận hàng.' })} />
+              <Input
+                id="checkout-address"
+                {...register("address", {
+                  required: "Vui lòng nhập địa chỉ nhận hàng.",
+                })}
+              />
               {errors.address ? (
-                <p className="text-xs text-destructive">{errors.address.message}</p>
+                <p className="text-xs text-destructive">
+                  {errors.address.message}
+                </p>
               ) : null}
             </div>
           </CardContent>
@@ -106,8 +143,13 @@ export function CheckoutPage() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {items.map((item) => (
-            <div key={item.productId} className="flex items-center justify-between gap-2">
-              <span className="line-clamp-1">{item.name} x{item.quantity}</span>
+            <div
+              key={item.productId}
+              className="flex items-center justify-between gap-2"
+            >
+              <span className="line-clamp-1">
+                {item.name} x{item.quantity}
+              </span>
               <span>{formatVnd((item.price ?? 0) * item.quantity)}</span>
             </div>
           ))}
@@ -119,8 +161,15 @@ export function CheckoutPage() {
           </div>
         </CardContent>
         <CardFooter className="flex-col gap-2">
-          <Button type="submit" className="w-full" size="lg" disabled={createOrder.isPending || isSubmitting}>
-            {createOrder.isPending || isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          <Button
+            type="submit"
+            className="w-full"
+            size="lg"
+            disabled={createOrder.isPending || isSubmitting}
+          >
+            {createOrder.isPending || isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : null}
             Xác nhận thanh toán
           </Button>
           <Link to="/cart" className="w-full">
@@ -131,5 +180,5 @@ export function CheckoutPage() {
         </CardFooter>
       </Card>
     </form>
-  )
+  );
 }
