@@ -1,73 +1,79 @@
-# React + TypeScript + Vite
+# Ecommerce Shop (Frontend)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend e-commerce build bằng React + TypeScript + Vite.
 
-Currently, two official plugins are available:
+## Tech stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19
+- TypeScript
+- Vite 8
+- React Router
+- TanStack Query
+- Axios
+- Zustand
+- React Toastify
 
-## React Compiler
+## Features chính
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Đăng ký, đăng nhập, khôi phục phiên
+- Catalog sản phẩm:
+  - tìm kiếm
+  - lọc theo danh mục
+  - lọc theo giá/rating/giảm giá/còn hàng (đẩy qua backend filter)
+  - phân trang
+- Giỏ hàng + đặt hàng
+- Seller:
+  - quản lý sản phẩm (CRUD)
+  - upload ảnh
+  - lịch sử đơn liên quan sản phẩm
+- Admin:
+  - quản lý user
+  - tạo/xóa user
+  - reset mật khẩu user
+  - phân role USER/SELLER/ADMIN
 
-## Expanding the ESLint configuration
+## Yêu cầu môi trường
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Node.js 18+ (khuyến nghị 20+)
+- npm 9+
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Cài đặt và chạy local
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+App chạy mặc định tại `http://localhost:5173`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Biến môi trường
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Tạo file `.env`:
+
+```env
+VITE_API_BASE_URL=https://javabackend-olfp.onrender.com
+# Optional:
+# VITE_PUBLIC_ASSET_BASE_URL=
+# VITE_PRODUCTS_API_BASE=/api/v1/products
+# VITE_CATEGORIES_API_BASE=/api/v1/categories
 ```
+
+## Scripts
+
+- `npm run dev`: chạy môi trường development
+- `npm run build`: build production
+- `npm run preview`: preview bản build local
+- `npm run lint`: chạy eslint
+
+## Deploy Vercel
+
+1. Import repo lên Vercel.
+2. Framework preset: **Vite**.
+3. Build command: `npm run build`.
+4. Output directory: `dist`.
+5. Add environment variables tương tự `.env`.
+
+## Lưu ý
+
+- App dùng protected routes cho các khu vực `admin` và `seller`.
+- Một số warning chunk size của Vite là bình thường ở giai đoạn hiện tại.
