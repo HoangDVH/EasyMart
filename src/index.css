@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* Bảng màu: Trắng (background) + Xanh dương (primary) + Cam đỏ Shopee (secondary/accent) */
+  --color-background: hsl(0 0% 100%);
+  --color-foreground: hsl(222 47% 11%);
+
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(222 47% 11%);
+
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(222 47% 11%);
+
+  /* Xanh dương — màu chủ đạo cho thương hiệu, link, primary buttons */
+  --color-primary: hsl(217 91% 53%);
+  --color-primary-foreground: hsl(0 0% 100%);
+
+  /* Cam đỏ Shopee — accent/CTA: nhãn giảm giá, "Mua ngay", highlight */
+  --color-secondary: hsl(14 100% 53%);
+  --color-secondary-foreground: hsl(0 0% 100%);
+
+  --color-accent: hsl(14 100% 96%);
+  --color-accent-foreground: hsl(14 100% 36%);
+
+  --color-muted: hsl(210 40% 97%);
+  --color-muted-foreground: hsl(215 16% 45%);
+
+  --color-border: hsl(214 32% 88%);
+  --color-input: hsl(214 32% 88%);
+  --color-ring: hsl(217 91% 53%);
+
+  --color-destructive: hsl(0 78% 52%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
+
+* {
+  @apply border-border;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+}
+
+/* React-Toastify: đảm bảo không bị header/card/stacking của app che */
+.Toastify__toast-container {
+  z-index: 999999 !important;
+  width: auto;
+}
