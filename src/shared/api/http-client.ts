@@ -12,6 +12,14 @@ type RefreshResponse = {
 let isRefreshing = false
 let refreshPromise: Promise<string | null> | null = null
 
+function redirectToLogin() {
+  if (typeof window === 'undefined') return
+  const path = window.location.pathname
+  if (path.startsWith('/auth/login')) return
+  const next = encodeURIComponent(`${window.location.pathname}${window.location.search}${window.location.hash}`)
+  window.location.replace(`/auth/login?next=${next}`)
+}
+
 export const httpClient = axios.create({
   baseURL: env.API_BASE_URL,
   withCredentials: true,
@@ -56,9 +64,9 @@ httpClient.interceptors.request.use((config) => {
 httpClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config
+    const originalRequest = error.config as (typeof error.config & { _retry?: boolean }) | undefined
 
-    if (error.response?.status !== 401 || originalRequest._retry) {
+    if (error.response?.status !== 401 || !originalRequest || originalRequest._retry) {
       return Promise.reject(error)
     }
 
@@ -73,6 +81,8 @@ httpClient.interceptors.response.use(
 
     const newAccessToken = await refreshPromise
     if (!newAccessToken) {
+      useAuthStore.getState().clearAuth()
+      redirectToLogin()
       return Promise.reject(error)
     }
 

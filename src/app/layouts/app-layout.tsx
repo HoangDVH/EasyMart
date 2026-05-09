@@ -123,6 +123,30 @@ export function AppLayout() {
               ) : null}
             </div>
           </div>
+          {(profile?.role === 'ADMIN' || showSellerNav) ? (
+            <div className="flex items-center gap-3 border-t px-4 py-2 text-sm text-muted-foreground sm:hidden">
+              {profile?.role === 'ADMIN' ? (
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) =>
+                    isActive ? 'font-medium text-foreground' : 'hover:text-foreground'
+                  }
+                >
+                  Admin
+                </NavLink>
+              ) : null}
+              {showSellerNav ? (
+                <NavLink
+                  to="/seller"
+                  className={({ isActive }) =>
+                    isActive ? 'font-medium text-foreground' : 'hover:text-foreground'
+                  }
+                >
+                  Quản lí sản phẩm
+                </NavLink>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </header>
       <main className="mx-auto max-w-6xl p-4">
