@@ -61,7 +61,7 @@ export function CheckoutPage() {
     );
   }
 
-  const onSubmit = async (data: CheckoutFormValues) => {
+  const onSubmit = async () => {
     try {
       await createOrder.mutateAsync({
         items: items.map((item) => ({
