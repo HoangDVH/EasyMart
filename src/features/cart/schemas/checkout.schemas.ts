@@ -8,6 +8,9 @@ export const checkoutSchema = z.object({
     .min(1, 'Vui lòng nhập số điện thoại.')
     .regex(/^[0-9+\s-]{8,15}$/, 'Số điện thoại không hợp lệ.'),
   address: z.string().trim().min(1, 'Vui lòng nhập địa chỉ nhận hàng.'),
+  paymentMethod: z.enum(['COD', 'BANK_TRANSFER'], {
+    message: 'Chọn phương thức thanh toán.',
+  }),
 })
 
 export type CheckoutFormValues = z.infer<typeof checkoutSchema>

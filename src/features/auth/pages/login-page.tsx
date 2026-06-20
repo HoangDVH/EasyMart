@@ -103,6 +103,14 @@ export function LoginPage() {
                 </p>
               ) : null}
             </div>
+            <div className="text-right">
+              <Link
+                className="text-xs text-primary underline-offset-2 hover:underline"
+                to={`/auth/forgot-password${location.search}`}
+              >
+                Quên mật khẩu?
+              </Link>
+            </div>
             <Button
               type="submit"
               className="w-full"
@@ -112,7 +120,7 @@ export function LoginPage() {
             </Button>
             <p className="text-sm text-muted-foreground">
               Chưa có tài khoản?{' '}
-              <Link className="text-primary underline" to="/auth/register">
+              <Link className="text-primary underline" to={`/auth/register${location.search}`}>
                 Đăng ký
               </Link>
             </p>

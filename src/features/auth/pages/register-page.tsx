@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useRegisterMutation } from '@/features/auth/hooks/use-auth'
 import {
   registerSchema,
@@ -23,6 +23,7 @@ import { Eye, EyeOff } from 'lucide-react'
 
 export function RegisterPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const registerMutation = useRegisterMutation()
   const [showPassword, setShowPassword] = useState(false)
   const {
@@ -46,7 +47,7 @@ export function RegisterPage() {
     }
 
     window.setTimeout(() => {
-      navigate('/auth/login', { replace: true })
+      navigate(`/auth/login${location.search}`, { replace: true })
     }, 400)
   }
 
@@ -102,7 +103,7 @@ export function RegisterPage() {
           </Button>
           <p className="text-sm text-muted-foreground">
             Đã có tài khoản?{' '}
-            <Link className="text-primary underline" to="/auth/login">
+            <Link className="text-primary underline" to={`/auth/login${location.search}`}>
               Đăng nhập
             </Link>
           </p>

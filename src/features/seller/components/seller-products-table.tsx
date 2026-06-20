@@ -2,6 +2,7 @@ import type { Product } from '@/features/products/types/product.types'
 import { formatDateTime, formatVnd } from '@/features/seller/components/seller-formatters'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
+import { Card, CardContent } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
 
 type SellerProductsTableProps = {
@@ -47,7 +48,38 @@ export function SellerProductsTable({
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-md border">
+      <div className="space-y-3 md:hidden">
+        {products.map((product) => (
+          <Card key={product.id}>
+            <CardContent className="space-y-3 pt-4">
+              <div>
+                <p className="font-medium">{product.name}</p>
+                <p className="line-clamp-2 text-xs text-muted-foreground">{product.description || '—'}</p>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <span>{formatVnd(product.price)}</span>
+                <span>• Kho: {product.stock ?? product.stockQuantity ?? 0}</span>
+                <Badge>{product.categoryName ?? product.categoryId ?? '—'}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">{formatDateTime(product.createdAt)}</p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" className="flex-1" onClick={() => onEdit(product)}>
+                  Sửa
+                </Button>
+                <Button
+                  size="sm"
+                  className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => onDelete(product)}
+                >
+                  Xóa
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-md border md:block">
         <table className="w-full min-w-[720px] text-sm">
           <thead className="bg-muted/40 text-left">
             <tr>

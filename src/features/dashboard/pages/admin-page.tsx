@@ -271,7 +271,58 @@ export function AdminPage() {
           ) : filteredUsers.length === 0 ? (
             <p className="text-sm text-muted-foreground">Không có user phù hợp bộ lọc.</p>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
+            <>
+            <div className="space-y-3 md:hidden">
+              {filteredUsers.map((user) => (
+                <Card key={user.id}>
+                  <CardContent className="space-y-3 pt-4">
+                    <div>
+                      <p className="font-medium">{user.email}</p>
+                      <p className="text-xs text-muted-foreground">{user.id}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      <Badge>{user.role}</Badge>
+                      {(user.roles.length > 0 ? user.roles : ['(none)']).map((r) => (
+                        <Badge key={`${user.id}-m-${r}`} className="border-border/70 bg-muted/30 text-foreground">
+                          {r}
+                        </Badge>
+                      ))}
+                    </div>
+                    <Select
+                      value={user.role}
+                      onChange={(e) => void handleAssignRoleExclusive(user.id, e.target.value as UserRole)}
+                      className="w-full"
+                      disabled={Boolean(roleUpdatingUserId)}
+                    >
+                      {roleOptions.map((r) => (
+                        <option key={r.value} value={r.value}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </Select>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setResetPasswordTarget({ id: user.id, email: user.email })}
+                        disabled={updateUserMutation.isPending || Boolean(roleUpdatingUserId)}
+                      >
+                        Reset mật khẩu
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={() => void handleDeleteUser(user.id, user.email)}
+                        disabled={deleteUserMutation.isPending || Boolean(roleUpdatingUserId)}
+                      >
+                        Xóa user
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto rounded-md border md:block">
               <table className="w-full min-w-[900px] text-sm">
                 <thead className="bg-muted/40 text-left">
                   <tr>
@@ -340,6 +391,7 @@ export function AdminPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>

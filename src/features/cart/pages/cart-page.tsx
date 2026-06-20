@@ -1,49 +1,77 @@
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Trash2 } from 'lucide-react'
+import { Loader2, ShoppingCart, Tag, Trash2 } from 'lucide-react'
 import { buildLoginPath } from '@/shared/lib/auth-redirect'
+import { formatVnd } from '@/shared/lib/product-price'
 import { useAuthStore } from '@/shared/stores/auth-store'
+import {
+  calcCartCount,
+  calcCartSubtotal,
+  hasCartDiscount,
+  useCartStore,
+} from '@/shared/stores/cart-store'
+import { useSyncCart } from '@/features/cart/hooks/use-sync-cart'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Input } from '@/shared/ui/input'
-import { calcCartCount, calcCartSubtotal, useCartStore } from '@/shared/stores/cart-store'
-
-function formatVnd(n: number) {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n)
-}
+import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
+import { EmptyState } from '@/shared/ui/empty-state'
+import { QuantityStepper } from '@/shared/ui/quantity-stepper'
 
 export function CartPage() {
   const navigate = useNavigate()
   const accessToken = useAuthStore((state) => state.accessToken)
-  const { items, updateQuantity, removeItem, clearCart } = useCartStore()
+  const { items, updateQuantity, removeItem, clearCart, clearBuyNow } = useCartStore()
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false)
+
+  useEffect(() => {
+    clearBuyNow()
+  }, [clearBuyNow])
+
+  const { isSyncing } = useSyncCart(items.map((item) => item.productId))
   const itemCount = calcCartCount(items)
   const subtotal = calcCartSubtotal(items)
 
   if (items.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Giỏ hàng trống</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Bạn chưa thêm sản phẩm nào. Quay về trang chủ để chọn sản phẩm phù hợp.
-        </CardContent>
-        <CardFooter>
-          <Link to="/">
-            <Button>Tiếp tục mua sắm</Button>
-          </Link>
-        </CardFooter>
+        <EmptyState
+          icon={ShoppingCart}
+          title="Giỏ hàng trống"
+          description="Bạn chưa thêm sản phẩm nào. Khám phá ưu đãi hoặc quay về trang chủ để chọn sản phẩm phù hợp."
+          action={
+            <>
+              <Link to="/">
+                <Button>Tiếp tục mua sắm</Button>
+              </Link>
+              <Link to="/?hasDiscount=1">
+                <Button variant="outline" className="gap-1.5">
+                  <Tag className="h-4 w-4" />
+                  Xem ưu đãi
+                </Button>
+              </Link>
+            </>
+          }
+        />
       </Card>
     )
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-28 sm:pb-0">
       <Card>
         <CardHeader className="flex-row items-center justify-between">
           <CardTitle>Giỏ hàng của bạn ({itemCount})</CardTitle>
-          <Button variant="outline" onClick={clearCart}>
-            Xóa tất cả
-          </Button>
+          <div className="flex items-center gap-2">
+            {isSyncing ? (
+              <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:inline-flex">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Đang cập nhật…
+              </span>
+            ) : null}
+            <Button variant="outline" onClick={() => setConfirmClearOpen(true)}>
+              Xóa tất cả
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {items.map((item) => (
@@ -54,17 +82,25 @@ export function CartPage() {
                 ) : null}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{item.name}</p>
-                <p className="text-sm text-muted-foreground">{item.price != null ? formatVnd(item.price) : 'Liên hệ'}</p>
+                <Link to={`/products/${item.productId}`} className="truncate font-medium hover:text-primary hover:underline">
+                  {item.name}
+                </Link>
+                <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm">
+                  <span className="font-medium text-primary">
+                    {item.unitPrice != null ? formatVnd(item.unitPrice) : 'Liên hệ'}
+                  </span>
+                  {hasCartDiscount(item) && item.originalPrice != null ? (
+                    <span className="text-muted-foreground line-through">{formatVnd(item.originalPrice)}</span>
+                  ) : null}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={1}
-                  max={item.stockQuantity != null && item.stockQuantity > 0 ? item.stockQuantity : undefined}
+              <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
+                <QuantityStepper
+                  size="sm"
                   value={item.quantity}
-                  onChange={(e) => updateQuantity(item.productId, Number(e.target.value) || 1)}
-                  className="w-20"
+                  min={1}
+                  max={item.stockQuantity != null && item.stockQuantity > 0 ? item.stockQuantity : 99}
+                  onChange={(qty) => updateQuantity(item.productId, qty)}
                 />
                 <Button variant="outline" size="sm" onClick={() => removeItem(item.productId)} aria-label="Xóa khỏi giỏ">
                   <Trash2 className="h-4 w-4" />
@@ -73,14 +109,15 @@ export function CartPage() {
             </div>
           ))}
         </CardContent>
-        <CardFooter className="flex-col items-stretch gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <CardFooter className="hidden flex-col items-stretch gap-3 border-t pt-4 sm:flex sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-muted-foreground">Tạm tính</p>
-            <p className="text-xl font-semibold text-primary">{formatVnd(subtotal)}</p>
+            <p className="text-xl font-semibold text-secondary">{formatVnd(subtotal)}</p>
           </div>
           <Button
             size="lg"
             onClick={() => {
+              clearBuyNow()
               if (!accessToken) {
                 navigate(buildLoginPath('/checkout'))
                 return
@@ -92,6 +129,42 @@ export function CartPage() {
           </Button>
         </CardFooter>
       </Card>
+
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm sm:hidden">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+          <div>
+            <p className="text-xs text-muted-foreground">Tạm tính ({itemCount})</p>
+            <p className="text-lg font-semibold text-secondary">{formatVnd(subtotal)}</p>
+          </div>
+          <Button
+            size="lg"
+            className="shrink-0"
+            onClick={() => {
+              clearBuyNow()
+              if (!accessToken) {
+                navigate(buildLoginPath('/checkout'))
+                return
+              }
+              navigate('/checkout')
+            }}
+          >
+            Thanh toán
+          </Button>
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={confirmClearOpen}
+        title="Xóa toàn bộ giỏ hàng?"
+        description="Tất cả sản phẩm trong giỏ sẽ bị xóa. Bạn có thể thêm lại bất cứ lúc nào."
+        confirmLabel="Xóa tất cả"
+        destructive
+        onCancel={() => setConfirmClearOpen(false)}
+        onConfirm={() => {
+          clearCart()
+          setConfirmClearOpen(false)
+        }}
+      />
     </div>
   )
 }

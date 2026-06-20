@@ -43,6 +43,23 @@ export function AppLayout() {
         { label: 'Đơn mua' },
       ]
     }
+    if (pathname.startsWith('/account/orders/')) {
+      return [
+        { label: 'Trang chủ', to: '/' },
+        { label: 'Tài khoản', to: '/account' },
+        { label: 'Đơn mua', to: '/account/orders' },
+        { label: 'Chi tiết đơn' },
+      ]
+    }
+    if (pathname.startsWith('/policies/')) {
+      const slug = pathname.split('/').pop() ?? ''
+      const titles: Record<string, string> = {
+        returns: 'Đổi trả',
+        privacy: 'Bảo mật',
+        shipping: 'Vận chuyển',
+      }
+      return [{ label: 'Trang chủ', to: '/' }, { label: titles[slug] ?? 'Chính sách' }]
+    }
     return [{ label: 'Trang chủ', to: '/' }]
   })()
 
@@ -155,12 +172,76 @@ export function AppLayout() {
         <Breadcrumb items={breadcrumbItems} />
         <Outlet />
       </main>
-      <footer className="mt-8 bg-primary text-primary-foreground">
-        <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-6 text-center text-xs text-primary-foreground/85 sm:flex-row sm:items-center sm:justify-between sm:text-sm">
-          <span className="font-semibold text-primary-foreground">
-            © {new Date().getFullYear()} EasyMart
-          </span>
-          <span>Mua sắm an toàn — Giá tốt mỗi ngày</span>
+      <footer className="mt-8 border-t border-primary-foreground/10 bg-primary text-primary-foreground">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+            <p className="text-base font-bold">EasyMart</p>
+            <p className="text-sm text-primary-foreground/85">
+              Mua sắm trực tuyến an toàn — giá tốt, giao nhanh, hỗ trợ tận tâm.
+            </p>
+          </div>
+          <div>
+            <p className="mb-2 text-sm font-semibold">Hỗ trợ khách hàng</p>
+            <ul className="space-y-1.5 text-sm text-primary-foreground/85">
+              <li>
+                <a href="mailto:support@easymart.vn" className="hover:text-primary-foreground hover:underline">
+                  support@easymart.vn
+                </a>
+              </li>
+              <li>Hotline: 1900 1234 (8h–22h)</li>
+              <li>
+                <Link to="/cart" className="hover:text-primary-foreground hover:underline">
+                  Theo dõi giỏ hàng
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p className="mb-2 text-sm font-semibold">Chính sách</p>
+            <ul className="space-y-1.5 text-sm text-primary-foreground/85">
+              <li>
+                <Link to="/policies/returns" className="hover:text-primary-foreground hover:underline">
+                  Chính sách đổi trả
+                </Link>
+              </li>
+              <li>
+                <Link to="/policies/privacy" className="hover:text-primary-foreground hover:underline">
+                  Chính sách bảo mật
+                </Link>
+              </li>
+              <li>
+                <Link to="/policies/shipping" className="hover:text-primary-foreground hover:underline">
+                  Vận chuyển &amp; giao hàng
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p className="mb-2 text-sm font-semibold">Về EasyMart</p>
+            <ul className="space-y-1.5 text-sm text-primary-foreground/85">
+              <li>
+                <Link to="/" className="hover:text-primary-foreground hover:underline">
+                  Trang chủ
+                </Link>
+              </li>
+              <li>
+                <Link to="/?hasDiscount=1" className="hover:text-primary-foreground hover:underline">
+                  Ưu đãi hôm nay
+                </Link>
+              </li>
+              <li>
+                <Link to="/auth/login" className="hover:text-primary-foreground hover:underline">
+                  Đăng nhập / Đăng ký
+                </Link>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div className="border-t border-primary-foreground/15">
+          <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-4 text-center text-xs text-primary-foreground/75 sm:flex-row sm:items-center sm:justify-between sm:text-sm">
+            <span>© {new Date().getFullYear()} EasyMart. Bảo lưu mọi quyền.</span>
+            <span>Mua sắm an toàn — Giá tốt mỗi ngày</span>
+          </div>
         </div>
       </footer>
     </div>

@@ -1,22 +1,24 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { httpClient } from '@/shared/api/http-client'
 import { env } from '@/shared/config/env'
 import { PRODUCT_MEDIA } from '@/shared/constants/catalog'
-import { useAuthStore } from '@/shared/stores/auth-store'
-import { useProfileQuery } from '@/features/auth/hooks/use-auth'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
 import { cn } from '@/shared/lib/utils'
-import { Button } from '@/shared/ui/button'
+import { EmptyState } from '@/shared/ui/empty-state'
+import { PaginationBar } from '@/shared/ui/pagination-bar'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Badge } from '@/shared/ui/badge'
+import { Button } from '@/shared/ui/button'
 import {
   useCategoriesQuery,
   useProductQuery,
   useProductsQuery,
 } from '@/features/products/hooks/use-catalog'
 import type { Product } from '@/features/products/types/product.types'
-import { Loader2, SlidersHorizontal, Star, X } from 'lucide-react'
+import { SearchX, ShoppingCart, SlidersHorizontal, Star, X } from 'lucide-react'
+import { toast } from 'react-toastify'
+import { useCartStore } from '@/shared/stores/cart-store'
 
 const PAGE_SIZE = 8
 
@@ -212,6 +214,7 @@ function ProductCatalogCard({
   product: Product
   onOpenDetail: (id: string) => void
 }) {
+  const addToCart = useCartStore((state) => state.addItem)
   const needsDetailImage = !product.imageUrl
   const detailForImage = useProductQuery(product.id, { enabled: needsDetailImage })
   const merged: Product =
@@ -222,6 +225,18 @@ function ProductCatalogCard({
           images: detailForImage.data.images ?? product.images,
         }
       : product
+
+  const isOutOfStock = product.stockQuantity != null && product.stockQuantity <= 0
+
+  const handleAddToCart = (event: MouseEvent) => {
+    event.stopPropagation()
+    if (isOutOfStock) {
+      toast.error('Sản phẩm đã hết hàng.')
+      return
+    }
+    addToCart(product, 1)
+    toast.success('Đã thêm vào giỏ hàng.')
+  }
 
   return (
     <Card
@@ -252,6 +267,36 @@ function ProductCatalogCard({
             Nổi bật
           </Badge>
         ) : null}
+        {!isOutOfStock ? (
+          <>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="absolute bottom-2 right-2 z-[1] h-9 w-9 rounded-full p-0 shadow-md md:hidden"
+              onClick={handleAddToCart}
+              aria-label="Thêm vào giỏ"
+            >
+              <ShoppingCart className="h-4 w-4" />
+            </Button>
+            <div className="absolute inset-x-0 bottom-0 z-[1] hidden translate-y-full bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 md:block">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="w-full gap-1.5 shadow-md"
+                onClick={handleAddToCart}
+              >
+                <ShoppingCart className="h-3.5 w-3.5" />
+                Thêm vào giỏ
+              </Button>
+            </div>
+          </>
+        ) : (
+          <Badge className="absolute right-2 top-2 z-[1] bg-destructive text-destructive-foreground">
+            Hết hàng
+          </Badge>
+        )}
       </div>
       </div>
       <CardHeader className="space-y-2 pb-3">
@@ -301,8 +346,6 @@ function ProductCatalogCard({
 export function ProductCatalog() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const accessToken = useAuthStore((state) => state.accessToken)
-  const { data: profile } = useProfileQuery(Boolean(accessToken))
 
   /** Keyword + categoryId là nguồn URL → state (header-search và category-nav cập nhật URL). */
   const keyword = searchParams.get('keyword')?.trim() ?? ''
@@ -520,48 +563,55 @@ export function ProductCatalog() {
       ? 'Sản phẩm thuộc danh mục đã chọn.'
       : 'Chọn nhanh sản phẩm đang được quan tâm, giá tốt và sẵn hàng.'
 
+  const showCatalogHeader = Boolean(keyword || activeCategoryName || hasDiscountFromUrl)
+
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border bg-gradient-to-r from-primary/10 via-background to-secondary/10 p-4 sm:p-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      {showCatalogHeader ? (
+        <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">{heroTitle}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{heroSubtitle}</p>
-            {profile?.role === 'ADMIN' ? (
-              <p className="mt-2 text-sm text-muted-foreground">
-                Danh sách từ <code className="rounded bg-muted px-1 text-xs">GET /api/v1/products</code>
-                {accessToken ? (
-                  <> — đặt hàng qua <code className="rounded bg-muted px-1 text-xs">POST /api/v1/orders</code></>
-                ) : (
-                  <> — <Link className="text-primary underline" to="/auth/login">Đăng nhập</Link> để đặt hàng</>
-                )}
-              </p>
+            <h2 className="text-lg font-semibold tracking-tight">{heroTitle}</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">{heroSubtitle}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {keyword ? (
+              <button
+                type="button"
+                onClick={clearKeyword}
+                className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1 text-xs hover:border-destructive/40 hover:text-destructive"
+              >
+                Từ khoá: "{keyword}" <X className="h-3 w-3" aria-hidden />
+              </button>
+            ) : null}
+            {activeCategoryName ? (
+              <button
+                type="button"
+                onClick={() => setCategoryFilter('all')}
+                className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1 text-xs hover:border-destructive/40 hover:text-destructive"
+              >
+                Danh mục: {activeCategoryName} <X className="h-3 w-3" aria-hidden />
+              </button>
+            ) : null}
+            {hasDiscountFromUrl && !keyword && !activeCategoryName ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setOnlyDiscountFilter(false)
+                  const next = new URLSearchParams(searchParams)
+                  next.delete('hasDiscount')
+                  next.delete('discount')
+                  setSearchParams(next)
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1 text-xs hover:border-destructive/40 hover:text-destructive"
+              >
+                Ưu đãi giảm giá <X className="h-3 w-3" aria-hidden />
+              </button>
             ) : null}
           </div>
-          {(keyword || activeCategoryName) ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {keyword ? (
-                <button
-                  type="button"
-                  onClick={clearKeyword}
-                  className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1 text-xs hover:border-destructive/40 hover:text-destructive"
-                >
-                  Từ khoá: "{keyword}" <X className="h-3 w-3" aria-hidden />
-                </button>
-              ) : null}
-              {activeCategoryName ? (
-                <button
-                  type="button"
-                  onClick={() => setCategoryFilter('all')}
-                  className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1 text-xs hover:border-destructive/40 hover:text-destructive"
-                >
-                  Danh mục: {activeCategoryName} <X className="h-3 w-3" aria-hidden />
-                </button>
-              ) : null}
-            </div>
-          ) : null}
         </div>
-      </div>
+      ) : (
+        <h2 className="sr-only">Danh sách sản phẩm</h2>
+      )}
 
       {listQuery.isError ? (
         <p className="text-sm text-destructive">
@@ -621,58 +671,41 @@ export function ProductCatalog() {
           </div>
 
           {!listQuery.isPending && filteredProducts.length === 0 ? (
-            <div className="rounded-lg border border-dashed bg-muted/30 p-6 text-center">
-              <p className="text-sm font-medium">Không tìm thấy sản phẩm phù hợp</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {keyword
+            <EmptyState
+              icon={SearchX}
+              title="Không tìm thấy sản phẩm phù hợp"
+              description={
+                keyword
                   ? `Không có kết quả cho "${keyword}". Thử từ khoá khác hoặc đổi bộ lọc.`
-                  : 'Bộ lọc hiện tại không trả về sản phẩm nào.'}
-              </p>
-              {(keyword || activeFilterCount > 0) ? (
-                <div className="mt-3 flex justify-center gap-2">
-                  {keyword ? (
-                    <Button type="button" variant="outline" size="sm" onClick={clearKeyword}>
-                      Xoá từ khoá
-                    </Button>
-                  ) : null}
-                  {activeFilterCount > 0 ? (
-                    <Button type="button" variant="outline" size="sm" onClick={resetFilters}>
-                      Reset bộ lọc
-                    </Button>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
+                  : 'Bộ lọc hiện tại không trả về sản phẩm nào.'
+              }
+              action={
+                keyword || activeFilterCount > 0 ? (
+                  <>
+                    {keyword ? (
+                      <Button type="button" variant="outline" size="sm" onClick={clearKeyword}>
+                        Xoá từ khoá
+                      </Button>
+                    ) : null}
+                    {activeFilterCount > 0 ? (
+                      <Button type="button" variant="outline" size="sm" onClick={resetFilters}>
+                        Reset bộ lọc
+                      </Button>
+                    ) : null}
+                  </>
+                ) : undefined
+              }
+            />
           ) : null}
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2 border-t pt-4">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={page <= 0 || listQuery.isFetching}
-          onClick={() => setPage((p) => Math.max(0, p - 1))}
-        >
-          Trang trước
-        </Button>
-        <span className="text-sm text-muted-foreground">
-          Trang {page + 1} / {totalPages}
-          {listQuery.isFetching ? (
-            <Loader2 className="ml-2 inline h-4 w-4 animate-spin align-text-bottom" aria-hidden />
-          ) : null}
-        </span>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={page + 1 >= totalPages || listQuery.isFetching}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          Trang sau
-        </Button>
-      </div>
+      <PaginationBar
+        page={page}
+        totalPages={totalPages}
+        isFetching={listQuery.isFetching}
+        onPageChange={setPage}
+      />
 
       {isFilterSheetOpen ? (
         <div className="fixed inset-0 z-[70] lg:hidden">
