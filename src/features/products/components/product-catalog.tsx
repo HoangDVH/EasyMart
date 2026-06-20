@@ -303,18 +303,21 @@ export function ProductCatalog() {
   const [searchParams, setSearchParams] = useSearchParams()
   const accessToken = useAuthStore((state) => state.accessToken)
   const { data: profile } = useProfileQuery(Boolean(accessToken))
-  const [page, setPage] = useState(0)
-  const [priceFilter, setPriceFilter] = useState<PriceFilterKey>('all')
-  const [sortFilter, setSortFilter] = useState<SortFilterKey>('default')
-  const [minRatingFilter, setMinRatingFilter] = useState(0)
-  const [onlyDiscountFilter, setOnlyDiscountFilter] = useState(false)
-  const [onlyInStockFilter, setOnlyInStockFilter] = useState(false)
-  const [featuredFilter, setFeaturedFilter] = useState<FeaturedFilterKey>('all')
-  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
 
   /** Keyword + categoryId là nguồn URL → state (header-search và category-nav cập nhật URL). */
   const keyword = searchParams.get('keyword')?.trim() ?? ''
   const categoryFilter = searchParams.get('categoryId') ?? 'all'
+  const hasDiscountFromUrl =
+    searchParams.get('hasDiscount') === '1' || searchParams.get('discount') === '1'
+
+  const [page, setPage] = useState(0)
+  const [priceFilter, setPriceFilter] = useState<PriceFilterKey>('all')
+  const [sortFilter, setSortFilter] = useState<SortFilterKey>('default')
+  const [minRatingFilter, setMinRatingFilter] = useState(0)
+  const [onlyDiscountFilter, setOnlyDiscountFilter] = useState(hasDiscountFromUrl)
+  const [onlyInStockFilter, setOnlyInStockFilter] = useState(false)
+  const [featuredFilter, setFeaturedFilter] = useState<FeaturedFilterKey>('all')
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
 
   const categoriesQuery = useCategoriesQuery()
   const categories = categoriesQuery.data ?? []
@@ -399,6 +402,10 @@ export function ProductCatalog() {
       document.body.style.overflow = previous
     }
   }, [isFilterSheetOpen])
+
+  useEffect(() => {
+    setOnlyDiscountFilter(hasDiscountFromUrl)
+  }, [hasDiscountFromUrl])
 
   /** Reset về trang 0 mỗi khi đổi filter để không bị lệch trang. */
   useEffect(() => {

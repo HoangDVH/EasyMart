@@ -1,111 +1,71 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react'
-import { z } from 'zod'
+import { useEffect, type ChangeEvent } from 'react'
+import { useForm } from 'react-hook-form'
 import { X } from 'lucide-react'
 import type { Category } from '@/features/products/types/product.types'
+import type { SellerProductFormValues } from '@/features/seller/components/seller-types'
+import {
+  sellerProductFormSchema,
+  type SellerProductFormParsed,
+} from '@/features/seller/schemas/seller-product.schema'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Select } from '@/shared/ui/select'
 import { Textarea } from '@/shared/ui/textarea'
-import type { SellerProductFormValues } from '@/features/seller/components/seller-types'
 
 type ProductFormModalProps = {
   open: boolean
   mode: 'create' | 'edit'
-  values: SellerProductFormValues
+  initialValues: SellerProductFormValues
   categories: Category[]
   isSubmitting: boolean
   isUploading: boolean
   error: string | null
-  onChange: (next: SellerProductFormValues) => void
-  onSubmit: () => Promise<void>
+  onSubmit: (values: SellerProductFormParsed) => Promise<void>
   onClose: () => void
-  onUploadFiles: (files: File[]) => Promise<void>
-}
-
-const sellerProductFormSchema = z
-  .object({
-    name: z.string().trim().min(1, 'Tên sản phẩm không được để trống.'),
-    description: z.string(),
-    price: z.coerce.number().finite().gt(0, 'Giá phải là số > 0.'),
-    discountPrice: z
-      .string()
-      .trim()
-      .transform((v) => (v.length === 0 ? null : Number(v)))
-      .refine((v) => v === null || (Number.isFinite(v) && v > 0), 'Giá khuyến mãi phải là số > 0.'),
-    stock: z.coerce.number().finite().min(0, 'Tồn kho phải là số không âm.'),
-    rating: z
-      .string()
-      .trim()
-      .transform((v) => (v.length === 0 ? null : Number(v)))
-      .refine((v) => v === null || (Number.isFinite(v) && v >= 0 && v <= 5), 'Đánh giá từ 0 đến 5.'),
-    categoryId: z.string().trim().min(1, 'Chọn danh mục (API bắt buộc categoryId).'),
-    brandId: z.string(),
-    isFeatured: z.boolean(),
-    images: z.array(z.string()),
-  })
-  .superRefine((value, ctx) => {
-    if (value.discountPrice != null && value.discountPrice >= value.price) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['discountPrice'],
-        message: 'Giá khuyến mãi phải nhỏ hơn giá gốc.',
-      })
-    }
-  })
-
-function mergeValues(
-  prev: SellerProductFormValues,
-  patch: Partial<SellerProductFormValues>,
-): SellerProductFormValues {
-  return { ...prev, ...patch }
+  onUploadFiles: (files: File[]) => Promise<string[]>
 }
 
 export function ProductFormModal({
   open,
   mode,
-  values,
+  initialValues,
   categories,
   isSubmitting,
   isUploading,
   error,
-  onChange,
   onSubmit,
   onClose,
   onUploadFiles,
 }: ProductFormModalProps) {
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof SellerProductFormValues, string>>>({})
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<SellerProductFormValues>({
+    resolver: zodResolver(sellerProductFormSchema),
+    defaultValues: initialValues,
+  })
+
+  const images = watch('images')
+
+  useEffect(() => {
+    if (open) reset(initialValues)
+  }, [open, initialValues, reset])
 
   if (!open) return null
-
-  function validate(next: SellerProductFormValues) {
-    const parsed = sellerProductFormSchema.safeParse(next)
-    const errors: Partial<Record<keyof SellerProductFormValues, string>> = {}
-    if (!parsed.success) {
-      const flattened = parsed.error.flatten().fieldErrors
-      for (const [field, messages] of Object.entries(flattened)) {
-        const first = messages?.[0]
-        if (!first) continue
-        if (field in next) {
-          errors[field as keyof SellerProductFormValues] = first
-        }
-      }
-    }
-    return errors
-  }
-
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const errors = validate(values)
-    setFieldErrors(errors)
-    if (Object.keys(errors).length > 0) return
-    await onSubmit()
-  }
 
   async function handleFiles(e: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
     if (files.length === 0) return
-    await onUploadFiles(files)
+    const uploaded = await onUploadFiles(files)
+    if (uploaded.length > 0) {
+      setValue('images', [...images, ...uploaded], { shouldValidate: true })
+    }
     e.target.value = ''
   }
 
@@ -118,47 +78,30 @@ export function ProductFormModal({
             <X className="h-4 w-4" />
           </Button>
         </div>
-        <form className="space-y-4 p-4" onSubmit={handleSubmit}>
+        <form className="space-y-4 p-4" onSubmit={handleSubmit(onSubmit)}>
           <div className="grid gap-2">
             <Label htmlFor="seller-product-name">Tên sản phẩm *</Label>
-            <Input
-              id="seller-product-name"
-              value={values.name}
-              onChange={(e) => onChange(mergeValues(values, { name: e.target.value }))}
-            />
-            {fieldErrors.name ? <p className="text-xs text-destructive">{fieldErrors.name}</p> : null}
+            <Input id="seller-product-name" {...register('name')} />
+            {errors.name ? <p className="text-xs text-destructive">{errors.name.message}</p> : null}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="seller-product-description">Mô tả (rich text dạng HTML)</Label>
             <Textarea
               id="seller-product-description"
-              value={values.description}
-              onChange={(e) => onChange(mergeValues(values, { description: e.target.value }))}
+              {...register('description')}
               placeholder="<p>Mô tả sản phẩm...</p>"
             />
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="seller-product-price">Giá *</Label>
-              <Input
-                id="seller-product-price"
-                type="number"
-                min={1}
-                value={values.price}
-                onChange={(e) => onChange(mergeValues(values, { price: e.target.value }))}
-              />
-              {fieldErrors.price ? <p className="text-xs text-destructive">{fieldErrors.price}</p> : null}
+              <Input id="seller-product-price" type="number" min={1} {...register('price')} />
+              {errors.price ? <p className="text-xs text-destructive">{errors.price.message}</p> : null}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="seller-product-stock">Tồn kho *</Label>
-              <Input
-                id="seller-product-stock"
-                type="number"
-                min={0}
-                value={values.stock}
-                onChange={(e) => onChange(mergeValues(values, { stock: e.target.value }))}
-              />
-              {fieldErrors.stock ? <p className="text-xs text-destructive">{fieldErrors.stock}</p> : null}
+              <Input id="seller-product-stock" type="number" min={0} {...register('stock')} />
+              {errors.stock ? <p className="text-xs text-destructive">{errors.stock.message}</p> : null}
             </div>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
@@ -168,12 +111,11 @@ export function ProductFormModal({
                 id="seller-product-discount"
                 type="number"
                 min={1}
-                value={values.discountPrice}
-                onChange={(e) => onChange(mergeValues(values, { discountPrice: e.target.value }))}
+                {...register('discountPrice')}
                 placeholder="Để trống nếu không giảm giá"
               />
-              {fieldErrors.discountPrice ? (
-                <p className="text-xs text-destructive">{fieldErrors.discountPrice}</p>
+              {errors.discountPrice ? (
+                <p className="text-xs text-destructive">{errors.discountPrice.message}</p>
               ) : null}
             </div>
             <div className="grid gap-2">
@@ -184,21 +126,16 @@ export function ProductFormModal({
                 min={0}
                 max={5}
                 step="0.1"
-                value={values.rating}
-                onChange={(e) => onChange(mergeValues(values, { rating: e.target.value }))}
+                {...register('rating')}
                 placeholder="Ví dụ: 4.5"
               />
-              {fieldErrors.rating ? <p className="text-xs text-destructive">{fieldErrors.rating}</p> : null}
+              {errors.rating ? <p className="text-xs text-destructive">{errors.rating.message}</p> : null}
             </div>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="seller-product-category">Danh mục *</Label>
-              <Select
-                id="seller-product-category"
-                value={values.categoryId}
-                onChange={(e) => onChange(mergeValues(values, { categoryId: e.target.value }))}
-              >
+              <Select id="seller-product-category" {...register('categoryId')}>
                 <option value="">Chọn danh mục</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
@@ -206,16 +143,15 @@ export function ProductFormModal({
                   </option>
                 ))}
               </Select>
-              {fieldErrors.categoryId ? (
-                <p className="text-xs text-destructive">{fieldErrors.categoryId}</p>
+              {errors.categoryId ? (
+                <p className="text-xs text-destructive">{errors.categoryId.message}</p>
               ) : null}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="seller-product-brand">Brand ID</Label>
               <Input
                 id="seller-product-brand"
-                value={values.brandId}
-                onChange={(e) => onChange(mergeValues(values, { brandId: e.target.value }))}
+                {...register('brandId')}
                 placeholder="Mặc định 1"
               />
             </div>
@@ -225,8 +161,7 @@ export function ProductFormModal({
               id="seller-product-featured"
               type="checkbox"
               className="h-4 w-4 rounded border-input"
-              checked={values.isFeatured}
-              onChange={(e) => onChange(mergeValues(values, { isFeatured: e.target.checked }))}
+              {...register('isFeatured')}
             />
             <Label htmlFor="seller-product-featured" className="font-normal">
               Sản phẩm nổi bật (isFeatured)
@@ -242,8 +177,8 @@ export function ProductFormModal({
               onChange={(e) => void handleFiles(e)}
               disabled={isUploading}
             />
-            {values.images.length > 0 ? (
-              <p className="text-xs text-muted-foreground">Đã upload {values.images.length} ảnh.</p>
+            {images.length > 0 ? (
+              <p className="text-xs text-muted-foreground">Đã upload {images.length} ảnh.</p>
             ) : (
               <p className="text-xs text-muted-foreground">
                 Có thể để trống nếu API chấp nhận mảng ảnh rỗng; nếu lỗi, hãy upload ít nhất một ảnh.

@@ -1,5 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Trash2 } from 'lucide-react'
+import { buildLoginPath } from '@/shared/lib/auth-redirect'
+import { useAuthStore } from '@/shared/stores/auth-store'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
@@ -11,6 +13,7 @@ function formatVnd(n: number) {
 
 export function CartPage() {
   const navigate = useNavigate()
+  const accessToken = useAuthStore((state) => state.accessToken)
   const { items, updateQuantity, removeItem, clearCart } = useCartStore()
   const itemCount = calcCartCount(items)
   const subtotal = calcCartSubtotal(items)
@@ -75,7 +78,16 @@ export function CartPage() {
             <p className="text-sm text-muted-foreground">Tạm tính</p>
             <p className="text-xl font-semibold text-primary">{formatVnd(subtotal)}</p>
           </div>
-          <Button size="lg" onClick={() => navigate('/checkout')}>
+          <Button
+            size="lg"
+            onClick={() => {
+              if (!accessToken) {
+                navigate(buildLoginPath('/checkout'))
+                return
+              }
+              navigate('/checkout')
+            }}
+          >
             Tiến hành thanh toán
           </Button>
         </CardFooter>

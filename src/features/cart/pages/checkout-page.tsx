@@ -1,47 +1,47 @@
-import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
-import { Loader2 } from "lucide-react";
-import { useCreateOrderMutation } from "@/features/products/hooks/use-catalog";
-import { getApiErrorMessage } from "@/shared/lib/api-error";
-import { Button } from "@/shared/ui/button";
+import { useForm } from 'react-hook-form'
+import { Link, useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
+import { Loader2 } from 'lucide-react'
+import { useCreateOrderMutation } from '@/features/products/hooks/use-catalog'
+import {
+  checkoutSchema,
+  type CheckoutFormValues,
+} from '@/features/cart/schemas/checkout.schemas'
+import { getApiErrorMessage } from '@/shared/lib/api-error'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Button } from '@/shared/ui/button'
 import {
   Card,
   CardContent,
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/shared/ui/card";
-import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
-import { calcCartSubtotal, useCartStore } from "@/shared/stores/cart-store";
+} from '@/shared/ui/card'
+import { Input } from '@/shared/ui/input'
+import { Label } from '@/shared/ui/label'
+import { calcCartSubtotal, useCartStore } from '@/shared/stores/cart-store'
 
 function formatVnd(n: number) {
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(n);
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(n)
 }
 
-type CheckoutFormValues = {
-  customerName: string;
-  phone: string;
-  address: string;
-};
-
 export function CheckoutPage() {
-  const navigate = useNavigate();
-  const createOrder = useCreateOrderMutation();
-  const { items, clearCart } = useCartStore();
-  const subtotal = calcCartSubtotal(items);
+  const navigate = useNavigate()
+  const createOrder = useCreateOrderMutation()
+  const { items, clearCart } = useCartStore()
+  const subtotal = calcCartSubtotal(items)
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<CheckoutFormValues>({
-    defaultValues: { customerName: "", phone: "", address: "" },
-  });
+    resolver: zodResolver(checkoutSchema),
+    defaultValues: { customerName: '', phone: '', address: '' },
+  })
 
   if (items.length === 0) {
     return (
@@ -58,27 +58,27 @@ export function CheckoutPage() {
           </Link>
         </CardFooter>
       </Card>
-    );
+    )
   }
 
-  const onSubmit = async () => {
+  const onSubmit = async (_data: CheckoutFormValues) => {
     try {
       await createOrder.mutateAsync({
         items: items.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
         })),
-      });
-      clearCart();
-      toast.success("Đặt hàng thành công. Đơn của bạn đang được xử lý.");
-      reset();
-      navigate("/");
+      })
+      clearCart()
+      toast.success('Đặt hàng thành công. Đơn của bạn đang được xử lý.')
+      reset()
+      navigate('/')
     } catch (error) {
       toast.error(
-        getApiErrorMessage(error, "Không thể thanh toán. Vui lòng thử lại."),
-      );
+        getApiErrorMessage(error, 'Không thể thanh toán. Vui lòng thử lại.'),
+      )
     }
-  };
+  }
 
   return (
     <form
@@ -93,12 +93,7 @@ export function CheckoutPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="checkout-name">Họ và tên</Label>
-              <Input
-                id="checkout-name"
-                {...register("customerName", {
-                  required: "Vui lòng nhập họ và tên.",
-                })}
-              />
+              <Input id="checkout-name" {...register('customerName')} />
               {errors.customerName ? (
                 <p className="text-xs text-destructive">
                   {errors.customerName.message}
@@ -107,12 +102,7 @@ export function CheckoutPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="checkout-phone">Số điện thoại</Label>
-              <Input
-                id="checkout-phone"
-                {...register("phone", {
-                  required: "Vui lòng nhập số điện thoại.",
-                })}
-              />
+              <Input id="checkout-phone" {...register('phone')} />
               {errors.phone ? (
                 <p className="text-xs text-destructive">
                   {errors.phone.message}
@@ -121,12 +111,7 @@ export function CheckoutPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="checkout-address">Địa chỉ nhận hàng</Label>
-              <Input
-                id="checkout-address"
-                {...register("address", {
-                  required: "Vui lòng nhập địa chỉ nhận hàng.",
-                })}
-              />
+              <Input id="checkout-address" {...register('address')} />
               {errors.address ? (
                 <p className="text-xs text-destructive">
                   {errors.address.message}
@@ -180,5 +165,5 @@ export function CheckoutPage() {
         </CardFooter>
       </Card>
     </form>
-  );
+  )
 }

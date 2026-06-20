@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useProfileQuery } from '@/features/auth/hooks/use-auth'
+import { HomeBanner } from '@/features/dashboard/components/home-banner'
 import { ProductCatalog } from '@/features/products/components/product-catalog'
 import { useAuthStore } from '@/shared/stores/auth-store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -12,6 +13,8 @@ export function HomePage() {
 
   return (
     <div className="space-y-8">
+      <HomeBanner />
+
       {isProfilePending && Boolean(accessToken) ? (
         <Card>
           <CardHeader>

@@ -16,6 +16,7 @@ import {
 } from '@/features/seller/hooks/use-seller'
 import type { Product } from '@/features/products/types/product.types'
 import type { SellerProductPayload } from '@/features/seller/api/seller.api'
+import type { SellerProductFormParsed } from '@/features/seller/schemas/seller-product.schema'
 import { ProductFormModal } from '@/features/seller/components/product-form-modal'
 import { ConfirmDeleteModal } from '@/features/seller/components/confirm-delete-modal'
 import { SellerProductsToolbar } from '@/features/seller/components/seller-products-toolbar'
@@ -24,11 +25,10 @@ import { SellerOrdersHistoryPanel } from '@/features/seller/components/seller-or
 import {
   defaultSellerProductFormValues,
   productToFormValues,
-  type SellerProductFormValues,
   type SellerProductsFilters,
 } from '@/features/seller/components/seller-types'
 
-function buildPayload(form: SellerProductFormValues): SellerProductPayload {
+function buildPayload(form: SellerProductFormParsed): SellerProductPayload {
   const price = Math.round(Number(form.price))
   const discountRaw = form.discountPrice.trim()
   const discountPrice = discountRaw.length > 0 ? Math.round(Number(discountRaw)) : price
@@ -61,7 +61,6 @@ export function SellerDashboardPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
-  const [form, setForm] = useState<SellerProductFormValues>(defaultSellerProductFormValues)
   const [formError, setFormError] = useState<string | null>(null)
   const [filters, setFilters] = useState<SellerProductsFilters>({
     keyword: '',
@@ -134,23 +133,26 @@ export function SellerDashboardPage() {
     return filteredProducts.slice(start, start + filters.pageSize)
   }, [filteredProducts, filters.page, filters.pageSize, totalPages])
 
+  const formInitialValues = useMemo(
+    () => (editingProduct ? productToFormValues(editingProduct) : defaultSellerProductFormValues),
+    [editingProduct],
+  )
+
   function resetFormAndClose() {
     setEditingProduct(null)
-    setForm(defaultSellerProductFormValues)
     setFormError(null)
     setFormOpen(false)
   }
 
   function onEdit(product: Product) {
     setEditingProduct(product)
-    setForm(productToFormValues(product))
     setFormError(null)
     setFormOpen(true)
   }
 
-  async function onSubmitForm() {
+  async function onSubmitForm(values: SellerProductFormParsed) {
     setFormError(null)
-    const payload = buildPayload(form)
+    const payload = buildPayload(values)
     try {
       if (editingProduct) {
         await updateMutation.mutateAsync({ productId: editingProduct.id, payload })
@@ -176,19 +178,19 @@ export function SellerDashboardPage() {
     }
   }
 
-  async function onUploadFiles(files: File[]) {
+  async function onUploadFiles(files: File[]): Promise<string[]> {
     try {
       const urls = await uploadImagesMutation.mutateAsync(files)
-      setForm((prev) => ({ ...prev, images: Array.from(new Set([...prev.images, ...urls])) }))
       toast.success('Upload ảnh thành công.')
+      return urls
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Upload ảnh thất bại.'))
+      return []
     }
   }
 
   function openCreateModal() {
     setEditingProduct(null)
-    setForm(defaultSellerProductFormValues)
     setFormError(null)
     setFormOpen(true)
   }
@@ -290,12 +292,11 @@ export function SellerDashboardPage() {
       <ProductFormModal
         open={formOpen}
         mode={editingProduct ? 'edit' : 'create'}
-        values={form}
+        initialValues={formInitialValues}
         categories={categories}
         isSubmitting={isSaving}
         isUploading={uploadImagesMutation.isPending}
         error={formError}
-        onChange={setForm}
         onSubmit={onSubmitForm}
         onClose={resetFormAndClose}
         onUploadFiles={onUploadFiles}

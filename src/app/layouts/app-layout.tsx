@@ -1,6 +1,6 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { ShoppingCart } from 'lucide-react'
-import { useProfileQuery } from '@/features/auth/hooks/use-auth'
+import { useProfileQuery, useRestoreSessionQuery } from '@/features/auth/hooks/use-auth'
 import { useAuthStore } from '@/shared/stores/auth-store'
 import { calcCartCount, useCartStore } from '@/shared/stores/cart-store'
 import { Button } from '@/shared/ui/button'
@@ -13,13 +13,15 @@ import { UserMenu } from '@/shared/ui/user-menu'
 export function AppLayout() {
   const location = useLocation()
   const accessToken = useAuthStore((state) => state.accessToken)
-  const profileQuery = useProfileQuery(Boolean(accessToken))
+  const restoreSessionQuery = useRestoreSessionQuery(!accessToken)
+  const effectiveToken = accessToken ?? restoreSessionQuery.data ?? null
+  const profileQuery = useProfileQuery(Boolean(effectiveToken))
   const profile = profileQuery.data
   const cartCount = useCartStore((state) => calcCartCount(state.items))
   const showSellerNav =
     profile?.role === 'ADMIN' || profile?.role === 'SELLER' || profile?.roles?.includes('SELLER')
 
-  if (accessToken && profileQuery.isLoading) {
+  if (effectiveToken && profileQuery.isLoading) {
     return <FullPageSpinner message="Đang tải tài khoản..." />
   }
 
@@ -81,7 +83,7 @@ export function AppLayout() {
               </span>
               <span className="hidden sm:inline">Giỏ hàng</span>
             </NavLink>
-            {accessToken && profile?.email ? (
+            {effectiveToken && profile?.email ? (
               <UserMenu email={profile.email} variant="onPrimary" />
             ) : (
               <NavLink to="/auth/login">

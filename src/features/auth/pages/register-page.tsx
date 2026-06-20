@@ -1,80 +1,54 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
-import { z } from "zod";
-import { useRegisterMutation } from "@/features/auth/hooks/use-auth";
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { Link, useNavigate } from 'react-router-dom'
+import { useRegisterMutation } from '@/features/auth/hooks/use-auth'
+import {
+  registerSchema,
+  type RegisterFormValues,
+} from '@/features/auth/schemas/auth.schemas'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/shared/ui/card";
-import { Label } from "@/shared/ui/label";
-import { Input } from "@/shared/ui/input";
-import { Button } from "@/shared/ui/button";
-import { getApiErrorMessage } from "@/shared/lib/api-error";
-import { toast } from "react-toastify";
-import { Eye, EyeOff } from "lucide-react";
-
-const registerSchema = z.object({
-  email: z.string().trim().email("Email không hợp lệ."),
-  password: z
-    .string()
-    .min(8, "Mật khẩu tối thiểu 8 ký tự.")
-    .regex(/[A-Z]/, "Mật khẩu cần ít nhất 1 chữ hoa.")
-    .regex(/[a-z]/, "Mật khẩu cần ít nhất 1 chữ thường.")
-    .regex(/\d/, "Mật khẩu cần ít nhất 1 chữ số."),
-});
-
-type RegisterFormValues = {
-  email: string;
-  password: string;
-};
+} from '@/shared/ui/card'
+import { Label } from '@/shared/ui/label'
+import { Input } from '@/shared/ui/input'
+import { Button } from '@/shared/ui/button'
+import { getApiErrorMessage } from '@/shared/lib/api-error'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'react-toastify'
+import { Eye, EyeOff } from 'lucide-react'
 
 export function RegisterPage() {
-  const navigate = useNavigate();
-  const registerMutation = useRegisterMutation();
-  const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate()
+  const registerMutation = useRegisterMutation()
+  const [showPassword, setShowPassword] = useState(false)
   const {
     register,
     handleSubmit,
-    setError,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
-    defaultValues: { email: "", password: "" },
-  });
+    resolver: zodResolver(registerSchema),
+    defaultValues: { email: '', password: '' },
+  })
 
   const onSubmit = async (data: RegisterFormValues) => {
-    const parsed = registerSchema.safeParse(data);
-    if (!parsed.success) {
-      const flattened = parsed.error.flatten().fieldErrors;
-      if (flattened.email?.[0]) {
-        setError("email", { type: "manual", message: flattened.email?.[0] });
-      }
-      if (flattened.password?.[0]) {
-        setError("password", {
-          type: "manual",
-          message: flattened.password?.[0],
-        });
-      }
-      return;
-    }
-
     try {
-      await registerMutation.mutateAsync(parsed.data);
-      toast.success("Đăng ký thành công. Đang chuyển tới đăng nhập…");
+      await registerMutation.mutateAsync(data)
+      toast.success('Đăng ký thành công. Đang chuyển tới đăng nhập…')
     } catch (error) {
       toast.error(
-        getApiErrorMessage(error, "Vui lòng kiểm tra dữ liệu đầu vào."),
-      );
-      return;
+        getApiErrorMessage(error, 'Vui lòng kiểm tra dữ liệu đầu vào.'),
+      )
+      return
     }
 
     window.setTimeout(() => {
-      navigate("/auth/login", { replace: true });
-    }, 400);
-  };
+      navigate('/auth/login', { replace: true })
+    }, 400)
+  }
 
   return (
     <Card>
@@ -86,7 +60,7 @@ export function RegisterPage() {
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" {...register("email")} required />
+            <Input id="email" type="email" {...register('email')} />
             {errors.email ? (
               <p className="text-xs text-destructive">{errors.email.message}</p>
             ) : null}
@@ -96,16 +70,15 @@ export function RegisterPage() {
             <div className="relative">
               <Input
                 id="password"
-                type={showPassword ? "text" : "password"}
-                {...register("password")}
+                type={showPassword ? 'text' : 'password'}
+                {...register('password')}
                 className="pr-10"
-                required
               />
               <button
                 type="button"
                 className="absolute inset-y-0 right-0 inline-flex items-center px-3 text-muted-foreground hover:text-foreground"
                 onClick={() => setShowPassword((prev) => !prev)}
-                aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
               >
                 {showPassword ? (
                   <EyeOff className="h-4 w-4" />
@@ -123,12 +96,12 @@ export function RegisterPage() {
           <Button
             type="submit"
             className="w-full"
-            disabled={registerMutation.isPending}
+            disabled={registerMutation.isPending || isSubmitting}
           >
-            {registerMutation.isPending ? "Đang xử lý..." : "Đăng ký"}
+            {registerMutation.isPending ? 'Đang xử lý...' : 'Đăng ký'}
           </Button>
           <p className="text-sm text-muted-foreground">
-            Đã có tài khoản?{" "}
+            Đã có tài khoản?{' '}
             <Link className="text-primary underline" to="/auth/login">
               Đăng nhập
             </Link>
@@ -136,5 +109,5 @@ export function RegisterPage() {
         </form>
       </CardContent>
     </Card>
-  );
+  )
 }

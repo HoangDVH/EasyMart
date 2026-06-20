@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
 import type { UserRole } from '@/features/auth/types/auth.types'
 import {
@@ -8,7 +9,13 @@ import {
   useUpdateUserMutation,
   useUsersQuery,
 } from '@/features/account/hooks/use-users'
+import { AdminResetPasswordModal } from '@/features/dashboard/components/admin-reset-password-modal'
+import {
+  adminCreateUserSchema,
+  type AdminCreateUserFormValues,
+} from '@/features/dashboard/schemas/admin.schemas'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -44,11 +51,22 @@ export function AdminPage() {
   const deleteUserMutation = useDeleteUserMutation()
   const assignRoleMutation = useAssignRoleMutation()
 
-  const [createEmail, setCreateEmail] = useState('')
-  const [createPassword, setCreatePassword] = useState('')
   const [searchKeyword, setSearchKeyword] = useState('')
   const [roleFilter, setRoleFilter] = useState<'ALL' | UserRole>('ALL')
   const [roleUpdatingUserId, setRoleUpdatingUserId] = useState<string | null>(null)
+  const [resetPasswordTarget, setResetPasswordTarget] = useState<{ id: string; email: string } | null>(
+    null,
+  )
+
+  const {
+    register: registerCreateUser,
+    handleSubmit: handleCreateUserSubmit,
+    reset: resetCreateUserForm,
+    formState: { errors: createUserErrors, isSubmitting: isCreatingUserForm },
+  } = useForm<AdminCreateUserFormValues>({
+    resolver: zodResolver(adminCreateUserSchema),
+    defaultValues: { email: '', password: '' },
+  })
 
   const users = usersQuery.data ?? []
   const summary = useMemo(() => {
@@ -72,36 +90,25 @@ export function AdminPage() {
     })
   }, [users, searchKeyword, roleFilter])
 
-  async function handleCreateUser() {
-    const email = createEmail.trim()
-    if (!email) {
-      toast.info('Nhập email trước khi tạo user.')
-      return
-    }
-    if (!createPassword || createPassword.length < 8) {
-      toast.info('Mật khẩu tối thiểu 8 ký tự.')
-      return
-    }
+  async function onCreateUser(data: AdminCreateUserFormValues) {
     try {
-      await createUserMutation.mutateAsync({ email, password: createPassword })
-      setCreateEmail('')
-      setCreatePassword('')
+      await createUserMutation.mutateAsync(data)
+      resetCreateUserForm()
       toast.success('Đã tạo user mới.')
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Không tạo được user.'))
     }
   }
 
-  async function handleResetPassword(id: string) {
-    const nextPassword = window.prompt('Nhập mật khẩu mới (>= 8 ký tự):')
-    if (!nextPassword) return
-    if (nextPassword.length < 8) {
-      toast.info('Mật khẩu tối thiểu 8 ký tự.')
-      return
-    }
+  async function handleResetPasswordSubmit(password: string) {
+    if (!resetPasswordTarget) return
     try {
-      await updateUserMutation.mutateAsync({ id, payload: { password: nextPassword } })
+      await updateUserMutation.mutateAsync({
+        id: resetPasswordTarget.id,
+        payload: { password },
+      })
       toast.success('Đã cập nhật mật khẩu user.')
+      setResetPasswordTarget(null)
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Không cập nhật được mật khẩu user.'))
     }
@@ -185,29 +192,43 @@ export function AdminPage() {
         <CardHeader>
           <CardTitle>Tạo tài khoản mới</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
-          <div className="grid gap-1.5">
-            <Label htmlFor="admin-create-email">Email</Label>
-            <Input
-              id="admin-create-email"
-              value={createEmail}
-              onChange={(e) => setCreateEmail(e.target.value)}
-              placeholder="new.user@gmail.com"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="admin-create-password">Mật khẩu</Label>
-            <Input
-              id="admin-create-password"
-              type="password"
-              value={createPassword}
-              onChange={(e) => setCreatePassword(e.target.value)}
-              placeholder="Tối thiểu 8 ký tự"
-            />
-          </div>
-          <Button onClick={() => void handleCreateUser()} disabled={createUserMutation.isPending}>
-            {createUserMutation.isPending ? 'Đang tạo...' : 'Tạo user'}
-          </Button>
+        <CardContent>
+          <form
+            className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-start"
+            onSubmit={handleCreateUserSubmit(onCreateUser)}
+          >
+            <div className="grid gap-1.5">
+              <Label htmlFor="admin-create-email">Email</Label>
+              <Input
+                id="admin-create-email"
+                type="email"
+                placeholder="new.user@gmail.com"
+                {...registerCreateUser('email')}
+              />
+              {createUserErrors.email ? (
+                <p className="text-xs text-destructive">{createUserErrors.email.message}</p>
+              ) : null}
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="admin-create-password">Mật khẩu</Label>
+              <Input
+                id="admin-create-password"
+                type="password"
+                placeholder="Tối thiểu 8 ký tự"
+                {...registerCreateUser('password')}
+              />
+              {createUserErrors.password ? (
+                <p className="text-xs text-destructive">{createUserErrors.password.message}</p>
+              ) : null}
+            </div>
+            <Button
+              type="submit"
+              className="md:mt-6"
+              disabled={createUserMutation.isPending || isCreatingUserForm}
+            >
+              {createUserMutation.isPending ? 'Đang tạo...' : 'Tạo user'}
+            </Button>
+          </form>
         </CardContent>
       </Card>
 
@@ -297,7 +318,9 @@ export function AdminPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => void handleResetPassword(user.id)}
+                            onClick={() =>
+                              setResetPasswordTarget({ id: user.id, email: user.email })
+                            }
                             disabled={updateUserMutation.isPending || Boolean(roleUpdatingUserId)}
                           >
                             Reset mật khẩu
@@ -320,6 +343,14 @@ export function AdminPage() {
           )}
         </CardContent>
       </Card>
+
+      <AdminResetPasswordModal
+        open={Boolean(resetPasswordTarget)}
+        email={resetPasswordTarget?.email ?? ''}
+        isSubmitting={updateUserMutation.isPending}
+        onClose={() => setResetPasswordTarget(null)}
+        onSubmit={handleResetPasswordSubmit}
+      />
     </div>
   )
 }

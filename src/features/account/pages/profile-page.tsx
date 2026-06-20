@@ -1,61 +1,59 @@
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "react-toastify";
-import { KeyRound } from "lucide-react";
-import { useProfileQuery } from "@/features/auth/hooks/use-auth";
-import { useUpdateMyInfoMutation } from "@/features/account/hooks/use-users";
-import { getApiErrorMessage } from "@/shared/lib/api-error";
-import { useAuthStore } from "@/shared/stores/auth-store";
-import { Button } from "@/shared/ui/button";
+import { useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { toast } from 'react-toastify'
+import { KeyRound } from 'lucide-react'
+import { useProfileQuery } from '@/features/auth/hooks/use-auth'
+import { useUpdateMyInfoMutation } from '@/features/account/hooks/use-users'
+import {
+  changePasswordSchema,
+  type ChangePasswordFormValues,
+} from '@/features/account/schemas/profile.schemas'
+import { getApiErrorMessage } from '@/shared/lib/api-error'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useAuthStore } from '@/shared/stores/auth-store'
+import { Button } from '@/shared/ui/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/shared/ui/card";
-import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
-import { Skeleton } from "@/shared/ui/skeleton";
-
-type ProfileFormValues = {
-  password: string;
-  confirm: string;
-};
+} from '@/shared/ui/card'
+import { Input } from '@/shared/ui/input'
+import { Label } from '@/shared/ui/label'
+import { Skeleton } from '@/shared/ui/skeleton'
 
 export function ProfilePage() {
-  const accessToken = useAuthStore((state) => state.accessToken);
-  const profileQuery = useProfileQuery(Boolean(accessToken));
-  const updateMutation = useUpdateMyInfoMutation();
-  const profile = profileQuery.data;
+  const accessToken = useAuthStore((state) => state.accessToken)
+  const profileQuery = useProfileQuery(Boolean(accessToken))
+  const updateMutation = useUpdateMyInfoMutation()
+  const profile = profileQuery.data
 
   const {
     register,
     handleSubmit,
-    watch,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<ProfileFormValues>({
-    defaultValues: { password: "", confirm: "" },
-  });
-
-  const password = watch("password");
+  } = useForm<ChangePasswordFormValues>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: { password: '', confirm: '' },
+  })
 
   useEffect(() => {
     if (!updateMutation.isPending && !isSubmitting) {
-      reset({ password: "", confirm: "" });
+      reset({ password: '', confirm: '' })
     }
-  }, [updateMutation.isPending, isSubmitting, reset]);
+  }, [updateMutation.isPending, isSubmitting, reset])
 
-  const onSubmit = async (data: ProfileFormValues) => {
+  const onSubmit = async (data: ChangePasswordFormValues) => {
     try {
-      await updateMutation.mutateAsync({ password: data.password });
-      toast.success("Đã cập nhật mật khẩu mới.");
-      reset();
+      await updateMutation.mutateAsync({ password: data.password })
+      toast.success('Đã cập nhật mật khẩu mới.')
+      reset()
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Không cập nhật được mật khẩu."));
+      toast.error(getApiErrorMessage(error, 'Không cập nhật được mật khẩu.'))
     }
-  };
+  }
 
   return (
     <div className="space-y-4">
@@ -75,7 +73,7 @@ export function ProfilePage() {
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                 Email
               </Label>
-              <p className="text-sm font-medium">{profile?.email ?? "—"}</p>
+              <p className="text-sm font-medium">{profile?.email ?? '—'}</p>
             </div>
           )}
         </CardContent>
@@ -101,13 +99,7 @@ export function ProfilePage() {
                 type="password"
                 autoComplete="new-password"
                 placeholder="Tối thiểu 8 ký tự"
-                {...register("password", {
-                  required: "Mật khẩu mới không được để trống.",
-                  minLength: {
-                    value: 8,
-                    message: "Mật khẩu phải có ít nhất 8 ký tự.",
-                  },
-                })}
+                {...register('password')}
               />
               {errors.password ? (
                 <p className="text-xs text-destructive">
@@ -122,11 +114,7 @@ export function ProfilePage() {
                 type="password"
                 autoComplete="new-password"
                 placeholder="Nhập lại mật khẩu mới"
-                {...register("confirm", {
-                  required: "Vui lòng xác nhận mật khẩu.",
-                  validate: (value) =>
-                    value === password || "Mật khẩu xác nhận không khớp.",
-                })}
+                {...register('confirm')}
               />
               {errors.confirm ? (
                 <p className="text-xs text-destructive">
@@ -139,12 +127,12 @@ export function ProfilePage() {
                 type="submit"
                 disabled={updateMutation.isPending || isSubmitting}
               >
-                {updateMutation.isPending ? "Đang lưu..." : "Cập nhật mật khẩu"}
+                {updateMutation.isPending ? 'Đang lưu...' : 'Cập nhật mật khẩu'}
               </Button>
             </div>
           </form>
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

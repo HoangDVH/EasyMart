@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { ShoppingCart, Star } from 'lucide-react'
 import { useCreateOrderMutation, useProductQuery } from '@/features/products/hooks/use-catalog'
+import { buildLoginPath } from '@/shared/lib/auth-redirect'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
 import { useAuthStore } from '@/shared/stores/auth-store'
 import { useCartStore } from '@/shared/stores/cart-store'
@@ -27,6 +28,7 @@ function displayPrice(price: number | null | undefined, discountPrice: number | 
 
 export function ProductDetailPage() {
   const { id } = useParams()
+  const location = useLocation()
   const navigate = useNavigate()
   const accessToken = useAuthStore((state) => state.accessToken)
   const addToCart = useCartStore((state) => state.addItem)
@@ -49,7 +51,7 @@ export function ProductDetailPage() {
 
   const handleOrderNow = async () => {
     if (!accessToken) {
-      toast.info('Vui lòng đăng nhập để đặt hàng.')
+      navigate(buildLoginPath(location.pathname))
       return
     }
     if (!product) return

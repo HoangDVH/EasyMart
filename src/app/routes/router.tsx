@@ -24,14 +24,14 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    element: <ProtectedRoute />,
+    element: <AppLayout />,
     children: [
+      { path: '/', element: <HomePage /> },
+      { path: '/products/:id', element: <ProductDetailPage /> },
+      { path: '/cart', element: <CartPage /> },
       {
-        element: <AppLayout />,
+        element: <ProtectedRoute />,
         children: [
-          { path: '/', element: <HomePage /> },
-          { path: '/products/:id', element: <ProductDetailPage /> },
-          { path: '/cart', element: <CartPage /> },
           { path: '/checkout', element: <CheckoutPage /> },
           {
             path: '/account',
