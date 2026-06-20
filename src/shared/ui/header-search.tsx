@@ -166,11 +166,12 @@ export function HeaderSearch({ className }: { className?: string }) {
     <div ref={containerRef} className={cn('relative w-full', className)}>
       <form onSubmit={onSubmit} role="search">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground sm:left-3" aria-hidden />
           <Input
             ref={inputRef}
-            type="text"
-            placeholder="Bạn cần tìm gì? (vd: iPhone, Laptop…)"
+            type="search"
+            enterKeyHint="search"
+            placeholder="Tìm kiếm sản phẩm…"
             value={value}
             onChange={(e) => {
               setValue(e.target.value)
@@ -178,7 +179,7 @@ export function HeaderSearch({ className }: { className?: string }) {
             }}
             onFocus={() => setIsOpen(true)}
             onKeyDown={onKeyDown}
-            className="h-10 rounded-full border-transparent bg-background pl-9 pr-9 text-foreground shadow-md focus-visible:ring-2 focus-visible:ring-secondary/60"
+            className="h-11 rounded-full border-transparent bg-background pl-10 pr-10 text-base text-foreground shadow-md sm:h-10 sm:pl-9 sm:pr-9 sm:text-sm focus-visible:ring-2 focus-visible:ring-secondary/60"
             aria-label="Tìm sản phẩm"
             aria-autocomplete="list"
             aria-expanded={isOpen}

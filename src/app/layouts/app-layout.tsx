@@ -63,56 +63,70 @@ export function AppLayout() {
     return [{ label: 'Trang chủ', to: '/' }]
   })()
 
+  const headerActions = (
+    <>
+      <NavLink
+        to="/cart"
+        className={({ isActive }) =>
+          `inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm transition ${
+            isActive
+              ? 'text-primary-foreground'
+              : 'text-primary-foreground/85 hover:text-primary-foreground'
+          }`
+        }
+        aria-label="Giỏ hàng"
+      >
+        <span className="relative inline-flex">
+          <ShoppingCart className="h-5 w-5" aria-hidden />
+          {cartCount > 0 ? (
+            <span className="absolute -right-2 -top-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 text-[10px] font-semibold text-secondary-foreground ring-2 ring-primary">
+              {cartCount > 99 ? '99+' : cartCount}
+            </span>
+          ) : null}
+        </span>
+        <span className="hidden sm:inline">Giỏ hàng</span>
+      </NavLink>
+      {effectiveToken && profile?.email ? (
+        <UserMenu email={profile.email} variant="onPrimary" />
+      ) : (
+        <NavLink to="/auth/login">
+          <Button
+            size="sm"
+            variant="secondary"
+            className="shadow-sm hover:brightness-105 px-2.5 text-xs sm:px-4 sm:text-sm"
+          >
+            Đăng nhập
+          </Button>
+        </NavLink>
+      )}
+    </>
+  )
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 bg-primary text-primary-foreground shadow-sm">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:gap-6">
-          <Link
-            to="/"
-            className="shrink-0 rounded-md bg-primary-foreground px-3 py-1.5 text-sm font-bold tracking-wide text-primary shadow-sm"
-          >
-            EasyMart
-          </Link>
-
-          <div className="flex-1">
-            <HeaderSearch />
+        <div className="mx-auto max-w-6xl px-4 pt-2.5 sm:pt-3">
+          <div className="flex items-center justify-between gap-2 sm:hidden">
+            <Link
+              to="/"
+              className="shrink-0 rounded-md bg-primary-foreground px-2.5 py-1.5 text-sm font-bold tracking-wide text-primary shadow-sm"
+            >
+              EasyMart
+            </Link>
+            <div className="flex shrink-0 items-center gap-1">{headerActions}</div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
-            <NavLink
-              to="/cart"
-              className={({ isActive }) =>
-                `inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm transition ${
-                  isActive
-                    ? 'text-primary-foreground'
-                    : 'text-primary-foreground/85 hover:text-primary-foreground'
-                }`
-              }
-              aria-label="Giỏ hàng"
+          <div className="mt-2 flex items-center gap-3 pb-2.5 sm:mt-0 sm:pb-3">
+            <Link
+              to="/"
+              className="hidden shrink-0 rounded-md bg-primary-foreground px-3 py-1.5 text-sm font-bold tracking-wide text-primary shadow-sm sm:inline-flex"
             >
-              <span className="relative inline-flex">
-                <ShoppingCart className="h-5 w-5" aria-hidden />
-                {cartCount > 0 ? (
-                  <span className="absolute -right-2 -top-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 text-[10px] font-semibold text-secondary-foreground ring-2 ring-primary">
-                    {cartCount > 99 ? '99+' : cartCount}
-                  </span>
-                ) : null}
-              </span>
-              <span className="hidden sm:inline">Giỏ hàng</span>
-            </NavLink>
-            {effectiveToken && profile?.email ? (
-              <UserMenu email={profile.email} variant="onPrimary" />
-            ) : (
-              <NavLink to="/auth/login">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="shadow-sm hover:brightness-105"
-                >
-                  Đăng nhập
-                </Button>
-              </NavLink>
-            )}
+              EasyMart
+            </Link>
+            <div className="min-w-0 flex-1">
+              <HeaderSearch />
+            </div>
+            <div className="hidden shrink-0 items-center gap-3 sm:flex">{headerActions}</div>
           </div>
         </div>
 

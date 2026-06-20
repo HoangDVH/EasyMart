@@ -59,52 +59,62 @@ export function CartPage() {
   return (
     <div className="space-y-4 pb-28 sm:pb-0">
       <Card>
-        <CardHeader className="flex-row items-center justify-between">
-          <CardTitle>Giỏ hàng của bạn ({itemCount})</CardTitle>
-          <div className="flex items-center gap-2">
+        <CardHeader className="flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="text-lg sm:text-xl">Giỏ hàng ({itemCount})</CardTitle>
+          <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
             {isSyncing ? (
-              <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:inline-flex">
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Đang cập nhật…
               </span>
             ) : null}
-            <Button variant="outline" onClick={() => setConfirmClearOpen(true)}>
+            <Button variant="outline" size="sm" className="shrink-0" onClick={() => setConfirmClearOpen(true)}>
               Xóa tất cả
             </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {items.map((item) => (
-            <div key={item.productId} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center">
-              <div className="h-16 w-24 shrink-0 overflow-hidden rounded-md bg-muted/40">
+            <div key={item.productId} className="flex gap-3 rounded-lg border p-3">
+              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted/40 sm:h-16 sm:w-24">
                 {item.imageUrl ? (
-                  <img src={item.imageUrl} alt={item.name} className="h-full w-full object-contain p-1" loading="lazy" />
+                  <img src={item.imageUrl} alt="" className="h-full w-full object-contain p-1" loading="lazy" />
                 ) : null}
               </div>
-              <div className="min-w-0 flex-1">
-                <Link to={`/products/${item.productId}`} className="truncate font-medium hover:text-primary hover:underline">
+              <div className="min-w-0 flex-1 space-y-2">
+                <Link
+                  to={`/products/${item.productId}`}
+                  className="line-clamp-2 block text-sm font-medium leading-snug hover:text-primary hover:underline"
+                  title={item.name}
+                >
                   {item.name}
                 </Link>
-                <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm">
-                  <span className="font-medium text-primary">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
+                  <span className="font-semibold text-secondary">
                     {item.unitPrice != null ? formatVnd(item.unitPrice) : 'Liên hệ'}
                   </span>
                   {hasCartDiscount(item) && item.originalPrice != null ? (
-                    <span className="text-muted-foreground line-through">{formatVnd(item.originalPrice)}</span>
+                    <span className="text-xs text-muted-foreground line-through">{formatVnd(item.originalPrice)}</span>
                   ) : null}
                 </div>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
-                <QuantityStepper
-                  size="sm"
-                  value={item.quantity}
-                  min={1}
-                  max={item.stockQuantity != null && item.stockQuantity > 0 ? item.stockQuantity : 99}
-                  onChange={(qty) => updateQuantity(item.productId, qty)}
-                />
-                <Button variant="outline" size="sm" onClick={() => removeItem(item.productId)} aria-label="Xóa khỏi giỏ">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center justify-between gap-2">
+                  <QuantityStepper
+                    size="sm"
+                    value={item.quantity}
+                    min={1}
+                    max={item.stockQuantity != null && item.stockQuantity > 0 ? item.stockQuantity : 99}
+                    onChange={(qty) => updateQuantity(item.productId, qty)}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => removeItem(item.productId)}
+                    aria-label="Xóa khỏi giỏ"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
