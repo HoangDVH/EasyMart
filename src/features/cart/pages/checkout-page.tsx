@@ -31,6 +31,7 @@ import { Label } from '@/shared/ui/label'
 import { Textarea } from '@/shared/ui/textarea'
 import { formatVnd } from '@/shared/lib/product-price'
 import { PaymentMethodCards } from '@/features/cart/components/payment-method-cards'
+import { CheckoutSteps } from '@/features/cart/components/checkout-steps'
 import { useSyncCart } from '@/features/cart/hooks/use-sync-cart'
 
 const savedProfile = loadCheckoutProfile()
@@ -158,9 +159,7 @@ export function CheckoutPage() {
       }
 
       finishCheckout()
-      toast.success('Đặt hàng thành công.')
-      reset()
-      navigate(`/account/orders/${order.id}`)
+      navigate(`/checkout/success/${order.id}`)
     } catch (error) {
       toast.error(
         getApiErrorMessage(error, 'Không thể thanh toán. Vui lòng thử lại.'),
@@ -172,6 +171,7 @@ export function CheckoutPage() {
 
   return (
     <>
+    <CheckoutSteps current="checkout" />
     <form
       id="checkout-form"
       className="grid gap-4 pb-28 lg:grid-cols-3 lg:pb-0"

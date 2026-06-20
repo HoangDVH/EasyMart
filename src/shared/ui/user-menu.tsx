@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ChevronDown, LogOut, Receipt, UserCog, UserRound } from 'lucide-react'
+import { ChevronDown, Loader2, LogOut, Receipt, UserCog, UserRound } from 'lucide-react'
 import { useLogoutMutation } from '@/features/auth/hooks/use-auth'
+import { FullPageSpinner } from '@/shared/ui/full-page-spinner'
 import { cn } from '@/shared/lib/utils'
 
 type UserMenuProps = {
@@ -40,12 +41,14 @@ export function UserMenu({ email, className, variant = 'default' }: UserMenuProp
     setOpen(false)
     logout.mutate(undefined, {
       onSettled: () => {
-        navigate('/auth/login', { replace: true })
+        navigate('/auth/login', { replace: true, state: { loggedOut: true } })
       },
     })
   }
 
   return (
+    <>
+      {logout.isPending ? <FullPageSpinner message="Đang đăng xuất..." /> : null}
     <div ref={containerRef} className={cn('relative', className)}>
       <button
         type="button"
@@ -111,12 +114,17 @@ export function UserMenu({ email, className, variant = 'default' }: UserMenuProp
               disabled={logout.isPending}
               className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-60"
             >
-              <LogOut className="h-4 w-4 text-muted-foreground" aria-hidden />
+              {logout.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden />
+              ) : (
+                <LogOut className="h-4 w-4 text-muted-foreground" aria-hidden />
+              )}
               {logout.isPending ? 'Đang đăng xuất...' : 'Đăng xuất'}
             </button>
           </div>
         </div>
       ) : null}
     </div>
+    </>
   )
 }

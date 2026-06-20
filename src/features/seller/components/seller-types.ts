@@ -35,6 +35,16 @@ export const defaultSellerProductFormValues: SellerProductFormValues = {
 }
 
 export function productToFormValues(product: Product): SellerProductFormValues {
+  /** Gửi lại đúng ref gốc từ API — tránh mất ảnh khi chỉ sửa giá. */
+  const images =
+    product.imageRefs && product.imageRefs.length > 0
+      ? [...product.imageRefs]
+      : product.images && product.images.length > 0
+        ? [...product.images]
+        : product.imageUrl
+          ? [product.imageUrl]
+          : []
+
   return {
     name: product.name,
     description: product.description ?? '',
@@ -46,6 +56,6 @@ export function productToFormValues(product: Product): SellerProductFormValues {
     categoryId: product.categoryId ?? '',
     brandId: product.brandId ?? '1',
     isFeatured: product.featured ?? false,
-    images: product.images ?? [],
+    images,
   }
 }

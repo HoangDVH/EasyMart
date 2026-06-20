@@ -29,7 +29,7 @@ export function getProductsQueryKey(params: ProductListParams) {
 export function useProductsQuery(params: ProductListParams) {
   return useQuery({
     queryKey: getProductsQueryKey(params),
-    queryFn: () => productsApi.list(params),
+    queryFn: () => productsApi.listWindow(params),
     placeholderData: (prev) => prev,
     /** Chuyển qua lại danh mục trong thời gian ngắn dùng luôn cache để mượt hơn. */
     staleTime: 60 * 1000,

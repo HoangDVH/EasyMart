@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { useCategoriesQuery } from '@/features/products/hooks/use-catalog'
+import { productsApi } from '@/features/products/api/products.api'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
@@ -36,7 +37,7 @@ function buildPayload(form: SellerProductFormParsed): SellerProductPayload {
   const rating = ratingRaw.length > 0 ? Number(ratingRaw) : 0
   return {
     name: form.name.trim(),
-    ...(form.description.trim().length > 0 ? { description: form.description.trim() } : {}),
+    description: form.description.trim(),
     price,
     discountPrice,
     rating,
@@ -62,6 +63,7 @@ export function SellerDashboardPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
+  const [editLoading, setEditLoading] = useState(false)
   const [filters, setFilters] = useState<SellerProductsFilters>({
     keyword: '',
     sort: 'newest',
@@ -148,6 +150,16 @@ export function SellerDashboardPage() {
     setEditingProduct(product)
     setFormError(null)
     setFormOpen(true)
+    setEditLoading(true)
+    void productsApi
+      .getById(product.id)
+      .then((detail) => setEditingProduct(detail))
+      .catch((error) => {
+        toast.warning(
+          getApiErrorMessage(error, 'Không tải đủ ảnh/mô tả sản phẩm — vẫn dùng dữ liệu tóm tắt.'),
+        )
+      })
+      .finally(() => setEditLoading(false))
   }
 
   async function onSubmitForm(values: SellerProductFormParsed) {
@@ -296,6 +308,7 @@ export function SellerDashboardPage() {
         categories={categories}
         isSubmitting={isSaving}
         isUploading={uploadImagesMutation.isPending}
+        isLoading={editLoading}
         error={formError}
         onSubmit={onSubmitForm}
         onClose={resetFormAndClose}

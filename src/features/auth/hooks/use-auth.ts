@@ -80,8 +80,6 @@ export function useLogoutMutation() {
         toast.warning(
           getApiErrorMessage(error, 'Đã xóa phiên trên trình duyệt. (Máy chủ có thể chưa phản hồi.)'),
         )
-      } else {
-        toast.success('Đã đăng xuất.')
       }
     },
   })

@@ -11,8 +11,10 @@ export type Product = {
   stockQuantity?: number | null
   /** Ảnh đại diện (phần tử đầu của `images` hoặc field legacy) — dùng trực tiếp trong `<img src>` khi là URL đầy đủ theo docs API */
   imageUrl?: string | null
-  /** `GET /products` trả `images: string[]` — URL dùng trực tiếp trong thẻ img */
+  /** `GET /products` trả `images: string[]` — URL đã resolve để hiển thị trong `<img src>` */
   images?: string[]
+  /** Giá trị gốc từ API (vd `uuid.jpg`) — dùng khi PUT/POST, không qua resolve URL */
+  imageRefs?: string[]
   categoryId?: string | null
   /** Backend trả `categoryName` từ join — hiển thị thay cho id */
   categoryName?: string | null

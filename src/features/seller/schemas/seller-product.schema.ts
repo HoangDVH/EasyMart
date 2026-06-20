@@ -30,7 +30,7 @@ export const sellerProductFormSchema = z
     categoryId: z.string().trim().min(1, 'Chọn danh mục (API bắt buộc categoryId).'),
     brandId: z.string(),
     isFeatured: z.boolean(),
-    images: z.array(z.string()),
+    images: z.array(z.string()).min(1, 'Cần ít nhất một ảnh sản phẩm (upload mới hoặc giữ ảnh hiện có).'),
   })
   .superRefine((value, ctx) => {
     const price = Number(value.price)

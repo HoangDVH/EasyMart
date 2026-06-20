@@ -13,6 +13,7 @@ import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Label } from '@/shared/ui/label'
 import { QuantityStepper } from '@/shared/ui/quantity-stepper'
+import { RelatedProducts } from '@/features/products/components/related-products'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { cn } from '@/shared/lib/utils'
 
@@ -233,6 +234,8 @@ export function ProductDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <RelatedProducts productId={product.id} categoryId={product.categoryId} />
 
       {!isOutOfStock ? (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm sm:hidden">

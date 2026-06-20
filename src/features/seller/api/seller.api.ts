@@ -1,3 +1,4 @@
+import { parseProductFromApi } from '@/features/products/api/products.api'
 import { httpClient } from '@/shared/api/http-client'
 import type { ApiEnvelope } from '@/shared/types/api-result'
 import type { Product } from '@/features/products/types/product.types'
@@ -40,49 +41,6 @@ function toNumberOrNull(value: unknown): number | null {
     return Number.isFinite(n) ? n : null
   }
   return null
-}
-
-function coerceProduct(raw: unknown): Product | null {
-  const row = asRecord(raw)
-  if (!row) return null
-  const id = toIdString(row.id ?? row.productId)
-  const name = typeof row.name === 'string' ? row.name : typeof row.title === 'string' ? row.title : null
-  if (!id || !name) return null
-  return {
-    id,
-    name,
-    description: typeof row.description === 'string' ? row.description : null,
-    price: toNumberOrNull(row.price),
-    discountPrice: (() => {
-      const candidate = row.discountPrice ?? row.salePrice ?? row.promoPrice ?? row.finalPrice ?? row.discount_price
-      const n = toNumberOrNull(candidate)
-      const base = toNumberOrNull(row.price)
-      if (n == null) return null
-      if (base != null && n >= base) return null
-      return n
-    })(),
-    rating: (() => {
-      const candidate = row.rating ?? row.averageRating ?? row.avgRating ?? row.rate
-      const n = toNumberOrNull(candidate)
-      if (n == null) return null
-      return Math.max(0, Math.min(5, n))
-    })(),
-    stock: toNumberOrNull(row.stock ?? row.stockQuantity ?? row.quantityInStock),
-    stockQuantity: toNumberOrNull(row.stock ?? row.stockQuantity ?? row.quantityInStock),
-    categoryId: toIdString(row.categoryId),
-    categoryName: typeof row.categoryName === 'string' ? row.categoryName : null,
-    brandId: toIdString(row.brandId),
-    sellerId: toIdString(row.sellerId),
-    sellerEmail: typeof row.sellerEmail === 'string' ? row.sellerEmail : null,
-    status: typeof row.status === 'string' ? row.status : null,
-    featured:
-      typeof row.featured === 'boolean'
-        ? row.featured
-        : typeof row.isFeatured === 'boolean'
-          ? row.isFeatured
-          : null,
-    createdAt: typeof row.createdAt === 'string' ? row.createdAt : null,
-  }
 }
 
 function pickArray(result: unknown): unknown[] {
@@ -132,18 +90,18 @@ export const sellerApi = {
   async listMyProducts(): Promise<Product[]> {
     const { data } = await httpClient.get<ApiEnvelope<unknown>>(`${SELLER_PRODUCTS_BASE}/seller/my`)
     return pickArray(data.result)
-      .map((row) => coerceProduct(row))
+      .map((row) => parseProductFromApi(row))
       .filter((product): product is Product => product !== null)
   },
 
   async createProduct(payload: SellerProductPayload): Promise<Product | null> {
     const { data } = await httpClient.post<ApiEnvelope<unknown>>(SELLER_PRODUCTS_BASE, payload)
-    return coerceProduct(data.result)
+    return parseProductFromApi(data.result)
   },
 
   async updateProduct(productId: string, payload: SellerProductPayload): Promise<Product | null> {
     const { data } = await httpClient.put<ApiEnvelope<unknown>>(`${SELLER_PRODUCTS_BASE}/${productId}`, payload)
-    return coerceProduct(data.result)
+    return parseProductFromApi(data.result)
   },
 
   async deleteProduct(productId: string): Promise<void> {

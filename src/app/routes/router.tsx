@@ -11,6 +11,7 @@ import { AdminPage } from '@/features/dashboard/pages/admin-page'
 import { SellerDashboardPage } from '@/features/seller/pages/seller-dashboard-page'
 import { CartPage } from '@/features/cart/pages/cart-page'
 import { CheckoutPage } from '@/features/cart/pages/checkout-page'
+import { OrderSuccessPage } from '@/features/cart/pages/order-success-page'
 import { ProductDetailPage } from '@/features/products/pages/product-detail-page'
 import { AccountLayout } from '@/features/account/pages/account-layout'
 import { ProfilePage } from '@/features/account/pages/profile-page'
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
         element: <ProtectedRoute />,
         children: [
           { path: '/checkout', element: <CheckoutPage /> },
+          { path: '/checkout/success/:orderId', element: <OrderSuccessPage /> },
           {
             path: '/account',
             element: <AccountLayout />,

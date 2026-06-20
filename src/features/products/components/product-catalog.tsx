@@ -22,6 +22,24 @@ import { useCartStore } from '@/shared/stores/cart-store'
 
 const PAGE_SIZE = 8
 
+function dedupeProducts(rows: Product[]): Product[] {
+  const seen = new Set<string>()
+  return rows.filter((product) => {
+    const id = product.id?.trim()
+    const name = product.name?.trim()
+    if (!id || !name || seen.has(id)) return false
+    seen.add(id)
+    return true
+  })
+}
+
+/** Tránh lưới 2–3 cột khi chỉ có 1–2 sản phẩm → ô trống bên cạnh. */
+function catalogGridClass(count: number) {
+  if (count <= 1) return 'grid-cols-1 sm:max-w-xs'
+  if (count === 2) return 'grid-cols-1 sm:grid-cols-2'
+  return 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'
+}
+
 type PriceFilterKey = 'all' | 'under-5m' | '5m-10m' | '10m-20m' | 'over-20m'
 type SortFilterKey = 'default' | 'price-asc' | 'price-desc' | 'rating-desc' | 'discount-desc'
 type FeaturedFilterKey = 'all' | 'featured' | 'non-featured'
@@ -228,7 +246,7 @@ function ProductCatalogCard({
 
   const isOutOfStock = product.stockQuantity != null && product.stockQuantity <= 0
 
-  const handleAddToCart = (event: MouseEvent) => {
+  const handleAddToCart = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
     if (isOutOfStock) {
       toast.error('Sản phẩm đã hết hàng.')
@@ -236,6 +254,7 @@ function ProductCatalogCard({
     }
     addToCart(product, 1)
     toast.success('Đã thêm vào giỏ hàng.')
+    event.currentTarget.blur()
   }
 
   return (
@@ -279,7 +298,7 @@ function ProductCatalogCard({
             >
               <ShoppingCart className="h-4 w-4" />
             </Button>
-            <div className="absolute inset-x-0 bottom-0 z-[1] hidden translate-y-full bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 md:block">
+            <div className="absolute inset-x-0 bottom-0 z-[1] hidden translate-y-full bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 transition-all duration-300 [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-y-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 md:block">
               <Button
                 type="button"
                 size="sm"
@@ -403,17 +422,23 @@ export function ProductCatalog() {
 
   const pageData = listQuery.data
   const totalPages = Math.max(1, pageData?.totalPages ?? 1)
-  /** Giữ data cũ bằng placeholderData, nên dùng overlay skeleton khi đang fetch bộ lọc mới. */
-  const showTransitionSkeleton = listQuery.isFetching && listQuery.isPlaceholderData
 
   const filteredProducts = useMemo(() => {
-    const rows = [...(pageData?.content ?? [])]
+    const rows = dedupeProducts([...(pageData?.content ?? [])])
     /** `discount-desc` không có cột backend tương ứng — sort cục bộ theo trang hiện tại. */
     if (sortFilter === 'discount-desc') {
       rows.sort((a, b) => (displayPrice(b).discountPercent ?? 0) - (displayPrice(a).discountPercent ?? 0))
     }
     return rows
   }, [pageData?.content, sortFilter])
+
+  /** Khi đổi filter/trang: không ghép sản phẩm cũ với lưới mới (tránh ô trống lạ). */
+  const isLoadingProducts =
+    (listQuery.isPending && !pageData) || (listQuery.isFetching && listQuery.isPlaceholderData)
+  const skeletonCount = Math.min(PAGE_SIZE, Math.max(3, filteredProducts.length || PAGE_SIZE))
+  const productGridClass = catalogGridClass(
+    isLoadingProducts ? skeletonCount : filteredProducts.length,
+  )
 
   const activeFilterCount = useMemo(() => {
     let count = 0
@@ -454,6 +479,15 @@ export function ProductCatalog() {
   useEffect(() => {
     setPage(0)
   }, [keyword, categoryFilter, featuredFilter, sortFilter, priceFilter, onlyDiscountFilter, onlyInStockFilter, minRatingFilter])
+
+  /** Trang vượt quá dữ liệu (sau khi dồn trang) → quay về trang cuối hợp lệ. */
+  useEffect(() => {
+    if (isLoadingProducts) return
+    const total = pageData?.totalElements ?? 0
+    if (page > 0 && filteredProducts.length === 0 && total > 0) {
+      setPage(Math.max(0, totalPages - 1))
+    }
+  }, [isLoadingProducts, page, filteredProducts.length, pageData?.totalElements, totalPages])
 
   const openDetail = (id: string) => navigate(`/products/${id}`)
 
@@ -637,9 +671,9 @@ export function ProductCatalog() {
 
         <div className="space-y-4">
           <div className="relative">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {listQuery.isPending && !pageData
-              ? Array.from({ length: PAGE_SIZE }).map((_, i) => (
+            <div className={cn('grid gap-4', productGridClass, filteredProducts.length === 1 && 'sm:mx-0')}>
+            {isLoadingProducts
+              ? Array.from({ length: skeletonCount }).map((_, i) => (
                   <Card key={`sk-${i}`} className="overflow-hidden">
                     <div className="h-48 animate-pulse bg-muted md:h-52" />
                     <CardHeader className="space-y-2">
@@ -648,29 +682,13 @@ export function ProductCatalog() {
                     </CardHeader>
                   </Card>
                 ))
-              : null}
-
-            {filteredProducts.map((product) => (
-              <ProductCatalogCard key={product.id} product={product} onOpenDetail={openDetail} />
-            ))}
-            </div>
-
-            {showTransitionSkeleton ? (
-              <div className="pointer-events-none absolute inset-0 z-10 grid gap-4 bg-background/35 p-0 backdrop-blur-[1px] sm:grid-cols-2 xl:grid-cols-3">
-                {Array.from({ length: Math.max(1, Math.min(PAGE_SIZE, filteredProducts.length || PAGE_SIZE)) }).map((_, i) => (
-                  <Card key={`overlay-sk-${i}`} className="overflow-hidden border-border/50">
-                    <div className="h-48 animate-pulse bg-muted/85 md:h-52" />
-                    <CardHeader className="space-y-2">
-                      <div className="h-4 w-2/3 animate-pulse rounded bg-muted/85" />
-                      <div className="h-3 w-1/3 animate-pulse rounded bg-muted/85" />
-                    </CardHeader>
-                  </Card>
+              : filteredProducts.map((product) => (
+                  <ProductCatalogCard key={product.id} product={product} onOpenDetail={openDetail} />
                 ))}
-              </div>
-            ) : null}
+            </div>
           </div>
 
-          {!listQuery.isPending && filteredProducts.length === 0 ? (
+          {!isLoadingProducts && filteredProducts.length === 0 ? (
             <EmptyState
               icon={SearchX}
               title="Không tìm thấy sản phẩm phù hợp"

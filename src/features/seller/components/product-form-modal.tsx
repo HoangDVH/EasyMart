@@ -2,6 +2,7 @@ import { useEffect, type ChangeEvent } from 'react'
 import { useForm } from 'react-hook-form'
 import { X } from 'lucide-react'
 import type { Category } from '@/features/products/types/product.types'
+import { resolveProductMediaUrl } from '@/features/products/api/products.api'
 import type { SellerProductFormValues } from '@/features/seller/components/seller-types'
 import {
   sellerProductFormSchema,
@@ -21,6 +22,7 @@ type ProductFormModalProps = {
   categories: Category[]
   isSubmitting: boolean
   isUploading: boolean
+  isLoading?: boolean
   error: string | null
   onSubmit: (values: SellerProductFormParsed) => Promise<void>
   onClose: () => void
@@ -34,6 +36,7 @@ export function ProductFormModal({
   categories,
   isSubmitting,
   isUploading,
+  isLoading = false,
   error,
   onSubmit,
   onClose,
@@ -178,20 +181,40 @@ export function ProductFormModal({
               disabled={isUploading}
             />
             {images.length > 0 ? (
-              <p className="text-xs text-muted-foreground">Đã upload {images.length} ảnh.</p>
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Đã có {images.length} ảnh (giữ nguyên nếu không upload thêm).</p>
+                <div className="flex flex-wrap gap-2">
+                  {images.slice(0, 4).map((ref) => (
+                    <div
+                      key={ref}
+                      className="h-14 w-14 overflow-hidden rounded-md border bg-muted/40"
+                    >
+                      <img
+                        src={resolveProductMediaUrl(ref)}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : (
-              <p className="text-xs text-muted-foreground">
-                Có thể để trống nếu API chấp nhận mảng ảnh rỗng; nếu lỗi, hãy upload ít nhất một ảnh.
+              <p className="text-xs text-destructive">
+                Chưa có ảnh — hãy upload ít nhất một ảnh trước khi lưu.
               </p>
             )}
+            {errors.images ? (
+              <p className="text-xs text-destructive">{errors.images.message}</p>
+            ) : null}
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <div className="flex flex-wrap justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose}>
               Hủy
             </Button>
-            <Button type="submit" disabled={isSubmitting || isUploading}>
-              {isSubmitting ? 'Đang lưu...' : mode === 'create' ? 'Tạo sản phẩm' : 'Cập nhật'}
+            <Button type="submit" disabled={isSubmitting || isUploading || isLoading}>
+              {isSubmitting ? 'Đang lưu...' : isLoading ? 'Đang tải...' : mode === 'create' ? 'Tạo sản phẩm' : 'Cập nhật'}
             </Button>
           </div>
         </form>

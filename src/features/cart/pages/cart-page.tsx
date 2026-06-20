@@ -16,6 +16,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/u
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
 import { EmptyState } from '@/shared/ui/empty-state'
 import { QuantityStepper } from '@/shared/ui/quantity-stepper'
+import { CheckoutSteps } from '@/features/cart/components/checkout-steps'
 
 export function CartPage() {
   const navigate = useNavigate()
@@ -58,6 +59,7 @@ export function CartPage() {
 
   return (
     <div className="space-y-4 pb-28 sm:pb-0">
+      <CheckoutSteps current="cart" />
       <Card>
         <CardHeader className="flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-lg sm:text-xl">Giỏ hàng ({itemCount})</CardTitle>

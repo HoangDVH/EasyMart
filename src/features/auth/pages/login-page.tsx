@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLoginMutation } from '@/features/auth/hooks/use-auth'
@@ -21,13 +21,16 @@ import { getApiErrorMessage } from '@/shared/lib/api-error'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { FullPageSpinner } from '@/shared/ui/full-page-spinner'
 import { toast } from 'react-toastify'
-import { Eye, EyeOff } from 'lucide-react'
+import { CheckCircle2, Eye, EyeOff } from 'lucide-react'
 
 export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const loginMutation = useLoginMutation()
   const [showPassword, setShowPassword] = useState(false)
+  const [showLoggedOutBanner] = useState(
+    () => (location.state as { loggedOut?: boolean } | null)?.loggedOut === true,
+  )
   const {
     register,
     handleSubmit,
@@ -36,6 +39,12 @@ export function LoginPage() {
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   })
+
+  useEffect(() => {
+    if (!showLoggedOutBanner) return
+    toast.success('Đã đăng xuất thành công.')
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: {} })
+  }, [showLoggedOutBanner, location.pathname, location.search, navigate])
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
@@ -57,6 +66,18 @@ export function LoginPage() {
 
   return (
     <>
+      {showLoggedOutBanner ? (
+        <div
+          role="status"
+          className="mb-4 flex items-start gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+        >
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
+          <div>
+            <p className="font-medium">Đã đăng xuất thành công</p>
+            <p className="mt-0.5 text-emerald-800/90">Bạn có thể đăng nhập lại bất cứ lúc nào.</p>
+          </div>
+        </div>
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle>Đăng nhập</CardTitle>

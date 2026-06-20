@@ -184,6 +184,18 @@ function pickNestedImageObjects(raw: Record<string, unknown>): string | null {
 }
 
 /** Docs API: `product.images` là mảng URL — dùng trực tiếp trong `<img src>`; path tương đối vẫn nối `assetRoot`. */
+function rawProductImages(raw: Record<string, unknown>): string[] {
+  const imagesEarly = raw.images
+  if (!Array.isArray(imagesEarly)) return []
+  const out: string[] = []
+  for (const entry of imagesEarly) {
+    if (typeof entry !== 'string') continue
+    const t = entry.trim()
+    if (t.length) out.push(t)
+  }
+  return out
+}
+
 function normalizedProductImages(raw: Record<string, unknown>): string[] {
   const imagesEarly = raw.images
   if (!Array.isArray(imagesEarly)) return []
@@ -281,8 +293,17 @@ function coerceProduct(raw: Record<string, unknown>): Product | null {
   const nameRaw = row.name ?? row.title ?? row.productName
   const name = typeof nameRaw === 'string' ? nameRaw : null
   if (!id || !name) return null
-  const images = normalizedProductImages(row)
+  const imageRefs = rawProductImages(row)
+  const images = imageRefs.map((ref) => resolveMediaUrl(ref))
   const imageUrl = images[0] ?? pickImageUrl({ ...row, images: [] })
+  const fallbackRef = pickNonEmptyString(
+    row.imageUrl,
+    row.mainImageUrl,
+    row.thumbnailUrl,
+    row.storedFileName,
+    row.fileName,
+  )
+  const refsForApi = imageRefs.length > 0 ? imageRefs : fallbackRef ? [fallbackRef] : []
   return {
     id,
     name,
@@ -320,6 +341,7 @@ function coerceProduct(raw: Record<string, unknown>): Product | null {
     })(),
     imageUrl,
     ...(images.length > 0 ? { images } : {}),
+    ...(refsForApi.length > 0 ? { imageRefs: refsForApi } : {}),
     categoryId: toIdString(row.categoryId),
     categoryName: typeof row.categoryName === 'string' ? row.categoryName : null,
     brandId: toIdString(row.brandId),
@@ -384,7 +406,28 @@ function parsePageEnvelope<T>(result: unknown, mapItem: (row: Record<string, unk
   }
 }
 
+export function parseProductFromApi(raw: unknown): Product | null {
+  const row = asRecord(raw)
+  if (!row) return null
+  return coerceProduct(unwrapProductRow(row))
+}
+
+/** Resolve ref ảnh từ API (filename/path) thành URL đầy đủ để hiển thị. */
+export function resolveProductMediaUrl(raw: string): string {
+  return resolveMediaUrl(raw)
+}
+
+function appendUniqueProducts(target: Product[], batch: Product[], seen: Set<string>) {
+  for (const product of batch) {
+    const id = product.id?.trim()
+    if (!id || seen.has(id)) continue
+    seen.add(id)
+    target.push(product)
+  }
+}
+
 export const productsApi = {
+  /** Một trang API thô — dùng cho search gợi ý, category nav. */
   async list(params: ProductListParams) {
     const trimmedKeyword = params.keyword?.trim()
     const { data } = await httpClient.get<ApiEnvelope<unknown>>(PRODUCT_ENDPOINTS.list, {
@@ -414,6 +457,69 @@ export const productsApi = {
       },
     })
     return parsePageEnvelope(data.result, (row) => coerceProduct(row))
+  },
+
+  /**
+   * Trang catalog UI: nếu trang API đầu trả ít hơn `size` (hoặc bị lọc mất bản ghi),
+   * gom thêm từ các trang API kế tiếp để lấp đầy lưới — không để ô trống ở trang 1.
+   */
+  async listWindow(params: ProductListParams): Promise<SpringPage<Product>> {
+    const windowSize = params.size
+    const uiPageIndex = Math.max(0, params.page)
+    const startIndex = uiPageIndex * windowSize
+    const endIndex = startIndex + windowSize
+
+    const first = await productsApi.list({ ...params, page: 0, size: windowSize })
+    const serverTotalPages = Math.max(1, first.totalPages ?? 1)
+    const totalElements = first.totalElements ?? first.content.length
+    const isCompactMode =
+      first.content.length < windowSize &&
+      serverTotalPages > 1 &&
+      totalElements > first.content.length
+
+    if (!isCompactMode) {
+      if (uiPageIndex === 0) {
+        return { ...first, number: 0, size: windowSize }
+      }
+      const page = await productsApi.list({ ...params, page: uiPageIndex, size: windowSize })
+      const uiTotalPages = Math.max(1, Math.ceil(totalElements / windowSize))
+      return {
+        ...page,
+        totalElements,
+        totalPages: uiTotalPages,
+        number: uiPageIndex,
+        size: windowSize,
+      }
+    }
+
+    const collected: Product[] = []
+    const seen = new Set<string>()
+    let apiPage = 0
+
+    while (collected.length < endIndex && apiPage < serverTotalPages + 20) {
+      const batch =
+        apiPage === 0 ? first : await productsApi.list({ ...params, page: apiPage, size: windowSize })
+      if (batch.content.length === 0) {
+        apiPage++
+        if (apiPage >= serverTotalPages) break
+        continue
+      }
+      appendUniqueProducts(collected, batch.content, seen)
+      apiPage++
+      if (collected.length >= endIndex) break
+      if (apiPage >= serverTotalPages) break
+    }
+
+    const content = collected.slice(startIndex, endIndex)
+    const uiTotalPages = Math.max(1, Math.ceil(totalElements / windowSize))
+
+    return {
+      content,
+      totalElements,
+      totalPages: uiTotalPages,
+      number: uiPageIndex,
+      size: windowSize,
+    }
   },
 
   async getById(id: string) {

@@ -31,6 +31,13 @@ export function AppLayout() {
     if (pathname.startsWith('/products/')) return []
     if (pathname === '/cart') return [{ label: 'Trang chủ', to: '/' }, { label: 'Giỏ hàng' }]
     if (pathname === '/checkout') return [{ label: 'Trang chủ', to: '/' }, { label: 'Thanh toán' }]
+    if (pathname.startsWith('/checkout/success/')) {
+      return [
+        { label: 'Trang chủ', to: '/' },
+        { label: 'Thanh toán', to: '/checkout' },
+        { label: 'Hoàn tất' },
+      ]
+    }
     if (pathname === '/seller') return [{ label: 'Trang chủ', to: '/' }, { label: 'Quản lí sản phẩm' }]
     if (pathname === '/admin') return [{ label: 'Trang chủ', to: '/' }, { label: 'Admin' }]
     if (pathname === '/account') {
