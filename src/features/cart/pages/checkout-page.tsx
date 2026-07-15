@@ -10,7 +10,7 @@ import {
   useCreatePaymentMutation,
   useInitVnpayMutation,
 } from '@/features/payments/hooks/use-payments'
-import { markVnpayCheckoutPending, saveVnpayTxnRefOrderId } from '@/features/payments/lib/vnpay-return'
+import { markVnpayCheckoutPending, saveVnpayTxnRefOrderId, setVnpayRedirectingFlag, isVnpayRedirectingFlag, isVnpayCheckoutPending } from '@/features/payments/lib/vnpay-return'
 import {
   checkoutSchema,
   type CheckoutFormValues,
@@ -42,6 +42,19 @@ import { useSyncCart } from '@/features/cart/hooks/use-sync-cart'
 
 const savedProfile = loadCheckoutProfile()
 
+function VnpayRedirectScreen() {
+  return (
+    <>
+      <CheckoutSteps current="checkout" />
+      <div className="mx-auto flex max-w-lg flex-col items-center gap-3 py-16 text-sm text-muted-foreground">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        Đang chuyển tới cổng VNPay…
+        <p className="text-center text-xs">Vui lòng không đóng hoặc tải lại trang.</p>
+      </div>
+    </>
+  )
+}
+
 export function CheckoutPage() {
   const navigate = useNavigate()
   const createOrder = useCreateOrderMutation()
@@ -59,24 +72,8 @@ export function CheckoutPage() {
   const isBuyNow = buyNowItems != null && buyNowItems.length > 0
   const items = isBuyNow ? buyNowItems : cartItems
   const subtotal = calcCartSubtotal(items)
-  const [redirectingToVnpay, setRedirectingToVnpay] = useState(false)
+  const [redirectingToVnpay, setRedirectingToVnpay] = useState(() => isVnpayRedirectingFlag())
 
-  const adjustQuantity = (productId: string, quantity: number) => {
-    if (isBuyNow) updateBuyNowQuantity(productId, quantity)
-    else updateQuantity(productId, quantity)
-  }
-
-  const dropItem = (productId: string) => {
-    if (isBuyNow) clearBuyNow()
-    else removeItem(productId)
-  }
-
-  const finishCheckout = () => {
-    if (isBuyNow) clearBuyNow()
-    else clearCart()
-  }
-
-  const { isSyncing } = useSyncCart(items.map((item) => item.productId))
   const {
     register,
     control,
@@ -94,20 +91,37 @@ export function CheckoutPage() {
     },
   })
 
+  const selectedPaymentMethod = watch('paymentMethod')
+  const isVnpayBusy =
+    redirectingToVnpay ||
+    isVnpayRedirectingFlag() ||
+    isVnpayCheckoutPending() ||
+    ((createOrder.isPending || initVnpay.isPending || isSubmitting) &&
+      selectedPaymentMethod === 'VNPAY')
+
+  const { isSyncing } = useSyncCart(isVnpayBusy ? [] : items.map((item) => item.productId))
+
   useEffect(() => {
     if (savedProfile) reset(savedProfile)
   }, [reset])
 
-  if (redirectingToVnpay) {
-    return (
-      <>
-        <CheckoutSteps current="checkout" />
-        <div className="mx-auto flex max-w-lg flex-col items-center gap-3 py-16 text-sm text-muted-foreground">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          Đang chuyển tới cổng VNPay…
-        </div>
-      </>
-    )
+  const adjustQuantity = (productId: string, quantity: number) => {
+    if (isBuyNow) updateBuyNowQuantity(productId, quantity)
+    else updateQuantity(productId, quantity)
+  }
+
+  const dropItem = (productId: string) => {
+    if (isBuyNow) clearBuyNow()
+    else removeItem(productId)
+  }
+
+  const finishCheckout = () => {
+    if (isBuyNow) clearBuyNow()
+    else clearCart()
+  }
+
+  if (isVnpayBusy) {
+    return <VnpayRedirectScreen />
   }
 
   if (items.length === 0) {
@@ -168,6 +182,8 @@ export function CheckoutPage() {
       const payWithVnpay = data.paymentMethod === 'VNPAY'
 
       if (payWithVnpay) {
+        setVnpayRedirectingFlag(true)
+        flushSync(() => setRedirectingToVnpay(true))
         try {
           const vnpay = await initVnpay.mutateAsync({ orderId: order.id })
           if (!vnpay.paymentUrl.startsWith('http')) {
@@ -177,10 +193,11 @@ export function CheckoutPage() {
           if (token) useAuthStore.getState().setAccessToken(token)
           markVnpayCheckoutPending(order.id)
           if (vnpay.transactionRef) saveVnpayTxnRefOrderId(vnpay.transactionRef, order.id)
-          flushSync(() => setRedirectingToVnpay(true))
           window.location.assign(vnpay.paymentUrl)
           return
         } catch (paymentError) {
+          setVnpayRedirectingFlag(false)
+          setRedirectingToVnpay(false)
           toast.error(
             getApiErrorMessage(
               paymentError,
@@ -217,7 +234,6 @@ export function CheckoutPage() {
 
   const isProcessing =
     createOrder.isPending || createPayment.isPending || initVnpay.isPending || isSubmitting
-  const selectedPaymentMethod = watch('paymentMethod')
   const submitLabel =
     selectedPaymentMethod === 'VNPAY' ? 'Tiếp tục thanh toán VNPay' : 'Xác nhận đặt hàng'
 

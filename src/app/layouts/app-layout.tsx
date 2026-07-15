@@ -69,7 +69,9 @@ export function AppLayout() {
   }, [location.pathname, location.search, location.hash, navigate])
 
   const isCheckoutFlowRoute =
-    location.pathname === '/payment/result' || location.pathname.startsWith('/checkout/success/')
+    location.pathname === '/checkout' ||
+    location.pathname === '/payment/result' ||
+    location.pathname.startsWith('/checkout/success/')
 
   if (effectiveToken && profileQuery.isLoading && !isCheckoutFlowRoute) {
     return <FullPageSpinner message="Đang tải tài khoản..." />

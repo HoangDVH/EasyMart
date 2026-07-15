@@ -12,12 +12,30 @@ const VNPAY_PENDING_ORDER_KEY = 'easymart-vnpay-pending-order'
 const VNPAY_CHECKOUT_PENDING_KEY = 'easymart-vnpay-checkout-pending'
 const VNPAY_TXN_REF_PREFIX = 'easymart-vnpay-txn:'
 const VNPAY_ORDER_COOKIE = 'easymart_vnpay_order'
+const VNPAY_REDIRECTING_KEY = 'easymart-vnpay-redirecting'
 const PENDING_TTL_MS = 2 * 60 * 60 * 1000
 const PENDING_COOKIE_MAX_AGE_SEC = 2 * 60 * 60
 
 function normalizeOrderId(orderId: string | number): string {
   const id = String(orderId).trim()
   return id.length > 0 ? id : ''
+}
+
+export function setVnpayRedirectingFlag(active: boolean) {
+  try {
+    if (active) sessionStorage.setItem(VNPAY_REDIRECTING_KEY, '1')
+    else sessionStorage.removeItem(VNPAY_REDIRECTING_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isVnpayRedirectingFlag(): boolean {
+  try {
+    return sessionStorage.getItem(VNPAY_REDIRECTING_KEY) === '1'
+  } catch {
+    return false
+  }
 }
 
 export function saveVnpayOrderCookie(orderId: string) {
@@ -151,6 +169,7 @@ export function clearVnpaySession() {
   clearVnpayPendingOrderId()
   clearVnpayCheckoutPending()
   clearVnpayOrderCookie()
+  setVnpayRedirectingFlag(false)
 }
 
 export function buildOrderSuccessPath(orderId: string): string {
