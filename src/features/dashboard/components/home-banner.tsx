@@ -86,7 +86,7 @@ function SideBannerCard({ banner }: { banner: SideBanner }) {
       to={banner.ctaTo}
       className={cn(
         'group relative flex min-h-[7.5rem] flex-1 overflow-hidden rounded-xl border shadow-sm sm:min-h-0',
-        'bg-gradient-to-br text-primary-foreground transition hover:brightness-105',
+        'bg-gradient-to-br text-primary-foreground transition-all duration-300 hover:-translate-y-0.5 hover:brightness-105 hover:shadow-lg',
         banner.gradient,
       )}
     >
@@ -165,7 +165,7 @@ export function HomeBanner() {
             </div>
           ))}
 
-          <div className="relative flex h-full flex-col justify-center px-5 py-6 text-primary-foreground sm:px-8 sm:py-8">
+          <div key={activeIndex} className="relative flex h-full flex-col justify-center px-5 py-6 text-primary-foreground sm:px-8 sm:py-8 animate-slide-up">
             <div className="mb-3 inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur-sm">
               <Icon className="h-3.5 w-3.5" aria-hidden />
               EasyMart

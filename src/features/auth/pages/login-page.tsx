@@ -78,7 +78,7 @@ export function LoginPage() {
           </div>
         </div>
       ) : null}
-      <Card>
+      <Card className="glass-panel">
         <CardHeader>
           <CardTitle>Đăng nhập</CardTitle>
           <CardDescription>

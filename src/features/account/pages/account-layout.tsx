@@ -1,10 +1,11 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { CreditCard, Receipt, UserCog, UserRound } from 'lucide-react'
 import { useProfileQuery } from '@/features/auth/hooks/use-auth'
 import { useAuthStore } from '@/shared/stores/auth-store'
 import { cn } from '@/shared/lib/utils'
 import { Card, CardContent } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
+import { AnimatedOutlet } from '@/shared/ui/page-transition'
 
 type NavItem = {
   to: string
@@ -40,10 +41,10 @@ export function AccountLayout() {
   return (
     <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
       <aside className="lg:sticky lg:top-32 lg:self-start">
-        <Card>
+        <Card className="hover-lift overflow-hidden">
           <CardContent className="space-y-4 pt-6">
             <div className="flex items-center gap-3 border-b pb-4">
-              <div className="grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary">
+              <div className="grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-primary shadow-inner">
                 <UserRound className="h-6 w-6" />
               </div>
               <div className="min-w-0">
@@ -77,10 +78,10 @@ export function AccountLayout() {
                   end={item.end}
                   className={({ isActive }) =>
                     cn(
-                      'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-200',
                       isActive
-                        ? 'bg-primary/10 font-medium text-primary'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                        ? 'bg-primary/10 font-medium text-primary shadow-sm shadow-primary/10'
+                        : 'text-muted-foreground hover:translate-x-0.5 hover:bg-muted hover:text-foreground',
                     )
                   }
                 >
@@ -94,7 +95,7 @@ export function AccountLayout() {
       </aside>
 
       <section className="min-w-0">
-        <Outlet />
+        <AnimatedOutlet />
       </section>
     </div>
   )

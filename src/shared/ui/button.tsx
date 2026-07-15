@@ -9,9 +9,11 @@ const buttonVariants = cva(
       variant: {
         default:
           'bg-primary text-primary-foreground shadow-sm shadow-primary/30 hover:-translate-y-0.5 hover:brightness-110 hover:shadow-md hover:shadow-primary/45 active:translate-y-0 active:brightness-95',
-        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        outline: 'border border-input bg-background hover:bg-muted',
-        ghost: 'hover:bg-muted',
+        secondary:
+          'bg-secondary text-secondary-foreground shadow-sm shadow-secondary/25 hover:-translate-y-0.5 hover:brightness-110 hover:shadow-md hover:shadow-secondary/35 active:translate-y-0',
+        outline:
+          'border border-input bg-background shadow-sm hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted hover:shadow-md active:translate-y-0',
+        ghost: 'hover:bg-muted/80',
       },
       size: {
         default: 'h-10 px-4 py-2',

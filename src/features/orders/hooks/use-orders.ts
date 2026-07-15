@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ordersApi } from '@/features/orders/api/orders.api'
+import { paymentsQueryKeyRoot } from '@/features/payments/hooks/use-payments'
 import type { CreateOrderPayload } from '@/features/orders/types/order.types'
 
 export const ordersQueryKeyRoot = ['orders'] as const
@@ -31,6 +32,21 @@ export function useCreateOrderMutation() {
     mutationFn: (payload: CreateOrderPayload) => ordersApi.create(payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ordersQueryKeyRoot })
+    },
+  })
+}
+
+export function useCancelOrderMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (orderId: string) => ordersApi.cancel(orderId),
+    onSuccess: async (order, orderId) => {
+      await queryClient.invalidateQueries({ queryKey: ordersQueryKeyRoot })
+      await queryClient.invalidateQueries({ queryKey: paymentsQueryKeyRoot })
+      const id = order?.id ?? orderId
+      if (id) {
+        queryClient.setQueryData([...ordersQueryKeyRoot, 'detail', id], order)
+      }
     },
   })
 }

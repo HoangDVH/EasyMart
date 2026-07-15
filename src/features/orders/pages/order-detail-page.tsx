@@ -11,6 +11,7 @@ import {
   formatVnd,
   orderStatusMeta,
 } from '@/features/orders/components/order-formatters'
+import { OrderCancelButton } from '@/features/orders/components/order-cancel-button'
 import { OrderIdDisplay } from '@/features/orders/components/order-id-display'
 import { OrderItemThumb } from '@/features/orders/components/order-item-thumb'
 import { OrderStatusTimeline } from '@/features/orders/components/order-status-timeline'
@@ -186,25 +187,28 @@ export function OrderDetailPage() {
 
           <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-sm text-muted-foreground">Tổng thanh toán</span>
-            <div className="flex flex-col items-stretch gap-2 sm:items-end">
+            <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-end">
               <span className="text-xl font-semibold text-secondary">{formatVnd(order.totalAmount)}</span>
-              {showVnpayRetry ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  disabled={initVnpay.isPending}
-                  onClick={() => void handleRetryVnpay()}
-                >
-                  {initVnpay.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                  Thanh toán lại VNPay
-                </Button>
-              ) : null}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                {showVnpayRetry ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={initVnpay.isPending}
+                    onClick={() => void handleRetryVnpay()}
+                  >
+                    {initVnpay.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    Thanh toán lại VNPay
+                  </Button>
+                ) : null}
+                <OrderCancelButton orderId={order.id} status={order.status} />
+              </div>
             </div>
           </div>
         </CardContent>

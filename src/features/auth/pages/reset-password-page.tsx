@@ -39,7 +39,7 @@ export function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <Card>
+      <Card className="glass-panel">
         <CardHeader>
           <CardTitle>Link không hợp lệ</CardTitle>
           <CardDescription>
@@ -71,7 +71,7 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <Card>
+    <Card className="glass-panel">
       <CardHeader>
         <CardTitle>Đặt lại mật khẩu</CardTitle>
         <CardDescription>Nhập mật khẩu mới cho tài khoản của bạn.</CardDescription>

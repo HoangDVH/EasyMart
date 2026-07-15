@@ -259,7 +259,7 @@ function ProductCatalogCard({
 
   return (
     <Card
-      className="group cursor-pointer overflow-hidden border-border/60 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10"
+      className="group cursor-pointer overflow-hidden border-border/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/20 hover:shadow-xl hover:shadow-primary/15"
       onClick={() => onOpenDetail(product.id)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -492,7 +492,7 @@ export function ProductCatalog() {
   const openDetail = (id: string) => navigate(`/products/${id}`)
 
   const renderFilterPanel = (mobile = false) => (
-    <div className={cn('rounded-xl border bg-background p-3 sm:p-4', mobile && 'border-none p-0')}>
+    <div className={cn('rounded-xl border border-border/70 bg-background p-3 shadow-sm transition-shadow hover:shadow-md sm:p-4', mobile && 'border-none p-0 shadow-none hover:shadow-none')}>
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-semibold">Bộ lọc sản phẩm</h3>
         <Button type="button" variant="ghost" size="sm" onClick={resetFilters} disabled={activeFilterCount === 0}>
@@ -671,7 +671,7 @@ export function ProductCatalog() {
 
         <div className="space-y-4">
           <div className="relative">
-            <div className={cn('grid gap-4', productGridClass, filteredProducts.length === 1 && 'sm:mx-0')}>
+            <div className={cn('stagger-children grid gap-4', productGridClass, filteredProducts.length === 1 && 'sm:mx-0')}>
             {isLoadingProducts
               ? Array.from({ length: skeletonCount }).map((_, i) => (
                   <Card key={`sk-${i}`} className="overflow-hidden">

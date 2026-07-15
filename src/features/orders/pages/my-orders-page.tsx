@@ -6,6 +6,7 @@ import {
   formatVnd,
   orderStatusMeta,
 } from '@/features/orders/components/order-formatters'
+import { OrderCancelButton } from '@/features/orders/components/order-cancel-button'
 import { OrderIdDisplay } from '@/features/orders/components/order-id-display'
 import { OrderItemThumb } from '@/features/orders/components/order-item-thumb'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
@@ -25,7 +26,7 @@ function OrderCard({ order }: { order: Order }) {
   const totalQty = order.items.reduce((sum, it) => sum + it.quantity, 0)
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="hover-lift overflow-hidden">
       <CardHeader className="flex flex-col gap-2 border-b bg-muted/30 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <CardTitle className="text-base">
@@ -77,11 +78,14 @@ function OrderCard({ order }: { order: Order }) {
           <span className="text-sm text-muted-foreground">Tổng thanh toán</span>
           <span className="text-lg font-semibold text-secondary">{formatVnd(order.totalAmount)}</span>
         </div>
-        <Link to={`/account/orders/${order.id}`}>
-          <Button variant="outline" size="sm" className="w-full sm:w-auto">
-            Xem chi tiết đơn
-          </Button>
-        </Link>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <Link to={`/account/orders/${order.id}`} className="sm:flex-1">
+            <Button variant="outline" size="sm" className="w-full">
+              Xem chi tiết đơn
+            </Button>
+          </Link>
+          <OrderCancelButton orderId={order.id} status={order.status} fullWidth className="sm:flex-1" />
+        </div>
       </CardContent>
     </Card>
   )
@@ -184,7 +188,7 @@ export function MyOrdersPage() {
         </CardHeader>
       </Card>
 
-      <div className="space-y-4">
+      <div className="stagger-children space-y-4">
         {orders.map((order) => (
           <OrderCard key={order.id} order={order} />
         ))}

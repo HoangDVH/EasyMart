@@ -92,7 +92,7 @@ export function PaymentResultPage() {
         <CheckoutSteps current="done" />
         <Card>
           <CardHeader className="items-center text-center">
-            <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <span className="inline-flex h-14 w-14 animate-scale-in items-center justify-center rounded-full bg-muted text-muted-foreground">
               <AlertCircle className="h-8 w-8" />
             </span>
             <CardTitle>Không có kết quả thanh toán</CardTitle>
@@ -125,7 +125,7 @@ export function PaymentResultPage() {
 
         <Card className="overflow-hidden border-destructive/20">
           <CardHeader className="items-center space-y-3 pb-2 text-center">
-            <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-red-600">
+            <span className="inline-flex h-16 w-16 animate-scale-in items-center justify-center rounded-full bg-red-100 text-red-600 shadow-lg shadow-red-200/50">
               <XCircle className="h-9 w-9" />
             </span>
             <div className="space-y-1">
@@ -183,7 +183,7 @@ export function PaymentResultPage() {
         <CheckoutSteps current="done" />
         <Card className="overflow-hidden border-primary/20">
           <CardHeader className="items-center space-y-3 pb-2 text-center">
-            <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+            <span className="inline-flex h-16 w-16 animate-success-pop items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shadow-lg shadow-emerald-200/50">
               <AlertCircle className="h-9 w-9" />
             </span>
             <div className="space-y-1">

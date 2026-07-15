@@ -85,4 +85,13 @@ export const ordersApi = {
     )
     return coerceOrder(data?.result)
   },
+
+  /** Hủy đơn chưa thanh toán (PENDING_PAYMENT). */
+  async cancel(id: string): Promise<Order | null> {
+    const { data } = await httpClient.post<ApiEnvelope<unknown>>(
+      `${ORDERS_BASE}/${id}/cancel`,
+      {},
+    )
+    return coerceOrder(data?.result)
+  },
 }

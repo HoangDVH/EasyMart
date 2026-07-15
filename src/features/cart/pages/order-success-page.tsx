@@ -99,9 +99,9 @@ export function OrderSuccessPage() {
     <div className="mx-auto max-w-lg space-y-4 pb-8">
       <CheckoutSteps current="done" />
 
-      <Card className="overflow-hidden border-primary/20">
+      <Card className="overflow-hidden border-primary/20 shadow-lg shadow-primary/10">
         <CardHeader className="items-center space-y-3 pb-2 text-center">
-          <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+          <span className="inline-flex h-16 w-16 animate-success-pop items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shadow-lg shadow-emerald-200/50">
             <CheckCircle2 className="h-9 w-9" aria-hidden />
           </span>
           <div className="space-y-1">

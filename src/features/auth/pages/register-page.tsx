@@ -52,7 +52,7 @@ export function RegisterPage() {
   }
 
   return (
-    <Card>
+    <Card className="glass-panel">
       <CardHeader>
         <CardTitle>Đăng ký</CardTitle>
         <CardDescription>Tạo tài khoản mới để bắt đầu.</CardDescription>

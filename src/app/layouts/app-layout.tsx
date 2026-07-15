@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { ShoppingCart, Loader2 } from 'lucide-react'
 import { useEffect } from 'react'
 import { useProfileQuery, useRestoreSessionQuery } from '@/features/auth/hooks/use-auth'
@@ -20,6 +20,7 @@ import { CategoryNav } from '@/shared/ui/category-nav'
 import { FullPageSpinner } from '@/shared/ui/full-page-spinner'
 import { HeaderSearch } from '@/shared/ui/header-search'
 import { UserMenu } from '@/shared/ui/user-menu'
+import { AnimatedOutlet } from '@/shared/ui/page-transition'
 
 export function AppLayout() {
   const location = useLocation()
@@ -177,12 +178,12 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 bg-primary text-primary-foreground shadow-sm">
+      <header className="sticky top-0 z-40 bg-primary/95 text-primary-foreground shadow-md shadow-primary/15 backdrop-blur-lg supports-[backdrop-filter]:bg-primary/90">
         <div className="mx-auto max-w-6xl px-4 pt-2.5 sm:pt-3">
           <div className="flex items-center justify-between gap-2 sm:hidden">
             <Link
               to="/"
-              className="shrink-0 rounded-md bg-primary-foreground px-2.5 py-1.5 text-sm font-bold tracking-wide text-primary shadow-sm"
+              className="shrink-0 rounded-lg bg-primary-foreground px-2.5 py-1.5 text-sm font-bold tracking-wide text-primary shadow-sm transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
             >
               EasyMart
             </Link>
@@ -192,7 +193,7 @@ export function AppLayout() {
           <div className="mt-2 flex items-center gap-3 pb-2.5 sm:mt-0 sm:pb-3">
             <Link
               to="/"
-              className="hidden shrink-0 rounded-md bg-primary-foreground px-3 py-1.5 text-sm font-bold tracking-wide text-primary shadow-sm sm:inline-flex"
+              className="hidden shrink-0 rounded-lg bg-primary-foreground px-3 py-1.5 text-sm font-bold tracking-wide text-primary shadow-sm transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] sm:inline-flex"
             >
               EasyMart
             </Link>
@@ -255,11 +256,11 @@ export function AppLayout() {
           ) : null}
         </div>
       </header>
-      <main className="mx-auto max-w-6xl p-4">
+      <main className="mx-auto max-w-6xl p-4 pb-8">
         <Breadcrumb items={breadcrumbItems} />
-        <Outlet />
+        <AnimatedOutlet />
       </main>
-      <footer className="mt-8 border-t border-primary-foreground/10 bg-primary text-primary-foreground">
+      <footer className="mt-auto border-t border-primary-foreground/10 bg-gradient-to-b from-primary to-primary/95 text-primary-foreground">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2 sm:col-span-2 lg:col-span-1">
             <p className="text-base font-bold">EasyMart</p>

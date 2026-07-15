@@ -44,7 +44,7 @@ export function ForgotPasswordPage() {
 
   if (submittedEmail) {
     return (
-      <Card>
+      <Card className="glass-panel">
         <CardHeader>
           <CardTitle>Kiểm tra email của bạn</CardTitle>
           <CardDescription>
@@ -65,7 +65,7 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <Card>
+    <Card className="glass-panel">
       <CardHeader>
         <CardTitle>Quên mật khẩu</CardTitle>
         <CardDescription>

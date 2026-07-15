@@ -75,9 +75,9 @@ export function CartPage() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="stagger-children space-y-3">
           {items.map((item) => (
-            <div key={item.productId} className="flex gap-3 rounded-lg border p-3">
+            <div key={item.productId} className="flex gap-3 rounded-xl border p-3 transition-colors hover:border-primary/20 hover:bg-muted/30">
               <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted/40 sm:h-16 sm:w-24">
                 {item.imageUrl ? (
                   <img src={item.imageUrl} alt="" className="h-full w-full object-contain p-1" loading="lazy" />

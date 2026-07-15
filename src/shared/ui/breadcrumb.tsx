@@ -13,7 +13,7 @@ type BreadcrumbProps = {
 export function Breadcrumb({ items }: BreadcrumbProps) {
   if (items.length === 0) return null
   return (
-    <nav aria-label="Breadcrumb" className="mb-3 text-sm text-muted-foreground">
+    <nav aria-label="Breadcrumb" className="mb-3 animate-fade-in text-sm text-muted-foreground">
       {items.map((item, index) => {
         const isLast = index === items.length - 1
         return (

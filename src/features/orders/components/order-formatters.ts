@@ -78,5 +78,7 @@ export function orderStatusMeta(
 
 export function canCancelOrder(status: string) {
   const code = status.toUpperCase()
-  return code.includes('PEND') && !code.includes('CANCEL')
+  if (code.includes('CANCEL') || code.includes('PAID')) return false
+  if (code.includes('SHIP') || code.includes('DELIVER') || code.includes('COMPLETE')) return false
+  return code.includes('PENDING_PAYMENT') || (code.includes('PEND') && code.includes('PAY'))
 }
