@@ -428,7 +428,7 @@ function appendUniqueProducts(target: Product[], batch: Product[], seen: Set<str
 
 export const productsApi = {
   /** Một trang API thô — dùng cho search gợi ý, category nav. */
-  async list(params: ProductListParams) {
+  async list(params: ProductListParams, signal?: AbortSignal) {
     const trimmedKeyword = params.keyword?.trim()
     const { data } = await httpClient.get<ApiEnvelope<unknown>>(PRODUCT_ENDPOINTS.list, {
       params: {
@@ -455,6 +455,7 @@ export const productsApi = {
         ...(typeof params.hasDiscount === 'boolean' ? { hasDiscount: params.hasDiscount } : {}),
         ...(params.sort ? { sort: params.sort } : {}),
       },
+      signal,
     })
     return parsePageEnvelope(data.result, (row) => coerceProduct(row))
   },
@@ -463,13 +464,28 @@ export const productsApi = {
    * Trang catalog UI: nếu trang API đầu trả ít hơn `size` (hoặc bị lọc mất bản ghi),
    * gom thêm từ các trang API kế tiếp để lấp đầy lưới — không để ô trống ở trang 1.
    */
-  async listWindow(params: ProductListParams): Promise<SpringPage<Product>> {
+  async listWindow(params: ProductListParams, signal?: AbortSignal): Promise<SpringPage<Product>> {
+    const trimmedKeyword = params.keyword?.trim()
     const windowSize = params.size
     const uiPageIndex = Math.max(0, params.page)
+
+    /** Tìm kiếm: 1 request/trang — tránh gom nhiều trang API làm chậm. */
+    if (trimmedKeyword) {
+      const page = await productsApi.list(
+        { ...params, page: uiPageIndex, size: windowSize, keyword: trimmedKeyword },
+        signal,
+      )
+      return {
+        ...page,
+        number: uiPageIndex,
+        size: windowSize,
+      }
+    }
+
     const startIndex = uiPageIndex * windowSize
     const endIndex = startIndex + windowSize
 
-    const first = await productsApi.list({ ...params, page: 0, size: windowSize })
+    const first = await productsApi.list({ ...params, page: 0, size: windowSize }, signal)
     const serverTotalPages = Math.max(1, first.totalPages ?? 1)
     const totalElements = first.totalElements ?? first.content.length
     const isCompactMode =
@@ -481,7 +497,7 @@ export const productsApi = {
       if (uiPageIndex === 0) {
         return { ...first, number: 0, size: windowSize }
       }
-      const page = await productsApi.list({ ...params, page: uiPageIndex, size: windowSize })
+      const page = await productsApi.list({ ...params, page: uiPageIndex, size: windowSize }, signal)
       const uiTotalPages = Math.max(1, Math.ceil(totalElements / windowSize))
       return {
         ...page,
@@ -498,7 +514,7 @@ export const productsApi = {
 
     while (collected.length < endIndex && apiPage < serverTotalPages + 20) {
       const batch =
-        apiPage === 0 ? first : await productsApi.list({ ...params, page: apiPage, size: windowSize })
+        apiPage === 0 ? first : await productsApi.list({ ...params, page: apiPage, size: windowSize }, signal)
       if (batch.content.length === 0) {
         apiPage++
         if (apiPage >= serverTotalPages) break

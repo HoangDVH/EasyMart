@@ -74,7 +74,7 @@ export function AppLayout() {
     location.pathname === '/payment/result' ||
     location.pathname.startsWith('/checkout/success/')
 
-  if (effectiveToken && profileQuery.isLoading && !isCheckoutFlowRoute) {
+  if (effectiveToken && profileQuery.isPending && !profileQuery.data && !isCheckoutFlowRoute) {
     return <FullPageSpinner message="Đang tải tài khoản..." />
   }
 

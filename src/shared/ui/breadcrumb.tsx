@@ -1,5 +1,6 @@
 import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
+import { cn } from '@/shared/lib/utils'
 
 export type BreadcrumbItem = {
   label: string
@@ -8,12 +9,16 @@ export type BreadcrumbItem = {
 
 type BreadcrumbProps = {
   items: BreadcrumbItem[]
+  className?: string
 }
 
-export function Breadcrumb({ items }: BreadcrumbProps) {
+export function Breadcrumb({ items, className }: BreadcrumbProps) {
   if (items.length === 0) return null
   return (
-    <nav aria-label="Breadcrumb" className="mb-3 animate-fade-in text-sm text-muted-foreground">
+    <nav
+      aria-label="Breadcrumb"
+      className={cn('mb-3 animate-fade-in text-sm text-muted-foreground', className)}
+    >
       {items.map((item, index) => {
         const isLast = index === items.length - 1
         return (

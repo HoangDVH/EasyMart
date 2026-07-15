@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { httpClient } from '@/shared/api/http-client'
 import { env } from '@/shared/config/env'
 import { PRODUCT_MEDIA } from '@/shared/constants/catalog'
@@ -11,6 +12,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import {
+  prefetchProductDetail,
   useCategoriesQuery,
   useProductQuery,
   useProductsQuery,
@@ -220,9 +222,11 @@ function ProductImage({ product, className, alt }: { product: Product; className
 }
 
 function ProductCatalogCard({ product }: { product: Product }) {
+  const queryClient = useQueryClient()
   const addToCart = useCartStore((state) => state.addItem)
   const needsDetailImage = !product.imageUrl
   const detailForImage = useProductQuery(product.id, { enabled: needsDetailImage })
+  const prefetchDetail = () => prefetchProductDetail(queryClient, product.id)
   const merged: Product =
     needsDetailImage && detailForImage.data?.imageUrl
       ? {
@@ -251,6 +255,8 @@ function ProductCatalogCard({ product }: { product: Product }) {
         <Link
           to={`/products/${product.id}`}
           className="relative isolate block h-48 w-full shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-muted/70 via-background to-muted/40 md:h-52"
+          onMouseEnter={prefetchDetail}
+          onFocus={prefetchDetail}
         >
           {needsDetailImage && detailForImage.isPending ? (
             <div className="absolute inset-0 animate-pulse bg-muted/80" />
@@ -303,7 +309,12 @@ function ProductCatalogCard({ product }: { product: Product }) {
         ) : null}
       </div>
       <CardHeader className="space-y-2 pb-3">
-        <Link to={`/products/${product.id}`} className="block hover:text-primary">
+        <Link
+          to={`/products/${product.id}`}
+          className="block hover:text-primary"
+          onMouseEnter={prefetchDetail}
+          onFocus={prefetchDetail}
+        >
           <CardTitle className="line-clamp-2 text-base leading-snug">{product.name}</CardTitle>
         </Link>
         <CardDescription className="space-y-2">

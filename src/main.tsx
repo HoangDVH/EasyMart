@@ -11,7 +11,16 @@ import { bootstrapVnpayReturnRedirect } from '@/features/payments/lib/vnpay-retu
 
 bootstrapVnpayReturnRedirect()
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

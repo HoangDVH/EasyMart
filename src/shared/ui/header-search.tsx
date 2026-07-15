@@ -1,15 +1,19 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2, Search, X, Clock, ArrowUpRight } from 'lucide-react'
 import { productsApi } from '@/features/products/api/products.api'
+import { getProductsQueryKey, prefetchProductList } from '@/features/products/hooks/use-catalog'
 import { Input } from '@/shared/ui/input'
 import { cn } from '@/shared/lib/utils'
 
 const RECENT_KEY = 'easymart.recent-searches'
 const RECENT_MAX = 6
 const SUGGEST_LIMIT = 6
-const DEBOUNCE_MS = 140
+const CATALOG_PAGE_SIZE = 8
+const DEBOUNCE_MS = 320
+const MIN_SEARCH_CHARS = 2
+const SEARCH_SORT = 'createdAt,desc'
 
 function formatVnd(n: number | null | undefined) {
   if (n == null || !Number.isFinite(n)) return ''
@@ -45,6 +49,7 @@ function pushRecent(keyword: string) {
 
 export function HeaderSearch({ className }: { className?: string }) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const initialKeyword = searchParams.get('keyword')?.trim() ?? ''
   const [value, setValue] = useState(initialKeyword)
@@ -66,20 +71,33 @@ export function HeaderSearch({ className }: { className?: string }) {
     return () => window.clearTimeout(t)
   }, [value])
 
+  const searchListParams = useMemo(
+    () => ({
+      page: 0,
+      size: CATALOG_PAGE_SIZE,
+      keyword: debounced,
+      sort: SEARCH_SORT,
+    }),
+    [debounced],
+  )
+
+  const canSuggest = debounced.length >= MIN_SEARCH_CHARS
+
   const suggestQuery = useQuery({
-    queryKey: ['header-search-suggest', debounced],
-    queryFn: () => productsApi.list({ page: 0, size: SUGGEST_LIMIT, keyword: debounced }),
-    enabled: isOpen && debounced.length > 0,
-    staleTime: 30 * 1000,
+    queryKey: getProductsQueryKey(searchListParams),
+    queryFn: ({ signal }) => productsApi.listWindow(searchListParams, signal),
+    enabled: isOpen && canSuggest,
+    staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     placeholderData: (prev) => prev,
   })
 
-  const suggestions = suggestQuery.data?.content ?? []
+  const suggestions = (suggestQuery.data?.content ?? []).slice(0, SUGGEST_LIMIT)
   const showRecent = isOpen && debounced.length === 0 && recent.length > 0
   const showSuggestions = isOpen && debounced.length > 0
-  const showEmpty = showSuggestions && !suggestQuery.isPending && suggestions.length === 0
+  const showMinCharsHint = showSuggestions && !canSuggest
+  const showEmpty = showSuggestions && canSuggest && !suggestQuery.isPending && suggestions.length === 0
 
   /** Tổng item navigate được bằng phím để set activeIdx */
   const navigableItems = useMemo(() => {
@@ -110,6 +128,16 @@ export function HeaderSearch({ className }: { className?: string }) {
     setRecent(loadRecent())
     setIsOpen(false)
     inputRef.current?.blur()
+
+    if (trimmed) {
+      prefetchProductList(queryClient, {
+        page: 0,
+        size: CATALOG_PAGE_SIZE,
+        keyword: trimmed,
+        sort: SEARCH_SORT,
+      })
+    }
+
     const next = new URLSearchParams(searchParams)
     if (trimmed) next.set('keyword', trimmed)
     else next.delete('keyword')
@@ -264,7 +292,14 @@ export function HeaderSearch({ className }: { className?: string }) {
                 ) : null}
               </div>
 
-              {suggestions.map((product, i) => {
+              {showMinCharsHint ? (
+                <div className="px-2 py-3 text-center text-xs text-muted-foreground">
+                  Nhập thêm ít nhất {MIN_SEARCH_CHARS} ký tự để xem gợi ý.
+                </div>
+              ) : null}
+
+              {canSuggest
+                ? suggestions.map((product, i) => {
                 const price =
                   product.discountPrice != null && product.price != null && product.discountPrice < product.price
                     ? product.discountPrice
@@ -304,7 +339,8 @@ export function HeaderSearch({ className }: { className?: string }) {
                     <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
                   </button>
                 )
-              })}
+              })
+                : null}
 
               {showEmpty ? (
                 <div className="px-2 py-3 text-center text-xs text-muted-foreground">

@@ -35,6 +35,8 @@ export function useProfileQuery(enabled = true) {
     queryFn: authApi.getProfile,
     enabled: enabled && Boolean(accessToken),
     retry: false,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   })
 
   useLayoutEffect(() => {

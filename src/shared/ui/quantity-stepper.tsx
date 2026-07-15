@@ -29,10 +29,16 @@ export function QuantityStepper({
 }: QuantityStepperProps) {
   const btnSize = size === 'sm' ? 'sm' : 'default'
   const heightClass = size === 'sm' ? 'h-9' : 'h-10'
+  const gridCols = size === 'sm' ? 'grid-cols-[2.25rem_2.5rem_2.25rem]' : 'grid-cols-[2.5rem_2.75rem_2.5rem]'
 
   return (
     <div
-      className={cn('inline-flex items-center rounded-md border', heightClass, disabled && 'opacity-50')}
+      className={cn(
+        'inline-grid w-fit max-w-fit shrink-0 overflow-hidden rounded-md border bg-background',
+        gridCols,
+        heightClass,
+        disabled && 'opacity-50',
+      )}
       role="group"
       aria-label={ariaLabel}
     >
@@ -40,7 +46,7 @@ export function QuantityStepper({
         type="button"
         variant="ghost"
         size={btnSize}
-        className="h-full rounded-none rounded-l-md px-2.5"
+        className="h-full w-full min-w-0 rounded-none rounded-l-md px-0"
         disabled={disabled || value <= min}
         onClick={() => onChange(clamp(value - 1, min, max))}
         aria-label="Giảm số lượng"
@@ -49,10 +55,7 @@ export function QuantityStepper({
       </Button>
       <span
         id={id}
-        className={cn(
-          'flex min-w-10 items-center justify-center border-x px-2 text-sm font-medium tabular-nums',
-          size === 'sm' ? 'min-w-9' : 'min-w-11',
-        )}
+        className="flex h-full w-full min-w-0 items-center justify-center border-x border-border bg-muted/20 text-sm font-medium tabular-nums"
         aria-live="polite"
       >
         {value}
@@ -61,7 +64,7 @@ export function QuantityStepper({
         type="button"
         variant="ghost"
         size={btnSize}
-        className="h-full rounded-none rounded-r-md px-2.5"
+        className="h-full w-full min-w-0 rounded-none rounded-r-md px-0"
         disabled={disabled || value >= max}
         onClick={() => onChange(clamp(value + 1, min, max))}
         aria-label="Tăng số lượng"
