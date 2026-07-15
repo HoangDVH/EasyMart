@@ -9,6 +9,7 @@ import {
 import { OrderIdDisplay } from '@/features/orders/components/order-id-display'
 import { OrderItemThumb } from '@/features/orders/components/order-item-thumb'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
+import { loadOrderShipping } from '@/shared/lib/shipping-storage'
 import { useAuthStore } from '@/shared/stores/auth-store'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
@@ -19,7 +20,8 @@ import { cn } from '@/shared/lib/utils'
 import type { Order } from '@/features/orders/types/order.types'
 
 function OrderCard({ order }: { order: Order }) {
-  const meta = orderStatusMeta(order.status)
+  const shipping = loadOrderShipping(order.id)
+  const meta = orderStatusMeta(order.status, { paymentMethod: shipping?.paymentMethod })
   const totalQty = order.items.reduce((sum, it) => sum + it.quantity, 0)
 
   return (

@@ -66,4 +66,13 @@ export const authApi = {
     const { data } = await httpClient.get<ApiResponse<UserResponse>>(AUTH_ENDPOINTS.me)
     return mapUser(data.result)
   },
+  async forgotPassword(email: string) {
+    await httpClient.post<ApiResponse<null>>(AUTH_ENDPOINTS.forgotPassword, { email })
+  },
+  async resetPassword(payload: { token: string; newPassword: string }) {
+    await httpClient.post<ApiResponse<null>>(AUTH_ENDPOINTS.resetPassword, {
+      token: payload.token,
+      newPassword: payload.newPassword,
+    })
+  },
 }

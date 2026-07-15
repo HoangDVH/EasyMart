@@ -1,5 +1,6 @@
 import { Check, Circle, X } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
+import type { OrderStatusDisplayOptions } from '@/features/orders/components/order-formatters'
 
 const STEPS = [
   { id: 'placed', label: 'Đặt hàng' },
@@ -8,24 +9,26 @@ const STEPS = [
   { id: 'done', label: 'Hoàn tất' },
 ] as const
 
-function resolveStepIndex(status: string): number {
+function resolveStepIndex(status: string, options?: OrderStatusDisplayOptions): number {
   const code = status.toUpperCase()
   if (code.includes('CANCEL') || code.includes('FAIL') || code.includes('REJECT')) return -1
   if (code.includes('COMPLETE') || code.includes('SUCCESS') || code.includes('DELIVERED')) return 3
   if (code.includes('SHIP') || code.includes('DELIVER')) return 2
-  if (code.includes('PAID') || code.includes('PAY') || code.includes('PROCESS') || code.includes('CONFIRM')) {
-    return 1
+  if (code.includes('PAID') || code.includes('PROCESS') || code.includes('CONFIRM')) return 1
+  if (code.includes('PEND') || code.includes('PAY')) {
+    return options?.paymentMethod === 'COD' ? 1 : 0
   }
-  return 0
+  return options?.paymentMethod === 'COD' ? 1 : 0
 }
 
 type OrderStatusTimelineProps = {
   status: string
   className?: string
+  paymentMethod?: OrderStatusDisplayOptions['paymentMethod']
 }
 
-export function OrderStatusTimeline({ status, className }: OrderStatusTimelineProps) {
-  const activeIndex = resolveStepIndex(status)
+export function OrderStatusTimeline({ status, className, paymentMethod }: OrderStatusTimelineProps) {
+  const activeIndex = resolveStepIndex(status, { paymentMethod })
   const isCancelled = activeIndex === -1
 
   if (isCancelled) {

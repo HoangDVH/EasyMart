@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Receipt, UserCog, UserRound } from 'lucide-react'
+import { CreditCard, Receipt, UserCog, UserRound } from 'lucide-react'
 import { useProfileQuery } from '@/features/auth/hooks/use-auth'
 import { useAuthStore } from '@/shared/stores/auth-store'
 import { cn } from '@/shared/lib/utils'
@@ -24,6 +24,11 @@ const navItems: NavItem[] = [
     to: '/account/orders',
     label: 'Đơn mua',
     icon: Receipt,
+  },
+  {
+    to: '/account/payments',
+    label: 'Thanh toán',
+    icon: CreditCard,
   },
 ]
 

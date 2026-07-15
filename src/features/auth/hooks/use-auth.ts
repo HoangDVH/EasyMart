@@ -85,6 +85,19 @@ export function useLogoutMutation() {
   })
 }
 
+export function useForgotPasswordMutation() {
+  return useMutation({
+    mutationFn: (email: string) => authApi.forgotPassword(email),
+  })
+}
+
+export function useResetPasswordMutation() {
+  return useMutation({
+    mutationFn: (payload: { token: string; newPassword: string }) =>
+      authApi.resetPassword(payload),
+  })
+}
+
 export function useHasRole(role: UserRole) {
   const user = useAuthStore((state) => state.user)
   return user?.role === role

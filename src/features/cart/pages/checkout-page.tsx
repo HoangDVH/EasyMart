@@ -215,12 +215,14 @@ export function CheckoutPage() {
           method: 'COD',
         })
       } catch (paymentError) {
-        toast.warning(
+        toast.error(
           getApiErrorMessage(
             paymentError,
-            'Đơn đã tạo nhưng ghi nhận thanh toán thất bại. Kiểm tra lại trong chi tiết đơn.',
+            'Đơn đã tạo nhưng ghi nhận thanh toán COD thất bại. Kiểm tra lại trong chi tiết đơn.',
           ),
         )
+        navigate(`/account/orders/${order.id}`)
+        return
       }
 
       finishCheckout()

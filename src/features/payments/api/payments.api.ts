@@ -73,11 +73,12 @@ function coerceVnpayInit(raw: unknown): VnpayPaymentInitResponse | null {
 }
 
 export const paymentsApi = {
-  /** Mock COD/CASH — đánh dấu đơn PAID ngay (backend học tập). */
+  /** Mock COD/CASH — backend nhận `method: CASH` để đánh dấu đơn PAID. */
   async create(payload: CreatePaymentPayload): Promise<Payment | null> {
+    const method = payload.method === 'COD' ? 'CASH' : payload.method
     const { data } = await httpClient.post<ApiEnvelope<unknown>>(PAYMENTS_BASE, {
       orderId: Number(payload.orderId),
-      method: payload.method,
+      method,
     })
     return coercePayment(data?.result)
   },

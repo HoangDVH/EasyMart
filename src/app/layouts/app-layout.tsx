@@ -105,6 +105,13 @@ export function AppLayout() {
         { label: 'Đơn mua' },
       ]
     }
+    if (pathname === '/account/payments') {
+      return [
+        { label: 'Trang chủ', to: '/' },
+        { label: 'Tài khoản', to: '/account' },
+        { label: 'Thanh toán' },
+      ]
+    }
     if (pathname.startsWith('/account/orders/')) {
       return [
         { label: 'Trang chủ', to: '/' },

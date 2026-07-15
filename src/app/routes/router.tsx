@@ -3,6 +3,7 @@ import { AppLayout } from '@/app/layouts/app-layout'
 import { AuthLayout } from '@/app/layouts/auth-layout'
 import { ProtectedRoute, RoleGuard } from '@/app/routes/guards'
 import { ForgotPasswordPage } from '@/features/auth/pages/forgot-password-page'
+import { ResetPasswordPage } from '@/features/auth/pages/reset-password-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
 import { RegisterPage } from '@/features/auth/pages/register-page'
 import { PolicyPage } from '@/features/dashboard/pages/policy-page'
@@ -18,6 +19,7 @@ import { ProfilePage } from '@/features/account/pages/profile-page'
 import { MyOrdersPage } from '@/features/orders/pages/my-orders-page'
 import { OrderDetailPage } from '@/features/orders/pages/order-detail-page'
 import { PaymentResultPage } from '@/features/payments/pages/payment-result-page'
+import { MyPaymentsPage } from '@/features/payments/pages/my-payments-page'
 
 export const router = createBrowserRouter([
   {
@@ -27,6 +29,7 @@ export const router = createBrowserRouter([
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
+      { path: 'reset-password', element: <ResetPasswordPage /> },
     ],
   },
   {
@@ -49,6 +52,7 @@ export const router = createBrowserRouter([
               { index: true, element: <ProfilePage /> },
               { path: 'orders', element: <MyOrdersPage /> },
               { path: 'orders/:id', element: <OrderDetailPage /> },
+              { path: 'payments', element: <MyPaymentsPage /> },
             ],
           },
           {

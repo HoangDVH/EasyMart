@@ -70,7 +70,7 @@ export function OrderDetailPage() {
   }
 
   const order = orderQuery.data
-  const meta = orderStatusMeta(order.status)
+  const meta = orderStatusMeta(order.status, { paymentMethod: shipping?.paymentMethod })
   const totalQty = order.items.reduce((sum, it) => sum + it.quantity, 0)
   const showVnpayRetry =
     shipping?.paymentMethod === 'VNPAY' && isPendingPayment(order.status)
@@ -118,7 +118,7 @@ export function OrderDetailPage() {
           <Badge className={cn('w-fit border', meta.tone)}>{meta.label}</Badge>
         </CardHeader>
         <CardContent className="space-y-6">
-          <OrderStatusTimeline status={order.status} />
+          <OrderStatusTimeline status={order.status} paymentMethod={shipping?.paymentMethod} />
 
           {shipping ? (
             <div className="rounded-lg border bg-muted/20 p-4">
