@@ -188,7 +188,7 @@ export function OrderDetailPage() {
           <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-sm text-muted-foreground">Tổng thanh toán</span>
             <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-end">
-              <span className="text-xl font-semibold text-secondary">{formatVnd(order.totalAmount)}</span>
+              <span className="text-xl font-semibold text-primary">{formatVnd(order.totalAmount)}</span>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 {showVnpayRetry ? (
                   <Button

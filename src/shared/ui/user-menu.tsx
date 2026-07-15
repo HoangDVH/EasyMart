@@ -46,6 +46,8 @@ export function UserMenu({ email, className, variant = 'default' }: UserMenuProp
     })
   }
 
+  const initials = email.trim().slice(0, 2).toUpperCase() || '?'
+
   return (
     <>
       {logout.isPending ? <FullPageSpinner message="Đang đăng xuất..." /> : null}
@@ -68,7 +70,10 @@ export function UserMenu({ email, className, variant = 'default' }: UserMenuProp
               ),
         )}
       >
-        <UserRound className="h-4 w-4" aria-hidden />
+        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-foreground/20 text-[10px] font-bold sm:hidden">
+          {initials}
+        </span>
+        <UserRound className="hidden h-4 w-4 sm:block" aria-hidden />
         <span className="hidden max-w-[160px] truncate sm:inline">{email}</span>
         <ChevronDown
           className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-180')}

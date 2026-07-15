@@ -1,5 +1,5 @@
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
-import { AlertCircle, Loader2, RefreshCw, XCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Loader2, RefreshCw, XCircle } from 'lucide-react'
 import { useEffect, useMemo, useRef } from 'react'
 import { CheckoutSteps } from '@/features/cart/components/checkout-steps'
 import {
@@ -184,7 +184,7 @@ export function PaymentResultPage() {
         <Card className="overflow-hidden border-primary/20">
           <CardHeader className="items-center space-y-3 pb-2 text-center">
             <span className="inline-flex h-16 w-16 animate-success-pop items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shadow-lg shadow-emerald-200/50">
-              <AlertCircle className="h-9 w-9" />
+              <CheckCircle2 className="h-9 w-9" />
             </span>
             <div className="space-y-1">
               <CardTitle className="text-xl">Thanh toán VNPay thành công</CardTitle>

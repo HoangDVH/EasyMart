@@ -94,7 +94,7 @@ export function AppLayout() {
     if (pathname === '/payment/result') {
       return [{ label: 'Trang chủ', to: '/' }, { label: 'Kết quả thanh toán' }]
     }
-    if (pathname === '/seller') return [{ label: 'Trang chủ', to: '/' }, { label: 'Quản lí sản phẩm' }]
+    if (pathname === '/seller') return [{ label: 'Trang chủ', to: '/' }, { label: 'Quản lý sản phẩm' }]
     if (pathname === '/admin') return [{ label: 'Trang chủ', to: '/' }, { label: 'Admin' }]
     if (pathname === '/account') {
       return [{ label: 'Trang chủ', to: '/' }, { label: 'Tài khoản' }]
@@ -225,7 +225,7 @@ export function AppLayout() {
                     isActive ? 'font-medium text-foreground' : 'hover:text-foreground'
                   }
                 >
-                  Quản lí sản phẩm
+                  Quản lý sản phẩm
                 </NavLink>
               ) : null}
             </div>
@@ -249,7 +249,7 @@ export function AppLayout() {
                     isActive ? 'font-medium text-foreground' : 'hover:text-foreground'
                   }
                 >
-                  Quản lí sản phẩm
+                  Quản lý sản phẩm
                 </NavLink>
               ) : null}
             </div>
@@ -279,7 +279,7 @@ export function AppLayout() {
               <li>Hotline: 1900 1234 (8h–22h)</li>
               <li>
                 <Link to="/cart" className="hover:text-primary-foreground hover:underline">
-                  Theo dõi giỏ hàng
+                  Xem giỏ hàng
                 </Link>
               </li>
             </ul>

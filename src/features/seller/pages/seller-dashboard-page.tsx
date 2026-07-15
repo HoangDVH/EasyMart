@@ -229,9 +229,9 @@ export function SellerDashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Quản lí sản phẩm</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Quản lý sản phẩm</h1>
           <p className="text-sm text-muted-foreground">
-            Quản lí danh sách sản phẩm và theo dõi đơn hàng liên quan.
+            Quản lý danh sách sản phẩm và theo dõi đơn hàng liên quan.
           </p>
         </div>
         <div className="flex gap-2">

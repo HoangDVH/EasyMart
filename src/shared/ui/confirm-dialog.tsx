@@ -1,3 +1,4 @@
+import { useEffect, useId, useRef } from 'react'
 import { Button } from '@/shared/ui/button'
 
 type ConfirmDialogProps = {
@@ -23,22 +24,49 @@ export function ConfirmDialog({
   onCancel,
   onConfirm,
 }: ConfirmDialogProps) {
+  const titleId = useId()
+  const descriptionId = useId()
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    dialogRef.current?.querySelector<HTMLButtonElement>('button[data-cancel]')?.focus()
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !loading) onCancel()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [open, loading, onCancel])
+
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/55"
+        aria-label="Đóng hộp thoại"
+        onClick={() => {
+          if (!loading) onCancel()
+        }}
+      />
       <div
-        className="w-full max-w-md rounded-xl border bg-background p-4 shadow-xl"
+        ref={dialogRef}
+        className="relative w-full max-w-md animate-scale-in rounded-xl border bg-background p-4 shadow-xl"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="confirm-dialog-title"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
       >
-        <h3 id="confirm-dialog-title" className="text-base font-semibold">
+        <h3 id={titleId} className="text-base font-semibold">
           {title}
         </h3>
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">
+          {description}
+        </p>
         <div className="mt-4 flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+          <Button type="button" variant="outline" data-cancel onClick={onCancel} disabled={loading}>
             {cancelLabel}
           </Button>
           <Button

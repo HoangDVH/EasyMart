@@ -18,7 +18,7 @@ function PaymentRow({ payment }: { payment: Payment }) {
   const status = paymentStatusMeta(payment.status)
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="hover-lift overflow-hidden">
       <CardContent className="space-y-3 p-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="space-y-1">
@@ -45,7 +45,7 @@ function PaymentRow({ payment }: { payment: Payment }) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Số tiền</p>
-            <p className="text-sm font-semibold text-secondary">{formatVnd(payment.amount)}</p>
+            <p className="text-sm font-semibold text-primary">{formatVnd(payment.amount)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Thời gian</p>
@@ -162,7 +162,7 @@ export function MyPaymentsPage() {
         </CardHeader>
       </Card>
 
-      <div className="space-y-3">
+      <div className="stagger-children space-y-3">
         {payments.map((payment) => (
           <PaymentRow key={payment.id} payment={payment} />
         ))}

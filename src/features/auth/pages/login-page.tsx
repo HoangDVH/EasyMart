@@ -19,9 +19,8 @@ import { Button } from '@/shared/ui/button'
 import { resolvePostLoginPath } from '@/shared/lib/auth-redirect'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { FullPageSpinner } from '@/shared/ui/full-page-spinner'
 import { toast } from 'react-toastify'
-import { CheckCircle2, Eye, EyeOff } from 'lucide-react'
+import { CheckCircle2, Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -89,7 +88,7 @@ export function LoginPage() {
           <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" {...register('email')} />
+              <Input id="email" type="email" autoComplete="email" {...register('email')} />
               {errors.email ? (
                 <p className="text-xs text-destructive">
                   {errors.email.message}
@@ -102,6 +101,7 @@ export function LoginPage() {
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
                   {...register('password')}
                   className="pr-10"
                 />
@@ -134,9 +134,10 @@ export function LoginPage() {
             </div>
             <Button
               type="submit"
-              className="w-full"
+              className="w-full gap-2"
               disabled={loginMutation.isPending || isSubmitting}
             >
+              {loginMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {loginMutation.isPending ? 'Đang xử lý...' : 'Đăng nhập'}
             </Button>
             <p className="text-sm text-muted-foreground">
@@ -148,9 +149,6 @@ export function LoginPage() {
           </form>
         </CardContent>
       </Card>
-      {loginMutation.isPending ? (
-        <FullPageSpinner message="Đang đăng nhập..." />
-      ) : null}
     </>
   )
 }

@@ -78,10 +78,14 @@ export function CartPage() {
         <CardContent className="stagger-children space-y-3">
           {items.map((item) => (
             <div key={item.productId} className="flex gap-3 rounded-xl border p-3 transition-colors hover:border-primary/20 hover:bg-muted/30">
-              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted/40 sm:h-16 sm:w-24">
+              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-md bg-muted/40 sm:h-20 sm:w-20">
                 {item.imageUrl ? (
-                  <img src={item.imageUrl} alt="" className="h-full w-full object-contain p-1" loading="lazy" />
-                ) : null}
+                  <img src={item.imageUrl} alt={item.name} className="h-full w-full object-contain p-1" loading="lazy" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
+                    Không có ảnh
+                  </div>
+                )}
               </div>
               <div className="min-w-0 flex-1 space-y-2">
                 <Link
@@ -92,7 +96,7 @@ export function CartPage() {
                   {item.name}
                 </Link>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
-                  <span className="font-semibold text-secondary">
+                  <span className="font-semibold text-primary">
                     {item.unitPrice != null ? formatVnd(item.unitPrice) : 'Liên hệ'}
                   </span>
                   {hasCartDiscount(item) && item.originalPrice != null ? (
@@ -124,7 +128,7 @@ export function CartPage() {
         <CardFooter className="hidden flex-col items-stretch gap-3 border-t pt-4 sm:flex sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-muted-foreground">Tạm tính</p>
-            <p className="text-xl font-semibold text-secondary">{formatVnd(subtotal)}</p>
+            <p className="text-xl font-semibold text-primary">{formatVnd(subtotal)}</p>
           </div>
           <Button
             size="lg"
@@ -142,11 +146,11 @@ export function CartPage() {
         </CardFooter>
       </Card>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm sm:hidden">
+      <div className="mobile-bottom-bar fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm sm:hidden">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <div>
             <p className="text-xs text-muted-foreground">Tạm tính ({itemCount})</p>
-            <p className="text-lg font-semibold text-secondary">{formatVnd(subtotal)}</p>
+            <p className="text-lg font-semibold text-primary">{formatVnd(subtotal)}</p>
           </div>
           <Button
             size="lg"

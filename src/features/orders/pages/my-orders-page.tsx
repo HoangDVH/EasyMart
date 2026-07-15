@@ -76,7 +76,7 @@ function OrderCard({ order }: { order: Order }) {
         ) : null}
         <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
           <span className="text-sm text-muted-foreground">Tổng thanh toán</span>
-          <span className="text-lg font-semibold text-secondary">{formatVnd(order.totalAmount)}</span>
+          <span className="text-lg font-semibold text-primary">{formatVnd(order.totalAmount)}</span>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Link to={`/account/orders/${order.id}`} className="sm:flex-1">

@@ -234,6 +234,28 @@ html {
   @apply transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10;
 }
 
+.sticky-below-header {
+  top: 10rem;
+}
+@media (min-width: 640px) {
+  .sticky-below-header {
+    top: 8.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .sticky-below-header {
+    top: 7.25rem;
+  }
+}
+
+.mobile-bottom-bar {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+}
+
+.animate-float-once {
+  animation: float 2.5s ease-in-out 1;
+}
+
 /* React-Toastify: đảm bảo không bị header/card/stacking của app che */
 .Toastify__toast-container {
   z-index: 999999 !important;

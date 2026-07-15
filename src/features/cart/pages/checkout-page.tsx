@@ -313,8 +313,12 @@ export function CheckoutPage() {
             <div key={item.productId} className="flex items-center gap-3">
               <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md border bg-muted/40">
                 {item.imageUrl ? (
-                  <img src={item.imageUrl} alt="" className="h-full w-full object-contain p-0.5" loading="lazy" />
-                ) : null}
+                  <img src={item.imageUrl} alt={item.name} className="h-full w-full object-contain p-0.5" loading="lazy" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
+                    Không có ảnh
+                  </div>
+                )}
               </div>
               <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                 <span className="line-clamp-2">
@@ -324,10 +328,14 @@ export function CheckoutPage() {
               </div>
             </div>
           ))}
-          <div className="border-t pt-3">
+          <div className="space-y-2 border-t pt-3 text-sm">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span>Phí vận chuyển</span>
+              <span>{subtotal >= 500_000 ? 'Miễn phí' : 'Tính khi giao hàng'}</span>
+            </div>
             <div className="flex items-center justify-between font-semibold">
               <span>Tổng thanh toán</span>
-              <span className="text-secondary">{formatVnd(subtotal)}</span>
+              <span className="text-primary">{formatVnd(subtotal)}</span>
             </div>
           </div>
         </CardContent>
@@ -358,11 +366,22 @@ export function CheckoutPage() {
       </Card>
     </form>
 
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm sm:hidden">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-        <div>
+    <div className="mobile-bottom-bar fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm sm:hidden">
+      <div className="mx-auto flex max-w-6xl items-center gap-2">
+        <Link
+          to={isBuyNow && items[0] ? `/products/${items[0].productId}` : '/cart'}
+          className="shrink-0"
+          onClick={() => {
+            if (isBuyNow) clearBuyNow()
+          }}
+        >
+          <Button type="button" variant="outline" size="sm">
+            Quay lại
+          </Button>
+        </Link>
+        <div className="min-w-0 flex-1">
           <p className="text-xs text-muted-foreground">Tổng thanh toán</p>
-          <p className="text-lg font-semibold text-secondary">{formatVnd(subtotal)}</p>
+          <p className="truncate text-base font-semibold text-primary">{formatVnd(subtotal)}</p>
         </div>
         <Button
           type="submit"

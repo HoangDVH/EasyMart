@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
-import { ShoppingCart, Star, Zap } from 'lucide-react'
+import { ArrowLeft, ShoppingCart, Star, Zap } from 'lucide-react'
 import { useProductQuery } from '@/features/products/hooks/use-catalog'
 import { buildLoginPath } from '@/shared/lib/auth-redirect'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
@@ -191,7 +191,20 @@ export function ProductDetailPage() {
                   {product.rating.toFixed(1)} / 5
                 </span>
               ) : null}
-              {product.stockQuantity != null ? <div>Tồn kho: {product.stockQuantity}</div> : null}
+              {product.stockQuantity != null ? (
+                <span
+                  className={cn(
+                    'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
+                    isOutOfStock
+                      ? 'bg-destructive/10 text-destructive'
+                      : product.stockQuantity <= 5
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-emerald-100 text-emerald-800',
+                  )}
+                >
+                  {isOutOfStock ? 'Hết hàng' : product.stockQuantity <= 5 ? 'Sắp hết hàng' : 'Còn hàng'}
+                </span>
+              ) : null}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -228,8 +241,12 @@ export function ProductDetailPage() {
                 Mua ngay
               </Button>
             </div>
-            <Link to="/" className="inline-block text-sm text-primary underline">
-              ← Quay lại danh sách sản phẩm
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Quay lại danh sách
             </Link>
           </CardContent>
         </Card>
@@ -238,11 +255,11 @@ export function ProductDetailPage() {
       <RelatedProducts productId={product.id} categoryId={product.categoryId} />
 
       {!isOutOfStock ? (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm sm:hidden">
+        <div className="mobile-bottom-bar fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm sm:hidden">
           <div className="mx-auto flex max-w-6xl items-center gap-3">
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs text-muted-foreground">{product.name}</p>
-              <p className="text-lg font-semibold text-secondary">{formatVnd(price.current)}</p>
+              <p className="text-lg font-semibold text-primary">{formatVnd(price.current)}</p>
             </div>
             <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1" onClick={handleAddToCart}>
               <ShoppingCart className="h-4 w-4" />

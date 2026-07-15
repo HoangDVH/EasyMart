@@ -12,7 +12,7 @@ type EmptyStateProps = {
 export function EmptyState({ icon: Icon, title, description, action, className }: EmptyStateProps) {
   return (
     <div className={cn('flex flex-col items-center px-4 py-10 text-center animate-scale-in', className)}>
-      <div className="mb-4 grid h-20 w-20 place-items-center rounded-full bg-gradient-to-br from-primary/15 via-muted to-secondary/10 shadow-inner animate-float">
+      <div className="mb-4 grid h-20 w-20 place-items-center rounded-full bg-gradient-to-br from-primary/15 via-muted to-secondary/10 shadow-inner animate-float-once">
         <Icon className="h-9 w-9 text-primary" aria-hidden />
       </div>
       <h3 className="text-lg font-semibold tracking-tight">{title}</h3>

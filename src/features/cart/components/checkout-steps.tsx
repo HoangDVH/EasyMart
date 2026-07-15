@@ -1,9 +1,10 @@
+import { Link } from 'react-router-dom'
 import { Check } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 
 const STEPS = [
-  { key: 'cart', label: 'Giỏ hàng' },
-  { key: 'checkout', label: 'Thanh toán' },
+  { key: 'cart', label: 'Giỏ hàng', to: '/cart' },
+  { key: 'checkout', label: 'Thanh toán', to: '/checkout' },
   { key: 'done', label: 'Hoàn tất' },
 ] as const
 
@@ -18,30 +19,44 @@ export function CheckoutSteps({ current }: { current: CheckoutStepKey }) {
         {STEPS.map((step, index) => {
           const done = index < currentIndex
           const active = index === currentIndex
+          const clickable = done && 'to' in step && step.to
+
+          const content = (
+            <>
+              <span
+                className={cn(
+                  'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                  done
+                    ? 'bg-primary text-primary-foreground'
+                    : active
+                      ? 'bg-secondary text-secondary-foreground'
+                      : 'bg-muted text-muted-foreground',
+                )}
+                aria-hidden
+              >
+                {done ? <Check className="h-3.5 w-3.5" /> : index + 1}
+              </span>
+              <span
+                className={cn(
+                  'truncate text-xs font-medium sm:text-sm',
+                  active ? 'text-foreground' : done ? 'text-primary' : 'text-muted-foreground',
+                )}
+              >
+                {step.label}
+              </span>
+            </>
+          )
+
           return (
             <li key={step.key} className="flex min-w-0 flex-1 items-center gap-2">
               <div className="flex min-w-0 items-center gap-2">
-                <span
-                  className={cn(
-                    'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
-                    done
-                      ? 'bg-primary text-primary-foreground'
-                      : active
-                        ? 'bg-secondary text-secondary-foreground'
-                        : 'bg-muted text-muted-foreground',
-                  )}
-                  aria-hidden
-                >
-                  {done ? <Check className="h-3.5 w-3.5" /> : index + 1}
-                </span>
-                <span
-                  className={cn(
-                    'truncate text-xs font-medium sm:text-sm',
-                    active ? 'text-foreground' : done ? 'text-primary' : 'text-muted-foreground',
-                  )}
-                >
-                  {step.label}
-                </span>
+                {clickable ? (
+                  <Link to={step.to!} className="flex min-w-0 items-center gap-2 hover:opacity-90">
+                    {content}
+                  </Link>
+                ) : (
+                  content
+                )}
               </div>
               {index < STEPS.length - 1 ? (
                 <div

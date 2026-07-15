@@ -121,7 +121,7 @@ export function OrderSuccessPage() {
               <>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Tổng thanh toán</span>
-                  <span className="font-semibold text-secondary">{formatVnd(order.totalAmount)}</span>
+                  <span className="font-semibold text-primary">{formatVnd(order.totalAmount)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Sản phẩm</span>

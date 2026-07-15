@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { httpClient } from '@/shared/api/http-client'
 import { env } from '@/shared/config/env'
 import { PRODUCT_MEDIA } from '@/shared/constants/catalog'
@@ -16,9 +16,15 @@ import {
   useProductsQuery,
 } from '@/features/products/hooks/use-catalog'
 import type { Product } from '@/features/products/types/product.types'
-import { SearchX, ShoppingCart, SlidersHorizontal, Star, X } from 'lucide-react'
+import { SearchX, ShoppingCart, Star } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useCartStore } from '@/shared/stores/cart-store'
+import {
+  CatalogFilterBar,
+  type FeaturedFilterKey,
+  type PriceFilterKey,
+  type SortFilterKey,
+} from '@/features/products/components/catalog-filter-bar'
 
 const PAGE_SIZE = 8
 
@@ -36,21 +42,9 @@ function dedupeProducts(rows: Product[]): Product[] {
 /** Tránh lưới 2–3 cột khi chỉ có 1–2 sản phẩm → ô trống bên cạnh. */
 function catalogGridClass(count: number) {
   if (count <= 1) return 'grid-cols-1 sm:max-w-xs'
-  if (count === 2) return 'grid-cols-1 sm:grid-cols-2'
-  return 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'
+  if (count === 2) return 'grid-cols-2 sm:max-w-2xl'
+  return 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
 }
-
-type PriceFilterKey = 'all' | 'under-5m' | '5m-10m' | '10m-20m' | 'over-20m'
-type SortFilterKey = 'default' | 'price-asc' | 'price-desc' | 'rating-desc' | 'discount-desc'
-type FeaturedFilterKey = 'all' | 'featured' | 'non-featured'
-
-const PRICE_OPTIONS: { key: PriceFilterKey; label: string }[] = [
-  { key: 'all', label: 'Tất cả' },
-  { key: 'under-5m', label: 'Dưới 5 triệu' },
-  { key: '5m-10m', label: '5 - 10 triệu' },
-  { key: '10m-20m', label: '10 - 20 triệu' },
-  { key: 'over-20m', label: 'Trên 20 triệu' },
-]
 
 function mapPriceRange(filter: PriceFilterKey): { minPrice?: number; maxPrice?: number } {
   switch (filter) {
@@ -159,7 +153,7 @@ async function fetchImageBlobWithAuth(imageUrl: string): Promise<{ ok: boolean; 
   }
 }
 
-function ProductImage({ product, className }: { product: Product; className?: string }) {
+function ProductImage({ product, className, alt }: { product: Product; className?: string; alt?: string }) {
   const [broken, setBroken] = useState(false)
   const [blobSrc, setBlobSrc] = useState<string | null>(null)
   const blobSrcRef = useRef<string | null>(null)
@@ -217,7 +211,7 @@ function ProductImage({ product, className }: { product: Product; className?: st
   return (
     <img
       src={displaySrc}
-      alt=""
+      alt={alt ?? product.name}
       className={cn('block', className)}
       loading="lazy"
       onError={tryBlobOnError ? onImgError : () => setBroken(true)}
@@ -225,13 +219,7 @@ function ProductImage({ product, className }: { product: Product; className?: st
   )
 }
 
-function ProductCatalogCard({
-  product,
-  onOpenDetail,
-}: {
-  product: Product
-  onOpenDetail: (id: string) => void
-}) {
+function ProductCatalogCard({ product }: { product: Product }) {
   const addToCart = useCartStore((state) => state.addItem)
   const needsDetailImage = !product.imageUrl
   const detailForImage = useProductQuery(product.id, { enabled: needsDetailImage })
@@ -258,32 +246,31 @@ function ProductCatalogCard({
   }
 
   return (
-    <Card
-      className="group cursor-pointer overflow-hidden border-border/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/20 hover:shadow-xl hover:shadow-primary/15"
-      onClick={() => onOpenDetail(product.id)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onOpenDetail(product.id)
-        }
-      }}
-      role="button"
-      tabIndex={0}
-    >
-      <div className="px-3 pt-3">
-        <div className="relative isolate h-48 w-full shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-muted/70 via-background to-muted/40 md:h-52">
-        {needsDetailImage && detailForImage.isPending ? (
-          <div className="absolute inset-0 animate-pulse bg-muted/80" />
-        ) : (
-          <ProductImage
-            product={merged}
-            className="pointer-events-none h-full w-full object-contain object-center"
-          />
-        )}
+    <Card className="group overflow-hidden border-border/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/20 hover:shadow-xl hover:shadow-primary/15">
+      <div className="relative px-3 pt-3">
+        <Link
+          to={`/products/${product.id}`}
+          className="relative isolate block h-48 w-full shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-muted/70 via-background to-muted/40 md:h-52"
+        >
+          {needsDetailImage && detailForImage.isPending ? (
+            <div className="absolute inset-0 animate-pulse bg-muted/80" />
+          ) : (
+            <ProductImage
+              product={merged}
+              alt={product.name}
+              className="pointer-events-none h-full w-full object-contain object-center"
+            />
+          )}
+        </Link>
         {product.featured ? (
-          <Badge className="absolute left-2 top-2 z-[1] border-secondary/30 bg-secondary text-secondary-foreground shadow-sm">
+          <Badge className="pointer-events-none absolute left-5 top-5 z-[1] border-secondary/30 bg-secondary text-secondary-foreground shadow-sm">
             <Star className="mr-1 h-3.5 w-3.5 fill-current text-secondary-foreground" />
             Nổi bật
+          </Badge>
+        ) : null}
+        {isOutOfStock ? (
+          <Badge className="pointer-events-none absolute right-5 top-5 z-[1] bg-destructive text-destructive-foreground">
+            Hết hàng
           </Badge>
         ) : null}
         {!isOutOfStock ? (
@@ -292,34 +279,33 @@ function ProductCatalogCard({
               type="button"
               size="sm"
               variant="secondary"
-              className="absolute bottom-2 right-2 z-[1] h-9 w-9 rounded-full p-0 shadow-md md:hidden"
+              className="absolute bottom-5 right-5 z-[2] h-9 w-9 rounded-full p-0 shadow-md md:hidden"
               onClick={handleAddToCart}
               aria-label="Thêm vào giỏ"
             >
               <ShoppingCart className="h-4 w-4" />
             </Button>
-            <div className="absolute inset-x-0 bottom-0 z-[1] hidden translate-y-full bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 transition-all duration-300 [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-y-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 md:block">
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                className="w-full gap-1.5 shadow-md"
-                onClick={handleAddToCart}
-              >
-                <ShoppingCart className="h-3.5 w-3.5" />
-                Thêm vào giỏ
-              </Button>
+            <div className="pointer-events-none absolute inset-x-3 bottom-3 top-3 hidden translate-y-0 overflow-hidden rounded-lg md:block">
+              <div className="absolute inset-x-0 bottom-0 translate-y-full bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:pointer-events-auto">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="w-full gap-1.5 shadow-md"
+                  onClick={handleAddToCart}
+                >
+                  <ShoppingCart className="h-3.5 w-3.5" />
+                  Thêm vào giỏ
+                </Button>
+              </div>
             </div>
           </>
-        ) : (
-          <Badge className="absolute right-2 top-2 z-[1] bg-destructive text-destructive-foreground">
-            Hết hàng
-          </Badge>
-        )}
-      </div>
+        ) : null}
       </div>
       <CardHeader className="space-y-2 pb-3">
-        <CardTitle className="line-clamp-2 text-base leading-snug">{product.name}</CardTitle>
+        <Link to={`/products/${product.id}`} className="block hover:text-primary">
+          <CardTitle className="line-clamp-2 text-base leading-snug">{product.name}</CardTitle>
+        </Link>
         <CardDescription className="space-y-2">
           {(() => {
             const price = displayPrice(product)
@@ -363,7 +349,7 @@ function ProductCatalogCard({
 }
 
 export function ProductCatalog() {
-  const navigate = useNavigate()
+  const filterBarRef = useRef<HTMLDivElement>(null)
   const [searchParams, setSearchParams] = useSearchParams()
 
   /** Keyword + categoryId là nguồn URL → state (header-search và category-nav cập nhật URL). */
@@ -379,7 +365,6 @@ export function ProductCatalog() {
   const [onlyDiscountFilter, setOnlyDiscountFilter] = useState(hasDiscountFromUrl)
   const [onlyInStockFilter, setOnlyInStockFilter] = useState(false)
   const [featuredFilter, setFeaturedFilter] = useState<FeaturedFilterKey>('all')
-  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
 
   const categoriesQuery = useCategoriesQuery()
   const categories = categoriesQuery.data ?? []
@@ -460,16 +445,11 @@ export function ProductCatalog() {
     setOnlyInStockFilter(false)
     setCategoryFilter('all')
     setFeaturedFilter('all')
+    const next = new URLSearchParams(searchParams)
+    next.delete('hasDiscount')
+    next.delete('discount')
+    setSearchParams(next, { replace: true })
   }
-
-  useEffect(() => {
-    if (!isFilterSheetOpen) return
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = previous
-    }
-  }, [isFilterSheetOpen])
 
   useEffect(() => {
     setOnlyDiscountFilter(hasDiscountFromUrl)
@@ -489,102 +469,18 @@ export function ProductCatalog() {
     }
   }, [isLoadingProducts, page, filteredProducts.length, pageData?.totalElements, totalPages])
 
-  const openDetail = (id: string) => navigate(`/products/${id}`)
+  const clearDiscountUrl = () => {
+    setOnlyDiscountFilter(false)
+    const next = new URLSearchParams(searchParams)
+    next.delete('hasDiscount')
+    next.delete('discount')
+    setSearchParams(next)
+  }
 
-  const renderFilterPanel = (mobile = false) => (
-    <div className={cn('rounded-xl border border-border/70 bg-background p-3 shadow-sm transition-shadow hover:shadow-md sm:p-4', mobile && 'border-none p-0 shadow-none hover:shadow-none')}>
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Bộ lọc sản phẩm</h3>
-        <Button type="button" variant="ghost" size="sm" onClick={resetFilters} disabled={activeFilterCount === 0}>
-          Reset
-        </Button>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {PRICE_OPTIONS.map((x) => (
-          <button
-            key={x.key}
-            type="button"
-            onClick={() => setPriceFilter(x.key)}
-            className={cn(
-              'rounded-full border px-3 py-1.5 text-xs transition sm:text-sm',
-              priceFilter === x.key ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/40',
-            )}
-          >
-            {x.label}
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => setOnlyDiscountFilter((v) => !v)}
-          className={cn(
-            'rounded-full border px-3 py-1.5 text-xs transition sm:text-sm',
-            onlyDiscountFilter ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/40',
-          )}
-        >
-          Đang giảm giá
-        </button>
-        <button
-          type="button"
-          onClick={() => setOnlyInStockFilter((v) => !v)}
-          className={cn(
-            'rounded-full border px-3 py-1.5 text-xs transition sm:text-sm',
-            onlyInStockFilter ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/40',
-          )}
-        >
-          Còn hàng
-        </button>
-      </div>
-
-      <div className="mt-3 grid gap-2">
-        <select
-          value={minRatingFilter}
-          onChange={(e) => setMinRatingFilter(Number(e.target.value))}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-        >
-          <option value={0}>Đánh giá: Tất cả</option>
-          <option value={3}>Từ 3 sao</option>
-          <option value={4}>Từ 4 sao</option>
-          <option value={4.5}>Từ 4.5 sao</option>
-        </select>
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-          disabled={categoriesQuery.isPending}
-        >
-          <option value="all">
-            {categoriesQuery.isPending ? 'Đang tải danh mục…' : 'Danh mục: Tất cả'}
-          </option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={featuredFilter}
-          onChange={(e) => setFeaturedFilter(e.target.value as FeaturedFilterKey)}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-        >
-          <option value="all">Nổi bật: Tất cả</option>
-          <option value="featured">Chỉ sản phẩm nổi bật</option>
-          <option value="non-featured">Không nổi bật</option>
-        </select>
-        <select
-          value={sortFilter}
-          onChange={(e) => setSortFilter(e.target.value as SortFilterKey)}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-        >
-          <option value="default">Sắp xếp: Mới nhất</option>
-          <option value="price-asc">Giá thấp đến cao</option>
-          <option value="price-desc">Giá cao đến thấp</option>
-          <option value="rating-desc">Đánh giá cao nhất</option>
-          <option value="discount-desc">Giảm giá mạnh nhất (theo trang)</option>
-        </select>
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground">Đang hiển thị {filteredProducts.length} sản phẩm sau lọc</p>
-    </div>
-  )
+  const handlePageChange = (nextPage: number) => {
+    setPage(nextPage)
+    filterBarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   const heroTitle = keyword
     ? `Kết quả cho "${keyword}"`
@@ -597,157 +493,113 @@ export function ProductCatalog() {
       ? 'Sản phẩm thuộc danh mục đã chọn.'
       : 'Chọn nhanh sản phẩm đang được quan tâm, giá tốt và sẵn hàng.'
 
-  const showCatalogHeader = Boolean(keyword || activeCategoryName || hasDiscountFromUrl)
-
   return (
     <div className="space-y-6">
-      {showCatalogHeader ? (
-        <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight">{heroTitle}</h2>
-            <p className="mt-0.5 text-sm text-muted-foreground">{heroSubtitle}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {keyword ? (
-              <button
-                type="button"
-                onClick={clearKeyword}
-                className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1 text-xs hover:border-destructive/40 hover:text-destructive"
-              >
-                Từ khoá: "{keyword}" <X className="h-3 w-3" aria-hidden />
-              </button>
-            ) : null}
-            {activeCategoryName ? (
-              <button
-                type="button"
-                onClick={() => setCategoryFilter('all')}
-                className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1 text-xs hover:border-destructive/40 hover:text-destructive"
-              >
-                Danh mục: {activeCategoryName} <X className="h-3 w-3" aria-hidden />
-              </button>
-            ) : null}
-            {hasDiscountFromUrl && !keyword && !activeCategoryName ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setOnlyDiscountFilter(false)
-                  const next = new URLSearchParams(searchParams)
-                  next.delete('hasDiscount')
-                  next.delete('discount')
-                  setSearchParams(next)
-                }}
-                className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1 text-xs hover:border-destructive/40 hover:text-destructive"
-              >
-                Ưu đãi giảm giá <X className="h-3 w-3" aria-hidden />
-              </button>
-            ) : null}
-          </div>
-        </div>
-      ) : (
-        <h2 className="sr-only">Danh sách sản phẩm</h2>
-      )}
+      <div className="border-b pb-4">
+        <h2 className="text-lg font-semibold tracking-tight">{heroTitle}</h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">{heroSubtitle}</p>
+      </div>
 
       {listQuery.isError ? (
-        <p className="text-sm text-destructive">
-          {getApiErrorMessage(listQuery.error, 'Không tải được danh sách sản phẩm.')}
-        </p>
+        <Card>
+          <EmptyState
+            icon={SearchX}
+            title="Không tải được sản phẩm"
+            description={getApiErrorMessage(listQuery.error, 'Vui lòng thử lại sau.')}
+            action={
+              <Button type="button" variant="outline" size="sm" onClick={() => void listQuery.refetch()}>
+                Thử lại
+              </Button>
+            }
+          />
+        </Card>
       ) : null}
-      <div className="flex justify-end lg:hidden">
-        <Button type="button" variant="outline" onClick={() => setIsFilterSheetOpen(true)}>
-          <SlidersHorizontal className="mr-2 h-4 w-4" />
-          Bộ lọc
-          {activeFilterCount > 0 ? (
-            <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-semibold text-primary-foreground">
-              {activeFilterCount}
-            </span>
-          ) : null}
-        </Button>
+
+      <div ref={filterBarRef}>
+      <CatalogFilterBar
+        keyword={keyword}
+        onClearKeyword={clearKeyword}
+        hasDiscountFromUrl={hasDiscountFromUrl}
+        onClearDiscountUrl={clearDiscountUrl}
+        priceFilter={priceFilter}
+        onPriceFilterChange={setPriceFilter}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={setCategoryFilter}
+        categories={categories}
+        minRatingFilter={minRatingFilter}
+        onMinRatingFilterChange={setMinRatingFilter}
+        featuredFilter={featuredFilter}
+        onFeaturedFilterChange={setFeaturedFilter}
+        onlyDiscountFilter={onlyDiscountFilter}
+        onOnlyDiscountFilterChange={setOnlyDiscountFilter}
+        onlyInStockFilter={onlyInStockFilter}
+        onOnlyInStockFilterChange={setOnlyInStockFilter}
+        sortFilter={sortFilter}
+        onSortFilterChange={setSortFilter}
+        totalCount={pageData?.totalElements ?? 0}
+        visibleCount={filteredProducts.length}
+        onResetFilters={resetFilters}
+        activeFilterCount={activeFilterCount}
+      />
       </div>
 
-      <div className="lg:grid lg:grid-cols-[280px_1fr] lg:gap-6">
-        <aside className="hidden lg:block">
-          <div className="sticky top-24">{renderFilterPanel()}</div>
-        </aside>
-
-        <div className="space-y-4">
-          <div className="relative">
-            <div className={cn('stagger-children grid gap-4', productGridClass, filteredProducts.length === 1 && 'sm:mx-0')}>
-            {isLoadingProducts
-              ? Array.from({ length: skeletonCount }).map((_, i) => (
-                  <Card key={`sk-${i}`} className="overflow-hidden">
-                    <div className="h-48 animate-pulse bg-muted md:h-52" />
-                    <CardHeader className="space-y-2">
-                      <div className="h-4 w-2/3 animate-pulse rounded bg-muted" />
-                      <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
-                    </CardHeader>
-                  </Card>
-                ))
-              : filteredProducts.map((product) => (
-                  <ProductCatalogCard key={product.id} product={product} onOpenDetail={openDetail} />
-                ))}
-            </div>
+      {!listQuery.isError ? (
+      <div className="space-y-4">
+        <div className="relative">
+          <div className={cn('stagger-children grid gap-3 sm:gap-4', productGridClass, filteredProducts.length === 1 && 'sm:mx-0')}>
+          {isLoadingProducts
+            ? Array.from({ length: skeletonCount }).map((_, i) => (
+                <Card key={`sk-${i}`} className="overflow-hidden">
+                  <div className="h-48 animate-pulse bg-muted md:h-52" />
+                  <CardHeader className="space-y-2">
+                    <div className="h-4 w-2/3 animate-pulse rounded bg-muted" />
+                    <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
+                  </CardHeader>
+                </Card>
+              ))
+            : filteredProducts.map((product) => (
+                <ProductCatalogCard key={product.id} product={product} />
+              ))}
           </div>
-
-          {!isLoadingProducts && filteredProducts.length === 0 ? (
-            <EmptyState
-              icon={SearchX}
-              title="Không tìm thấy sản phẩm phù hợp"
-              description={
-                keyword
-                  ? `Không có kết quả cho "${keyword}". Thử từ khoá khác hoặc đổi bộ lọc.`
-                  : 'Bộ lọc hiện tại không trả về sản phẩm nào.'
-              }
-              action={
-                keyword || activeFilterCount > 0 ? (
-                  <>
-                    {keyword ? (
-                      <Button type="button" variant="outline" size="sm" onClick={clearKeyword}>
-                        Xoá từ khoá
-                      </Button>
-                    ) : null}
-                    {activeFilterCount > 0 ? (
-                      <Button type="button" variant="outline" size="sm" onClick={resetFilters}>
-                        Reset bộ lọc
-                      </Button>
-                    ) : null}
-                  </>
-                ) : undefined
-              }
-            />
-          ) : null}
         </div>
-      </div>
 
+        {!isLoadingProducts && filteredProducts.length === 0 ? (
+          <EmptyState
+            icon={SearchX}
+            title="Không tìm thấy sản phẩm phù hợp"
+            description={
+              keyword
+                ? `Không có kết quả cho "${keyword}". Thử từ khoá khác hoặc đổi bộ lọc.`
+                : 'Bộ lọc hiện tại không trả về sản phẩm nào.'
+            }
+            action={
+              keyword || activeFilterCount > 0 ? (
+                <>
+                  {keyword ? (
+                    <Button type="button" variant="outline" size="sm" onClick={clearKeyword}>
+                      Xóa từ khóa
+                    </Button>
+                  ) : null}
+                  {activeFilterCount > 0 ? (
+                    <Button type="button" variant="outline" size="sm" onClick={resetFilters}>
+                      Reset bộ lọc
+                    </Button>
+                  ) : null}
+                </>
+              ) : undefined
+            }
+          />
+        ) : null}
+      </div>
+      ) : null}
+
+      {!listQuery.isError ? (
       <PaginationBar
         page={page}
         totalPages={totalPages}
         isFetching={listQuery.isFetching}
-        onPageChange={setPage}
+        onPageChange={handlePageChange}
       />
-
-      {isFilterSheetOpen ? (
-        <div className="fixed inset-0 z-[70] lg:hidden">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setIsFilterSheetOpen(false)}
-            aria-label="Đóng bộ lọc"
-          />
-          <div className="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-y-auto rounded-t-2xl border bg-background p-4 shadow-2xl">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold">Bộ lọc sản phẩm</h3>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setIsFilterSheetOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            {renderFilterPanel(true)}
-            <div className="mt-4">
-              <Button type="button" className="w-full" onClick={() => setIsFilterSheetOpen(false)}>
-                Xem {filteredProducts.length} sản phẩm
-              </Button>
-            </div>
-          </div>
-        </div>
       ) : null}
 
     </div>

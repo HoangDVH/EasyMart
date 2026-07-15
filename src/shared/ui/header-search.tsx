@@ -192,7 +192,7 @@ export function HeaderSearch({ className }: { className?: string }) {
                 inputRef.current?.focus()
               }}
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-              aria-label="Xoá từ khoá"
+              aria-label="Xóa từ khoá"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -216,7 +216,7 @@ export function HeaderSearch({ className }: { className?: string }) {
                   onClick={clearRecentAll}
                   className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
                 >
-                  Xoá tất cả
+                  Xóa tất cả
                 </button>
               </div>
               {recent.map((q, i) => (
@@ -244,7 +244,7 @@ export function HeaderSearch({ className }: { className?: string }) {
                       removeRecent(q)
                     }}
                     className="rounded p-1 text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:bg-background hover:text-foreground"
-                    aria-label={`Xoá lịch sử "${q}"`}
+                    aria-label={`Xóa lịch sử "${q}"`}
                   >
                     <X className="h-3 w-3" />
                   </span>

@@ -17,7 +17,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   {
     to: '/account',
-    label: 'Tài khoản của tôi',
+    label: 'Tài khoản',
     icon: UserCog,
     end: true,
   },
@@ -40,7 +40,31 @@ export function AccountLayout() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
-      <aside className="lg:sticky lg:top-32 lg:self-start">
+      <nav
+        aria-label="Tài khoản"
+        className="flex gap-2 overflow-x-auto pb-1 lg:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            className={({ isActive }) =>
+              cn(
+                'inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-all',
+                isActive
+                  ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                  : 'border-border bg-background text-muted-foreground hover:border-primary/40',
+              )
+            }
+          >
+            <item.icon className="h-4 w-4" aria-hidden />
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
+
+      <aside className="sticky-below-header hidden lg:sticky lg:block lg:self-start">
         <Card className="hover-lift overflow-hidden">
           <CardContent className="space-y-4 pt-6">
             <div className="flex items-center gap-3 border-b pb-4">

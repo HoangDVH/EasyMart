@@ -123,6 +123,7 @@ export function HomeBanner() {
 
   useEffect(() => {
     if (isPaused) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const timer = window.setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % MAIN_SLIDES.length)
     }, AUTO_PLAY_MS)
@@ -221,7 +222,7 @@ export function HomeBanner() {
       </div>
 
       {/* 2 banner nhỏ bên phải — desktop; mobile xếp 2 cột dưới banner lớn */}
-      <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-col lg:gap-4">
+      <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:flex lg:flex-col lg:gap-4">
         {SIDE_BANNERS.map((banner) => (
           <SideBannerCard key={banner.id} banner={banner} />
         ))}
