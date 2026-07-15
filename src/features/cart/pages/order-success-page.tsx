@@ -12,6 +12,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/u
 import { Skeleton } from '@/shared/ui/skeleton'
 import { clearVnpaySession, loadVnpayPendingOrderId } from '@/features/payments/lib/vnpay-return'
 import { paymentMethodLabel } from '@/features/payments/lib/payment-labels'
+import { useCartStore } from '@/shared/stores/cart-store'
 
 export function OrderSuccessPage() {
   const { orderId: orderIdParam } = useParams()
@@ -24,7 +25,11 @@ export function OrderSuccessPage() {
   const paymentMethod = shipping?.paymentMethod ?? 'VNPAY'
 
   useEffect(() => {
-    if (orderId) clearVnpaySession()
+    if (orderId) {
+      clearVnpaySession()
+      useCartStore.getState().clearCart()
+      useCartStore.getState().clearBuyNow()
+    }
   }, [orderId])
 
   if (!orderId) {

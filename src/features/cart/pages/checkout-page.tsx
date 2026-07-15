@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { Controller, useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -58,6 +59,7 @@ export function CheckoutPage() {
   const isBuyNow = buyNowItems != null && buyNowItems.length > 0
   const items = isBuyNow ? buyNowItems : cartItems
   const subtotal = calcCartSubtotal(items)
+  const [redirectingToVnpay, setRedirectingToVnpay] = useState(false)
 
   const adjustQuantity = (productId: string, quantity: number) => {
     if (isBuyNow) updateBuyNowQuantity(productId, quantity)
@@ -95,6 +97,18 @@ export function CheckoutPage() {
   useEffect(() => {
     if (savedProfile) reset(savedProfile)
   }, [reset])
+
+  if (redirectingToVnpay) {
+    return (
+      <>
+        <CheckoutSteps current="checkout" />
+        <div className="mx-auto flex max-w-lg flex-col items-center gap-3 py-16 text-sm text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          Đang chuyển tới cổng VNPay…
+        </div>
+      </>
+    )
+  }
 
   if (items.length === 0) {
     return (
@@ -163,7 +177,7 @@ export function CheckoutPage() {
           if (token) useAuthStore.getState().setAccessToken(token)
           markVnpayCheckoutPending(order.id)
           if (vnpay.transactionRef) saveVnpayTxnRefOrderId(vnpay.transactionRef, order.id)
-          finishCheckout()
+          flushSync(() => setRedirectingToVnpay(true))
           window.location.assign(vnpay.paymentUrl)
           return
         } catch (paymentError) {
