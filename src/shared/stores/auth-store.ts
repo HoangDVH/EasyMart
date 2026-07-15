@@ -1,6 +1,26 @@
 import { create } from 'zustand'
 import type { User } from '@/features/auth/types/auth.types'
 
+const ACCESS_TOKEN_KEY = 'easymart-access-token'
+
+function readStoredAccessToken(): string | null {
+  try {
+    const token = sessionStorage.getItem(ACCESS_TOKEN_KEY)
+    return token && token.length > 0 ? token : null
+  } catch {
+    return null
+  }
+}
+
+function writeStoredAccessToken(token: string | null) {
+  try {
+    if (token) sessionStorage.setItem(ACCESS_TOKEN_KEY, token)
+    else sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
 type AuthState = {
   accessToken: string | null
   user: User | null
@@ -10,9 +30,15 @@ type AuthState = {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  accessToken: null,
+  accessToken: readStoredAccessToken(),
   user: null,
-  setAccessToken: (accessToken) => set({ accessToken }),
+  setAccessToken: (accessToken) => {
+    writeStoredAccessToken(accessToken)
+    set({ accessToken })
+  },
   setUser: (user) => set({ user }),
-  clearAuth: () => set({ accessToken: null, user: null }),
+  clearAuth: () => {
+    writeStoredAccessToken(null)
+    set({ accessToken: null, user: null })
+  },
 }))

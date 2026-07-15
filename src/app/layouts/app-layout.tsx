@@ -1,6 +1,17 @@
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { ShoppingCart } from 'lucide-react'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { ShoppingCart, Loader2 } from 'lucide-react'
+import { useEffect } from 'react'
 import { useProfileQuery, useRestoreSessionQuery } from '@/features/auth/hooks/use-auth'
+import {
+  buildOrderSuccessPath,
+  isVnpayReturnUrl,
+  isVnpaySuccess,
+  loadVnpayCheckoutPending,
+  loadVnpayOrderCookie,
+  parseVnpayReturnParams,
+  readVnpaySearchFromLocation,
+  resolveVnpayOrderId,
+} from '@/features/payments/lib/vnpay-return'
 import { useAuthStore } from '@/shared/stores/auth-store'
 import { calcCartCount, useCartStore } from '@/shared/stores/cart-store'
 import { Button } from '@/shared/ui/button'
@@ -12,16 +23,55 @@ import { UserMenu } from '@/shared/ui/user-menu'
 
 export function AppLayout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const accessToken = useAuthStore((state) => state.accessToken)
   const restoreSessionQuery = useRestoreSessionQuery(!accessToken)
   const effectiveToken = accessToken ?? restoreSessionQuery.data ?? null
+  const isRestoringSession = !accessToken && restoreSessionQuery.isPending
   const profileQuery = useProfileQuery(Boolean(effectiveToken))
   const profile = profileQuery.data
   const cartCount = useCartStore((state) => calcCartCount(state.items))
   const showSellerNav =
     profile?.role === 'ADMIN' || profile?.role === 'SELLER' || profile?.roles?.includes('SELLER')
 
-  if (effectiveToken && profileQuery.isLoading) {
+  /** VNPay return URL backend có thể cấu hình về `/` — chuyển sang trang thành công hoặc handler chuẩn. */
+  useEffect(() => {
+    const vnpaySearch = readVnpaySearchFromLocation(location)
+
+    if (isVnpayReturnUrl(vnpaySearch)) {
+      const vnpay = parseVnpayReturnParams(vnpaySearch)
+      const orderId = resolveVnpayOrderId(vnpay, vnpaySearch)
+
+      if (isVnpaySuccess(vnpay.responseCode) && orderId) {
+        const target = buildOrderSuccessPath(orderId)
+        if (location.pathname !== target) {
+          navigate(target, { replace: true })
+          return
+        }
+      }
+
+      if (location.pathname !== '/payment/result') {
+        navigate(`/payment/result${vnpaySearch.startsWith('?') ? vnpaySearch : `?${vnpaySearch}`}`, {
+          replace: true,
+        })
+      }
+      return
+    }
+
+    const pendingOrderId = loadVnpayCheckoutPending()?.orderId ?? loadVnpayOrderCookie()
+    if (
+      pendingOrderId &&
+      (location.pathname === '/' || location.pathname === '') &&
+      !isVnpayReturnUrl(vnpaySearch)
+    ) {
+      navigate(buildOrderSuccessPath(pendingOrderId), { replace: true })
+    }
+  }, [location.pathname, location.search, location.hash, navigate])
+
+  const isCheckoutFlowRoute =
+    location.pathname === '/payment/result' || location.pathname.startsWith('/checkout/success/')
+
+  if (effectiveToken && profileQuery.isLoading && !isCheckoutFlowRoute) {
     return <FullPageSpinner message="Đang tải tài khoản..." />
   }
 
@@ -37,6 +87,9 @@ export function AppLayout() {
         { label: 'Thanh toán', to: '/checkout' },
         { label: 'Hoàn tất' },
       ]
+    }
+    if (pathname === '/payment/result') {
+      return [{ label: 'Trang chủ', to: '/' }, { label: 'Kết quả thanh toán' }]
     }
     if (pathname === '/seller') return [{ label: 'Trang chủ', to: '/' }, { label: 'Quản lí sản phẩm' }]
     if (pathname === '/admin') return [{ label: 'Trang chủ', to: '/' }, { label: 'Admin' }]
@@ -93,7 +146,11 @@ export function AppLayout() {
         </span>
         <span className="hidden sm:inline">Giỏ hàng</span>
       </NavLink>
-      {effectiveToken && profile?.email ? (
+      {isRestoringSession ? (
+        <span className="inline-flex h-9 w-9 items-center justify-center" aria-label="Đang tải">
+          <Loader2 className="h-4 w-4 animate-spin text-primary-foreground/80" />
+        </span>
+      ) : effectiveToken && profile?.email ? (
         <UserMenu email={profile.email} variant="onPrimary" />
       ) : (
         <NavLink to="/auth/login">

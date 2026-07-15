@@ -16,9 +16,9 @@ const OPTIONS: {
     icon: Banknote,
   },
   {
-    value: 'BANK_TRANSFER',
-    label: 'Chuyển khoản ngân hàng',
-    description: 'Chuyển khoản theo hướng dẫn sau khi đặt hàng',
+    value: 'VNPAY',
+    label: 'Chuyển khoản / Thẻ ngân hàng',
+    description: 'Chuyển sang cổng VNPay — ATM, Internet Banking, QR, thẻ quốc tế',
     icon: Building2,
   },
 ]
@@ -66,6 +66,12 @@ export function PaymentMethodCards({ value, onChange, error }: PaymentMethodCard
           )
         })}
       </div>
+      {value === 'VNPAY' ? (
+        <p className="rounded-md border border-sky-200/80 bg-sky-50/80 px-3 py-2 text-xs leading-relaxed text-sky-900">
+          Sau khi bấm <strong>Tiếp tục thanh toán VNPay</strong>, bạn sẽ được chuyển sang trang VNPay để
+          chọn ngân hàng và hoàn tất thanh toán.
+        </p>
+      ) : null}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   )

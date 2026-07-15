@@ -16,6 +16,8 @@ function redirectToLogin() {
   if (typeof window === 'undefined') return
   const path = window.location.pathname
   if (path.startsWith('/auth/login')) return
+  /** VNPay return / trang thành công: đợi khôi phục phiên, không redirect cứng. */
+  if (path.startsWith('/payment/result') || path.startsWith('/checkout/success/')) return
   const next = encodeURIComponent(`${window.location.pathname}${window.location.search}${window.location.hash}`)
   window.location.replace(`/auth/login?next=${next}`)
 }
@@ -34,7 +36,7 @@ export async function silentRefreshAccessToken() {
       {},
       {
         withCredentials: true,
-        timeout: 2000,
+        timeout: 15000,
       },
     )
 

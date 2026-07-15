@@ -1,5 +1,6 @@
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { CheckCircle2, Package } from 'lucide-react'
+import { useEffect, useMemo } from 'react'
 import { CheckoutSteps } from '@/features/cart/components/checkout-steps'
 import { useOrderQuery } from '@/features/orders/hooks/use-orders'
 import { OrderIdDisplay } from '@/features/orders/components/order-id-display'
@@ -9,19 +10,42 @@ import { loadOrderShipping } from '@/shared/lib/shipping-storage'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
-
-const PAYMENT_LABELS: Record<string, string> = {
-  COD: 'Thanh toán khi nhận hàng (COD)',
-  BANK_TRANSFER: 'Chuyển khoản ngân hàng',
-}
+import { clearVnpaySession, loadVnpayPendingOrderId } from '@/features/payments/lib/vnpay-return'
+import { paymentMethodLabel } from '@/features/payments/lib/payment-labels'
 
 export function OrderSuccessPage() {
-  const { orderId } = useParams()
+  const { orderId: orderIdParam } = useParams()
+  const orderId = useMemo(
+    () => orderIdParam?.trim() || loadVnpayPendingOrderId(),
+    [orderIdParam],
+  )
   const orderQuery = useOrderQuery(orderId ?? null)
   const shipping = orderId ? loadOrderShipping(orderId) : null
+  const paymentMethod = shipping?.paymentMethod ?? 'VNPAY'
+
+  useEffect(() => {
+    if (orderId) clearVnpaySession()
+  }, [orderId])
 
   if (!orderId) {
-    return <Navigate to="/" replace />
+    return (
+      <div className="mx-auto max-w-lg space-y-4 pb-8">
+        <CheckoutSteps current="done" />
+        <Card>
+          <CardHeader>
+            <CardTitle>Không tìm thấy mã đơn hàng</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Thanh toán có thể đã thành công. Vui lòng kiểm tra mục đơn mua của bạn.
+          </CardContent>
+          <CardFooter>
+            <Link to="/account/orders">
+              <Button>Xem đơn mua</Button>
+            </Link>
+          </CardFooter>
+        </Card>
+      </div>
+    )
   }
 
   if (orderQuery.isPending) {
@@ -42,7 +66,10 @@ export function OrderSuccessPage() {
     )
   }
 
-  if (orderQuery.isError || !orderQuery.data) {
+  const order = orderQuery.data
+  const showOfflineSuccess = (orderQuery.isError || !order) && paymentMethod === 'VNPAY' && shipping
+
+  if (orderQuery.isError && !showOfflineSuccess) {
     return (
       <div className="mx-auto max-w-lg space-y-4">
         <CheckoutSteps current="done" />
@@ -61,9 +88,7 @@ export function OrderSuccessPage() {
     )
   }
 
-  const order = orderQuery.data
-  const paymentMethod = shipping?.paymentMethod ?? 'COD'
-  const totalQty = order.items.reduce((sum, item) => sum + item.quantity, 0)
+  const totalQty = order?.items.reduce((sum, item) => sum + item.quantity, 0) ?? null
 
   return (
     <div className="mx-auto max-w-lg space-y-4 pb-8">
@@ -85,35 +110,33 @@ export function OrderSuccessPage() {
           <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
             <div className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">Mã đơn hàng</span>
-              <OrderIdDisplay id={order.id} />
+              <OrderIdDisplay id={orderId} />
             </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">Tổng thanh toán</span>
-              <span className="font-semibold text-secondary">{formatVnd(order.totalAmount)}</span>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">Sản phẩm</span>
-              <span>
-                {totalQty} sp · {order.items.length} mặt hàng
-              </span>
-            </div>
+            {order ? (
+              <>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Tổng thanh toán</span>
+                  <span className="font-semibold text-secondary">{formatVnd(order.totalAmount)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Sản phẩm</span>
+                  <span>
+                    {totalQty} sp · {order.items.length} mặt hàng
+                  </span>
+                </div>
+              </>
+            ) : null}
             <div className="flex items-start justify-between gap-2">
               <span className="shrink-0 text-muted-foreground">Thanh toán</span>
-              <span className="text-right">{PAYMENT_LABELS[paymentMethod] ?? paymentMethod}</span>
+              <span className="text-right">{paymentMethodLabel(paymentMethod)}</span>
             </div>
           </div>
 
-          {paymentMethod === 'BANK_TRANSFER' ? (
-            <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 p-3 text-xs text-amber-900">
-              <p className="font-medium">Hướng dẫn chuyển khoản</p>
+          {paymentMethod === 'VNPAY' ? (
+            <div className="rounded-lg border border-emerald-200/80 bg-emerald-50/80 p-3 text-xs text-emerald-900">
+              <p className="font-medium">Thanh toán VNPay thành công</p>
               <p className="mt-1 leading-relaxed">
-                Vui lòng chuyển khoản trong vòng 24 giờ với nội dung{' '}
-                <span className="font-mono font-semibold">DH {order.id.slice(-8).toUpperCase()}</span>. Chi tiết tài
-                khoản sẽ được gửi qua SMS/email hoặc liên hệ{' '}
-                <a href="mailto:support@easymart.vn" className="underline">
-                  support@easymart.vn
-                </a>
-                .
+                Giao dịch đã được ghi nhận. Đơn hàng sẽ được xử lý sau khi VNPay xác nhận (IPN).
               </p>
             </div>
           ) : (
@@ -134,7 +157,7 @@ export function OrderSuccessPage() {
           ) : null}
         </CardContent>
         <CardFooter className="flex flex-col gap-2 sm:flex-row">
-          <Link to={`/account/orders/${order.id}`} className="w-full sm:flex-1">
+          <Link to={`/account/orders/${orderId}`} className="w-full sm:flex-1">
             <Button className="w-full gap-1.5">
               <Package className="h-4 w-4" />
               Xem chi tiết đơn

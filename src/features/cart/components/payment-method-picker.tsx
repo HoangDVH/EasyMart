@@ -15,9 +15,9 @@ const OPTIONS: {
     icon: Banknote,
   },
   {
-    value: 'BANK_TRANSFER',
-    label: 'Chuyển khoản ngân hàng',
-    description: 'Chuyển khoản trước khi giao',
+    value: 'VNPAY',
+    label: 'Chuyển khoản / Thẻ ngân hàng',
+    description: 'Thanh toán online qua cổng VNPay',
     icon: Building2,
   },
 ]

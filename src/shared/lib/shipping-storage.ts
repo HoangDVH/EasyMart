@@ -1,7 +1,13 @@
 import type { CheckoutFormValues } from '@/features/cart/schemas/checkout.schemas'
+import type { PaymentMethod } from '@/features/payments/types/payment.types'
 
 const PROFILE_KEY = 'easymart-checkout-profile'
 const ORDER_SHIPPING_PREFIX = 'easymart-order-shipping:'
+
+function normalizePaymentMethod(value: unknown): PaymentMethod {
+  if (value === 'VNPAY' || value === 'BANK_TRANSFER') return 'VNPAY'
+  return 'COD'
+}
 
 export function saveCheckoutProfile(values: CheckoutFormValues) {
   try {
@@ -25,7 +31,7 @@ export function loadCheckoutProfile(): CheckoutFormValues | null {
         customerName: parsed.customerName,
         phone: parsed.phone,
         address: parsed.address,
-        paymentMethod: parsed.paymentMethod === 'BANK_TRANSFER' ? 'BANK_TRANSFER' : 'COD',
+        paymentMethod: normalizePaymentMethod(parsed.paymentMethod),
       }
     }
   } catch {
@@ -56,7 +62,7 @@ export function loadOrderShipping(orderId: string): CheckoutFormValues | null {
         customerName: parsed.customerName,
         phone: parsed.phone,
         address: parsed.address,
-        paymentMethod: parsed.paymentMethod === 'BANK_TRANSFER' ? 'BANK_TRANSFER' : 'COD',
+        paymentMethod: normalizePaymentMethod(parsed.paymentMethod),
       }
     }
   } catch {

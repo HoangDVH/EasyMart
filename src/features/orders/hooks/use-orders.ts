@@ -13,11 +13,15 @@ export function useMyOrdersQuery(enabled = true) {
   })
 }
 
-export function useOrderQuery(id: string | null) {
+export function useOrderQuery(
+  id: string | null,
+  options?: { enabled?: boolean },
+) {
+  const enabledOverride = options?.enabled ?? true
   return useQuery({
     queryKey: [...ordersQueryKeyRoot, 'detail', id ?? ''],
     queryFn: () => ordersApi.getById(id as string),
-    enabled: Boolean(id),
+    enabled: Boolean(id) && enabledOverride,
   })
 }
 

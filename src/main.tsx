@@ -7,6 +7,10 @@ import { router } from '@/app/routes/router'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
+import { bootstrapVnpayReturnRedirect } from '@/features/payments/lib/vnpay-return'
+
+bootstrapVnpayReturnRedirect()
+
 const queryClient = new QueryClient()
 
 createRoot(document.getElementById('root')!).render(

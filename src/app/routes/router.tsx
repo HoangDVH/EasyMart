@@ -17,6 +17,7 @@ import { AccountLayout } from '@/features/account/pages/account-layout'
 import { ProfilePage } from '@/features/account/pages/profile-page'
 import { MyOrdersPage } from '@/features/orders/pages/my-orders-page'
 import { OrderDetailPage } from '@/features/orders/pages/order-detail-page'
+import { PaymentResultPage } from '@/features/payments/pages/payment-result-page'
 
 export const router = createBrowserRouter([
   {
@@ -35,11 +36,12 @@ export const router = createBrowserRouter([
       { path: '/products/:id', element: <ProductDetailPage /> },
       { path: '/policies/:slug', element: <PolicyPage /> },
       { path: '/cart', element: <CartPage /> },
+      { path: '/payment/result', element: <PaymentResultPage /> },
+      { path: '/checkout/success/:orderId', element: <OrderSuccessPage /> },
       {
         element: <ProtectedRoute />,
         children: [
           { path: '/checkout', element: <CheckoutPage /> },
-          { path: '/checkout/success/:orderId', element: <OrderSuccessPage /> },
           {
             path: '/account',
             element: <AccountLayout />,

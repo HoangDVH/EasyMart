@@ -1,6 +1,11 @@
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, CalendarDays, MapPin, Package, Phone, User } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Loader2, MapPin, Package, Phone, RefreshCw, User } from 'lucide-react'
+import { toast } from 'react-toastify'
 import { useOrderQuery } from '@/features/orders/hooks/use-orders'
+import { useInitVnpayMutation } from '@/features/payments/hooks/use-payments'
+import { paymentMethodLabel } from '@/features/payments/lib/payment-labels'
+import { markVnpayCheckoutPending, saveVnpayTxnRefOrderId } from '@/features/payments/lib/vnpay-return'
+import { useAuthStore } from '@/shared/stores/auth-store'
 import {
   formatOrderDate,
   formatVnd,
@@ -17,14 +22,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Skeleton } from '@/shared/ui/skeleton'
 import { cn } from '@/shared/lib/utils'
 
-const PAYMENT_LABELS: Record<string, string> = {
-  COD: 'Thanh toán khi nhận hàng (COD)',
-  BANK_TRANSFER: 'Chuyển khoản ngân hàng',
+function isPendingPayment(status: string) {
+  const code = status.toUpperCase()
+  return code.includes('PENDING') || (code.includes('PEND') && code.includes('PAY'))
 }
 
 export function OrderDetailPage() {
   const { id } = useParams()
   const orderQuery = useOrderQuery(id ?? null)
+  const initVnpay = useInitVnpayMutation()
   const shipping = id ? loadOrderShipping(id) : null
 
   if (orderQuery.isPending) {
@@ -66,6 +72,21 @@ export function OrderDetailPage() {
   const order = orderQuery.data
   const meta = orderStatusMeta(order.status)
   const totalQty = order.items.reduce((sum, it) => sum + it.quantity, 0)
+  const showVnpayRetry =
+    shipping?.paymentMethod === 'VNPAY' && isPendingPayment(order.status)
+
+  const handleRetryVnpay = async () => {
+    try {
+      const result = await initVnpay.mutateAsync({ orderId: order.id })
+      const token = useAuthStore.getState().accessToken
+      if (token) useAuthStore.getState().setAccessToken(token)
+      markVnpayCheckoutPending(order.id)
+      if (result.transactionRef) saveVnpayTxnRefOrderId(result.transactionRef, order.id)
+      window.location.href = result.paymentUrl
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Không thể mở cổng VNPay.'))
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -127,7 +148,7 @@ export function OrderDetailPage() {
                 {shipping.paymentMethod ? (
                   <div>
                     <dt className="text-xs text-muted-foreground">Thanh toán</dt>
-                    <dd>{PAYMENT_LABELS[shipping.paymentMethod] ?? shipping.paymentMethod}</dd>
+                    <dd>{paymentMethodLabel(shipping.paymentMethod)}</dd>
                   </div>
                 ) : null}
               </dl>
@@ -163,9 +184,28 @@ export function OrderDetailPage() {
             </ul>
           </div>
 
-          <div className="flex items-center justify-between border-t pt-4">
+          <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-sm text-muted-foreground">Tổng thanh toán</span>
-            <span className="text-xl font-semibold text-secondary">{formatVnd(order.totalAmount)}</span>
+            <div className="flex flex-col items-stretch gap-2 sm:items-end">
+              <span className="text-xl font-semibold text-secondary">{formatVnd(order.totalAmount)}</span>
+              {showVnpayRetry ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={initVnpay.isPending}
+                  onClick={() => void handleRetryVnpay()}
+                >
+                  {initVnpay.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  Thanh toán lại VNPay
+                </Button>
+              ) : null}
+            </div>
           </div>
         </CardContent>
       </Card>

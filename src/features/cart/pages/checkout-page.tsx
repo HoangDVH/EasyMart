@@ -5,7 +5,11 @@ import { toast } from 'react-toastify'
 import { Loader2 } from 'lucide-react'
 import { productsApi } from '@/features/products/api/products.api'
 import { useCreateOrderMutation } from '@/features/orders/hooks/use-orders'
-import { useCreatePaymentMutation } from '@/features/payments/hooks/use-payments'
+import {
+  useCreatePaymentMutation,
+  useInitVnpayMutation,
+} from '@/features/payments/hooks/use-payments'
+import { markVnpayCheckoutPending, saveVnpayTxnRefOrderId } from '@/features/payments/lib/vnpay-return'
 import {
   checkoutSchema,
   type CheckoutFormValues,
@@ -17,6 +21,7 @@ import {
   saveOrderShipping,
 } from '@/shared/lib/shipping-storage'
 import { calcCartSubtotal, useCartStore } from '@/shared/stores/cart-store'
+import { useAuthStore } from '@/shared/stores/auth-store'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/shared/ui/button'
 import {
@@ -40,6 +45,7 @@ export function CheckoutPage() {
   const navigate = useNavigate()
   const createOrder = useCreateOrderMutation()
   const createPayment = useCreatePaymentMutation()
+  const initVnpay = useInitVnpayMutation()
   const {
     items: cartItems,
     buyNowItems,
@@ -73,6 +79,7 @@ export function CheckoutPage() {
     register,
     control,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<CheckoutFormValues>({
@@ -144,10 +151,37 @@ export function CheckoutPage() {
       saveCheckoutProfile(data)
       saveOrderShipping(order.id, data)
 
+      const payWithVnpay = data.paymentMethod === 'VNPAY'
+
+      if (payWithVnpay) {
+        try {
+          const vnpay = await initVnpay.mutateAsync({ orderId: order.id })
+          if (!vnpay.paymentUrl.startsWith('http')) {
+            throw new Error('Không nhận được link VNPay hợp lệ từ máy chủ.')
+          }
+          const token = useAuthStore.getState().accessToken
+          if (token) useAuthStore.getState().setAccessToken(token)
+          markVnpayCheckoutPending(order.id)
+          if (vnpay.transactionRef) saveVnpayTxnRefOrderId(vnpay.transactionRef, order.id)
+          finishCheckout()
+          window.location.assign(vnpay.paymentUrl)
+          return
+        } catch (paymentError) {
+          toast.error(
+            getApiErrorMessage(
+              paymentError,
+              'Không mở được cổng VNPay. Đơn đã được tạo — bạn có thể thanh toán lại trong chi tiết đơn.',
+            ),
+          )
+          navigate(`/account/orders/${order.id}`)
+          return
+        }
+      }
+
       try {
         await createPayment.mutateAsync({
           orderId: order.id,
-          method: data.paymentMethod,
+          method: 'COD',
         })
       } catch (paymentError) {
         toast.warning(
@@ -167,7 +201,11 @@ export function CheckoutPage() {
     }
   }
 
-  const isProcessing = createOrder.isPending || createPayment.isPending || isSubmitting
+  const isProcessing =
+    createOrder.isPending || createPayment.isPending || initVnpay.isPending || isSubmitting
+  const selectedPaymentMethod = watch('paymentMethod')
+  const submitLabel =
+    selectedPaymentMethod === 'VNPAY' ? 'Tiếp tục thanh toán VNPay' : 'Xác nhận đặt hàng'
 
   return (
     <>
@@ -271,7 +309,7 @@ export function CheckoutPage() {
             {isProcessing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : null}
-            Xác nhận thanh toán
+            {submitLabel}
           </Button>
           <Link
             to={isBuyNow && items[0] ? `/products/${items[0].productId}` : '/cart'}
@@ -302,7 +340,7 @@ export function CheckoutPage() {
           disabled={isProcessing || isSyncing}
         >
           {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          Xác nhận
+          {selectedPaymentMethod === 'VNPAY' ? 'VNPay' : 'Xác nhận'}
         </Button>
       </div>
     </div>
