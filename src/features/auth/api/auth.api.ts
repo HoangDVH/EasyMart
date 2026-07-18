@@ -67,12 +67,21 @@ export const authApi = {
     return mapUser(data.result)
   },
   async forgotPassword(email: string) {
-    await httpClient.post<ApiResponse<null>>(AUTH_ENDPOINTS.forgotPassword, { email })
+    /** SMTP + cold start Render có thể chậm — timeout dài hơn mặc định, nhưng vẫn có giới hạn. */
+    await httpClient.post<ApiResponse<null>>(
+      AUTH_ENDPOINTS.forgotPassword,
+      { email },
+      { timeout: 45_000 },
+    )
   },
   async resetPassword(payload: { token: string; newPassword: string }) {
-    await httpClient.post<ApiResponse<null>>(AUTH_ENDPOINTS.resetPassword, {
-      token: payload.token,
-      newPassword: payload.newPassword,
-    })
+    await httpClient.post<ApiResponse<null>>(
+      AUTH_ENDPOINTS.resetPassword,
+      {
+        token: payload.token,
+        newPassword: payload.newPassword,
+      },
+      { timeout: 30_000 },
+    )
   },
 }

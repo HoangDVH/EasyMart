@@ -15,6 +15,14 @@ export function getApiErrorMessage(
   fallback = 'Có lỗi xảy ra. Vui lòng thử lại.',
 ) {
   if (axios.isAxiosError<ApiErrorResponse>(error)) {
+    if (error.code === 'ECONNABORTED' || error.message.toLowerCase().includes('timeout')) {
+      return 'Máy chủ phản hồi quá chậm (có thể đang khởi động). Vui lòng thử lại sau vài giây.'
+    }
+
+    if (!error.response && error.message === 'Network Error') {
+      return 'Không kết nối được máy chủ. Kiểm tra mạng hoặc thử lại sau.'
+    }
+
     const raw =
       error.response?.data?.message ??
       error.response?.data?.result?.message ??

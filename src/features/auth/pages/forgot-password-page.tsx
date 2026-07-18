@@ -33,12 +33,19 @@ export function ForgotPasswordPage() {
     defaultValues: { email: '' },
   })
 
+  const isBusy = isSubmitting || forgotPassword.isPending
+
   const onSubmit = async (data: ForgotPasswordFormValues) => {
     try {
       await forgotPassword.mutateAsync(data.email.trim())
       setSubmittedEmail(data.email.trim())
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không gửi được yêu cầu. Vui lòng thử lại.'))
+      toast.error(
+        getApiErrorMessage(
+          error,
+          'Không gửi được yêu cầu. Máy chủ có thể đang khởi động — thử lại sau vài giây.',
+        ),
+      )
     }
   }
 
@@ -91,12 +98,15 @@ export function ForgotPasswordPage() {
               <p className="text-xs text-destructive">{errors.email.message}</p>
             ) : null}
           </div>
-          <Button type="submit" className="w-full" disabled={isSubmitting || forgotPassword.isPending}>
-            {isSubmitting || forgotPassword.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : null}
-            Gửi link đặt lại mật khẩu
+          <Button type="submit" className="w-full gap-2" disabled={isBusy}>
+            {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {isBusy ? 'Đang gửi email...' : 'Gửi link đặt lại mật khẩu'}
           </Button>
+          {isBusy ? (
+            <p className="text-center text-xs text-muted-foreground">
+              Máy chủ có thể mất 15–45 giây lần đầu (khởi động + gửi Gmail). Vui lòng đợi.
+            </p>
+          ) : null}
           <p className="text-center text-sm text-muted-foreground">
             <Link className="text-primary underline" to="/auth/login">
               Quay lại đăng nhập

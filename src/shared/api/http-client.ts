@@ -25,6 +25,8 @@ function redirectToLogin() {
 export const httpClient = axios.create({
   baseURL: env.API_BASE_URL,
   withCredentials: true,
+  /** Tránh spinner treo vô hạn khi Render cold start / SMTP chậm. */
+  timeout: 20_000,
 })
 
 export async function silentRefreshAccessToken() {
