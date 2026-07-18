@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, RefreshCw } from 'lucide-react'
+import { Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useCategoriesQuery } from '@/features/products/hooks/use-catalog'
 import { productsApi } from '@/features/products/api/products.api'
@@ -65,6 +65,9 @@ export function SellerProductsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [editLoading, setEditLoading] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
   const [filters, setFilters] = useState<SellerProductsFilters>({
     keyword: '',
     sort: 'newest',
@@ -212,8 +215,52 @@ export function SellerProductsPage() {
       await deleteMutation.mutateAsync(deleteTarget.id)
       toast.success('Đã xóa sản phẩm.')
       setDeleteTarget(null)
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(String(deleteTarget.id))
+        return next
+      })
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Không thể xóa sản phẩm.'))
+    }
+  }
+
+  function toggleSelect(productId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(productId)) next.delete(productId)
+      else next.add(productId)
+      return next
+    })
+  }
+
+  function toggleSelectPage(productIds: string[], checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      for (const id of productIds) {
+        if (checked) next.add(id)
+        else next.delete(id)
+      }
+      return next
+    })
+  }
+
+  async function onBulkDeleteConfirmed() {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    setBulkDeleting(true)
+    try {
+      const results = await Promise.allSettled(ids.map((id) => deleteMutation.mutateAsync(id)))
+      const failed = results.filter((result) => result.status === 'rejected').length
+      if (failed === 0) {
+        toast.success(`Đã xóa ${ids.length} sản phẩm.`)
+      } else {
+        toast.warning(`Đã xóa ${ids.length - failed}/${ids.length} sản phẩm — ${failed} đơn lỗi.`)
+      }
+      setSelectedIds(new Set())
+      setBulkDeleteOpen(false)
+    } finally {
+      setBulkDeleting(false)
     }
   }
 
@@ -288,6 +335,28 @@ export function SellerProductsPage() {
           <SellerProductsToolbar filters={filters} onChange={setFilters} counts={stockCounts} />
         </CardHeader>
         <CardContent>
+          {selectedIds.size > 0 ? (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+              <p className="text-sm">
+                Đã chọn <span className="font-semibold tabular-nums">{selectedIds.size}</span> sản
+                phẩm
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => setSelectedIds(new Set())}>
+                  Bỏ chọn
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => setBulkDeleteOpen(true)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Xóa đã chọn
+                </Button>
+              </div>
+            </div>
+          ) : null}
           <SellerProductsTable
             products={pagedProducts}
             isLoading={productsQuery.isPending}
@@ -299,6 +368,9 @@ export function SellerProductsPage() {
             onPageChange={changePage}
             onEdit={onEdit}
             onDelete={(product) => setDeleteTarget(product)}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onToggleSelectPage={toggleSelectPage}
           />
         </CardContent>
       </Card>
@@ -323,6 +395,14 @@ export function SellerProductsPage() {
         loading={deleteMutation.isPending}
         onCancel={() => setDeleteTarget(null)}
         onConfirm={() => void onDeleteConfirmed()}
+      />
+      <ConfirmDeleteModal
+        open={bulkDeleteOpen}
+        title="Xóa nhiều sản phẩm"
+        description={`Bạn có chắc muốn xóa ${selectedIds.size} sản phẩm đã chọn không? Hành động này không thể hoàn tác.`}
+        loading={bulkDeleting}
+        onCancel={() => setBulkDeleteOpen(false)}
+        onConfirm={() => void onBulkDeleteConfirmed()}
       />
     </div>
   )

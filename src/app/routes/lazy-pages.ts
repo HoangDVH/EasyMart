@@ -79,6 +79,10 @@ export const SellerLayout = lazyPage(
   () => import('@/features/seller/pages/seller-layout'),
   'SellerLayout',
 )
+export const SellerOverviewPage = lazyPage(
+  () => import('@/features/seller/pages/seller-overview-page'),
+  'SellerOverviewPage',
+)
 export const SellerProductsPage = lazyPage(
   () => import('@/features/seller/pages/seller-products-page'),
   'SellerProductsPage',

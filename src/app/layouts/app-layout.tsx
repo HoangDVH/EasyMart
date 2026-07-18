@@ -20,8 +20,10 @@ import { Breadcrumb } from '@/shared/ui/breadcrumb'
 import { CategoryNav } from '@/shared/ui/category-nav'
 import { FullPageSpinner } from '@/shared/ui/full-page-spinner'
 import { HeaderSearch } from '@/shared/ui/header-search'
+import { HeaderNotifications } from '@/shared/ui/header-notifications'
 import { UserMenu } from '@/shared/ui/user-menu'
 import { AnimatedOutlet } from '@/shared/ui/page-transition'
+import { useOrdersRealtime } from '@/features/orders/hooks/use-orders-realtime'
 
 export function AppLayout() {
   const location = useLocation()
@@ -35,6 +37,9 @@ export function AppLayout() {
   const cartCount = useCartStore((state) => calcCartCount(state.items))
   const showSellerNav =
     profile?.role === 'ADMIN' || profile?.role === 'SELLER' || profile?.roles?.includes('SELLER')
+
+  /** Một kết nối STOMP dùng chung mọi role — chuông navbar nhận thông báo realtime. */
+  useOrdersRealtime(Boolean(effectiveToken))
 
   /** VNPay return URL backend có thể cấu hình về `/` — chuyển sang trang thành công hoặc handler chuẩn. */
   useEffect(() => {
@@ -98,15 +103,22 @@ export function AppLayout() {
     if (pathname.startsWith('/seller/orders')) {
       return [
         { label: 'Trang chủ', to: '/' },
-        { label: 'Kênh người bán', to: '/seller/products' },
+        { label: 'Kênh người bán', to: '/seller' },
         { label: 'Lịch sử đơn hàng' },
+      ]
+    }
+    if (pathname.startsWith('/seller/products')) {
+      return [
+        { label: 'Trang chủ', to: '/' },
+        { label: 'Kênh người bán', to: '/seller' },
+        { label: 'Quản lý sản phẩm' },
       ]
     }
     if (pathname.startsWith('/seller')) {
       return [
         { label: 'Trang chủ', to: '/' },
-        { label: 'Kênh người bán', to: '/seller/products' },
-        { label: 'Quản lý sản phẩm' },
+        { label: 'Kênh người bán', to: '/seller' },
+        { label: 'Tổng quan' },
       ]
     }
     if (pathname === '/admin') return [{ label: 'Trang chủ', to: '/' }, { label: 'Admin' }]
@@ -149,6 +161,9 @@ export function AppLayout() {
 
   const headerActions = (
     <>
+      {effectiveToken && profile?.email ? (
+        <HeaderNotifications user={profile} variant="onPrimary" />
+      ) : null}
       <NavLink
         to="/cart"
         className={({ isActive }) =>
@@ -234,7 +249,7 @@ export function AppLayout() {
               ) : null}
               {showSellerNav ? (
                 <NavLink
-                  to="/seller/products"
+                  to="/seller"
                   className={() =>
                     location.pathname.startsWith('/seller')
                       ? 'font-medium text-foreground'
@@ -260,7 +275,7 @@ export function AppLayout() {
               ) : null}
               {showSellerNav ? (
                 <NavLink
-                  to="/seller/products"
+                  to="/seller"
                   className={() =>
                     location.pathname.startsWith('/seller')
                       ? 'font-medium text-foreground'

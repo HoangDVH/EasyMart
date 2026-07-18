@@ -1,9 +1,8 @@
 import { Suspense } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { Package, Receipt, Store } from 'lucide-react'
-import { useOrdersRealtime } from '@/features/orders/hooks/use-orders-realtime'
+import { LayoutDashboard, Package, Receipt, Store } from 'lucide-react'
 import type { SellerOutletContext } from '@/features/seller/hooks/use-seller-outlet'
-import { useAuthStore } from '@/shared/stores/auth-store'
+import { useOrdersRealtimeStore } from '@/features/orders/stores/orders-realtime-store'
 import { cn } from '@/shared/lib/utils'
 import { RouteChunkFallback } from '@/shared/ui/route-chunk-fallback'
 
@@ -15,6 +14,12 @@ type NavItem = {
 }
 
 const navItems: NavItem[] = [
+  {
+    to: '/seller',
+    label: 'Tổng quan',
+    icon: LayoutDashboard,
+    end: true,
+  },
   {
     to: '/seller/products',
     label: 'Quản lý sản phẩm',
@@ -60,8 +65,8 @@ function RealtimeBadge({ status }: { status: string }) {
 }
 
 export function SellerLayout() {
-  const accessToken = useAuthStore((state) => state.accessToken)
-  const realtimeStatus = useOrdersRealtime(Boolean(accessToken))
+  /** Trạng thái kết nối lấy từ AppLayout — không mở STOMP lần 2. */
+  const realtimeStatus = useOrdersRealtimeStore((state) => state.status)
 
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start">

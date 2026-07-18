@@ -23,6 +23,7 @@ import {
   ResetPasswordPage,
   SellerLayout,
   SellerOrdersPage,
+  SellerOverviewPage,
   SellerProductsPage,
 } from '@/app/routes/lazy-pages'
 
@@ -82,7 +83,7 @@ export const router = createBrowserRouter([
                 path: '/seller',
                 element: <SellerLayout />,
                 children: [
-                  { index: true, element: <Navigate to="products" replace /> },
+                  { index: true, element: <SellerOverviewPage /> },
                   { path: 'products', element: <SellerProductsPage /> },
                   { path: 'orders', element: <SellerOrdersPage /> },
                 ],

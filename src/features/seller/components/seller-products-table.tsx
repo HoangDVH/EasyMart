@@ -22,6 +22,11 @@ type SellerProductsTableProps = {
   onPageChange: (next: number) => void
   onEdit: (product: Product) => void
   onDelete: (product: Product) => void
+  /** Bulk select: id các sản phẩm đang chọn (trên mọi trang). */
+  selectedIds: ReadonlySet<string>
+  onToggleSelect: (productId: string) => void
+  /** Chọn/bỏ chọn toàn bộ sản phẩm đang hiển thị trên trang. */
+  onToggleSelectPage: (productIds: string[], checked: boolean) => void
 }
 
 function ProductThumb({ product }: { product: Product }) {
@@ -166,7 +171,14 @@ export function SellerProductsTable({
   onPageChange,
   onEdit,
   onDelete,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectPage,
 }: SellerProductsTableProps) {
+  const pageIds = products.map((p) => String(p.id))
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id))
+  const somePageSelected = pageIds.some((id) => selectedIds.has(id))
+
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -197,9 +209,20 @@ export function SellerProductsTable({
       <div className="space-y-2 md:hidden">
         {products.map((product) => {
           const stock = getProductStock(product)
+          const checked = selectedIds.has(String(product.id))
           return (
-            <div key={product.id} className="rounded-lg border p-3">
+            <div
+              key={product.id}
+              className={cn('rounded-lg border p-3', checked && 'border-primary/50 bg-primary/5')}
+            >
               <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-3 h-4 w-4 shrink-0 accent-primary"
+                  checked={checked}
+                  aria-label={`Chọn ${product.name}`}
+                  onChange={() => onToggleSelect(String(product.id))}
+                />
                 <ProductThumb product={product} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{product.name}</p>
@@ -223,6 +246,18 @@ export function SellerProductsTable({
         <table className="w-full min-w-[860px] text-sm">
           <thead>
             <tr className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <th className="w-10 px-4 py-3">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-primary"
+                  checked={allPageSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = !allPageSelected && somePageSelected
+                  }}
+                  aria-label="Chọn tất cả sản phẩm trang này"
+                  onChange={(e) => onToggleSelectPage(pageIds, e.target.checked)}
+                />
+              </th>
               <th className="px-4 py-3 font-medium">Sản phẩm</th>
               <th className="px-4 py-3 font-medium">Giá bán</th>
               <th className="px-4 py-3 font-medium">Tồn kho</th>
@@ -235,8 +270,21 @@ export function SellerProductsTable({
           <tbody className="divide-y">
             {products.map((product) => {
               const stock = getProductStock(product)
+              const checked = selectedIds.has(String(product.id))
               return (
-                <tr key={product.id} className="transition-colors hover:bg-muted/30">
+                <tr
+                  key={product.id}
+                  className={cn('transition-colors hover:bg-muted/30', checked && 'bg-primary/5')}
+                >
+                  <td className="px-4 py-2.5">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-primary"
+                      checked={checked}
+                      aria-label={`Chọn ${product.name}`}
+                      onChange={() => onToggleSelect(String(product.id))}
+                    />
+                  </td>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-3">
                       <ProductThumb product={product} />

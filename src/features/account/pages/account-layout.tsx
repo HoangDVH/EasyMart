@@ -1,7 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { CreditCard, Receipt, UserCog, UserRound } from 'lucide-react'
 import { useProfileQuery } from '@/features/auth/hooks/use-auth'
-import { useOrdersRealtime } from '@/features/orders/hooks/use-orders-realtime'
 import { useAuthStore } from '@/shared/stores/auth-store'
 import { cn } from '@/shared/lib/utils'
 import { Card, CardContent } from '@/shared/ui/card'
@@ -38,8 +37,6 @@ export function AccountLayout() {
   const accessToken = useAuthStore((state) => state.accessToken)
   const profileQuery = useProfileQuery(Boolean(accessToken))
   const profile = profileQuery.data
-  /** Buyer cũng nhận FULFILLMENT_STATUS_CHANGED qua /user/queue/orders. */
-  useOrdersRealtime(Boolean(accessToken))
 
   return (
     <div className="grid gap-4 lg:grid-cols-[260px_1fr]">

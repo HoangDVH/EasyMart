@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { User } from '@/features/auth/types/auth.types'
+import { useOrderNotificationsStore } from '@/features/orders/stores/order-notifications-store'
 
 const ACCESS_TOKEN_KEY = 'easymart-access-token'
 
@@ -39,6 +40,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user) => set({ user }),
   clearAuth: () => {
     writeStoredAccessToken(null)
+    useOrderNotificationsStore.getState().clear()
     set({ accessToken: null, user: null })
   },
 }))
