@@ -14,6 +14,7 @@ import {
 } from '@/features/payments/lib/vnpay-return'
 import { useAuthStore } from '@/shared/stores/auth-store'
 import { calcCartCount, useCartStore } from '@/shared/stores/cart-store'
+import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { Breadcrumb } from '@/shared/ui/breadcrumb'
 import { CategoryNav } from '@/shared/ui/category-nav'
@@ -94,7 +95,20 @@ export function AppLayout() {
     if (pathname === '/payment/result') {
       return [{ label: 'Trang chủ', to: '/' }, { label: 'Kết quả thanh toán' }]
     }
-    if (pathname === '/seller') return [{ label: 'Trang chủ', to: '/' }, { label: 'Quản lý sản phẩm' }]
+    if (pathname.startsWith('/seller/orders')) {
+      return [
+        { label: 'Trang chủ', to: '/' },
+        { label: 'Kênh người bán', to: '/seller/products' },
+        { label: 'Lịch sử đơn hàng' },
+      ]
+    }
+    if (pathname.startsWith('/seller')) {
+      return [
+        { label: 'Trang chủ', to: '/' },
+        { label: 'Kênh người bán', to: '/seller/products' },
+        { label: 'Quản lý sản phẩm' },
+      ]
+    }
     if (pathname === '/admin') return [{ label: 'Trang chủ', to: '/' }, { label: 'Admin' }]
     if (pathname === '/account') {
       return [{ label: 'Trang chủ', to: '/' }, { label: 'Tài khoản' }]
@@ -220,12 +234,14 @@ export function AppLayout() {
               ) : null}
               {showSellerNav ? (
                 <NavLink
-                  to="/seller"
-                  className={({ isActive }) =>
-                    isActive ? 'font-medium text-foreground' : 'hover:text-foreground'
+                  to="/seller/products"
+                  className={() =>
+                    location.pathname.startsWith('/seller')
+                      ? 'font-medium text-foreground'
+                      : 'hover:text-foreground'
                   }
                 >
-                  Quản lý sản phẩm
+                  Kênh người bán
                 </NavLink>
               ) : null}
             </div>
@@ -244,19 +260,29 @@ export function AppLayout() {
               ) : null}
               {showSellerNav ? (
                 <NavLink
-                  to="/seller"
-                  className={({ isActive }) =>
-                    isActive ? 'font-medium text-foreground' : 'hover:text-foreground'
+                  to="/seller/products"
+                  className={() =>
+                    location.pathname.startsWith('/seller')
+                      ? 'font-medium text-foreground'
+                      : 'hover:text-foreground'
                   }
                 >
-                  Quản lý sản phẩm
+                  Kênh người bán
                 </NavLink>
               ) : null}
             </div>
           ) : null}
         </div>
       </header>
-      <main className="mx-auto max-w-6xl p-4 pb-8">
+      <main
+        className={cn(
+          'mx-auto p-4 pb-8',
+          /** Dashboard seller/admin dùng bố cục full-bleed như các trang quản trị: sidebar sát mép, bảng chiếm phần còn lại. */
+          location.pathname.startsWith('/seller') || location.pathname.startsWith('/admin')
+            ? 'w-full max-w-none px-4 lg:px-6'
+            : 'max-w-6xl',
+        )}
+      >
         <Breadcrumb items={breadcrumbItems} />
         <AnimatedOutlet />
       </main>

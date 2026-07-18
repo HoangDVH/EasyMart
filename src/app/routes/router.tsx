@@ -21,7 +21,9 @@ import {
   ProfilePage,
   RegisterPage,
   ResetPasswordPage,
-  SellerDashboardPage,
+  SellerLayout,
+  SellerOrdersPage,
+  SellerProductsPage,
 } from '@/app/routes/lazy-pages'
 
 export const router = createBrowserRouter([
@@ -75,7 +77,17 @@ export const router = createBrowserRouter([
           },
           {
             element: <RoleGuard allowedRoles={['ADMIN', 'SELLER']} />,
-            children: [{ path: '/seller', element: <SellerDashboardPage /> }],
+            children: [
+              {
+                path: '/seller',
+                element: <SellerLayout />,
+                children: [
+                  { index: true, element: <Navigate to="products" replace /> },
+                  { path: 'products', element: <SellerProductsPage /> },
+                  { path: 'orders', element: <SellerOrdersPage /> },
+                ],
+              },
+            ],
           },
         ],
       },

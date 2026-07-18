@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Plus, RefreshCw } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useCategoriesQuery } from '@/features/products/hooks/use-catalog'
@@ -11,16 +10,10 @@ import { useAuthStore } from '@/shared/stores/auth-store'
 import {
   useCreateSellerProductMutation,
   useDeleteSellerProductMutation,
-  useSellerOrderHistoryQuery,
   useSellerProductsQuery,
-  useUpdateSellerOrderStatusMutation,
   useUpdateSellerProductMutation,
   useUploadSellerImagesMutation,
 } from '@/features/seller/hooks/use-seller'
-import { useSellerOrdersRealtime } from '@/features/seller/hooks/use-seller-orders-realtime'
-import { FULFILLMENT_LABELS, isFulfillmentStatus } from '@/features/orders/lib/fulfillment'
-import type { Order } from '@/features/orders/types/order.types'
-import { isAxiosError } from 'axios'
 import { cn } from '@/shared/lib/utils'
 import type { Product } from '@/features/products/types/product.types'
 import type { SellerProductPayload } from '@/features/seller/api/seller.api'
@@ -29,7 +22,6 @@ import { ProductFormModal } from '@/features/seller/components/product-form-moda
 import { ConfirmDeleteModal } from '@/features/seller/components/confirm-delete-modal'
 import { SellerProductsToolbar } from '@/features/seller/components/seller-products-toolbar'
 import { SellerProductsTable } from '@/features/seller/components/seller-products-table'
-import { SellerOrdersHistoryPanel } from '@/features/seller/components/seller-orders-history-panel'
 import { SellerStatsCards } from '@/features/seller/components/seller-stats-cards'
 import {
   defaultSellerProductFormValues,
@@ -59,16 +51,13 @@ function buildPayload(form: SellerProductFormParsed): SellerProductPayload {
   }
 }
 
-export function SellerDashboardPage() {
+export function SellerProductsPage() {
   const accessToken = useAuthStore((state) => state.accessToken)
   const productsQuery = useSellerProductsQuery(Boolean(accessToken))
-  const sellerOrdersQuery = useSellerOrderHistoryQuery(Boolean(accessToken))
   const createMutation = useCreateSellerProductMutation()
   const updateMutation = useUpdateSellerProductMutation()
   const deleteMutation = useDeleteSellerProductMutation()
   const uploadImagesMutation = useUploadSellerImagesMutation()
-  const updateOrderStatusMutation = useUpdateSellerOrderStatusMutation()
-  const realtimeStatus = useSellerOrdersRealtime(Boolean(accessToken))
   const categoriesQuery = useCategoriesQuery()
 
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -86,26 +75,7 @@ export function SellerDashboardPage() {
 
   const isSaving = createMutation.isPending || updateMutation.isPending
   const productsRaw = productsQuery.data ?? []
-  const sellerOrders = sellerOrdersQuery.data ?? []
   const categories = categoriesQuery.data ?? []
-  const totalSoldUnits = useMemo(
-    () =>
-      sellerOrders.reduce(
-        (sum, order) => sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0),
-        0,
-      ),
-    [sellerOrders],
-  )
-
-  /** Doanh thu từ các đơn đã thanh toán (totalAmount seller đã được backend filter theo items của seller). */
-  const paidRevenue = useMemo(
-    () =>
-      sellerOrders.reduce(
-        (sum, order) => (order.status === 'PAID' ? sum + order.totalAmount : sum),
-        0,
-      ),
-    [sellerOrders],
-  )
 
   const attentionStockCount = useMemo(
     () =>
@@ -116,7 +86,6 @@ export function SellerDashboardPage() {
     [productsRaw],
   )
 
-  /** Danh sách sau khi search — dùng chung cho tabs đếm và lọc kho. */
   const searchedProducts = useMemo(() => {
     const kw = filters.keyword.trim().toLowerCase()
     if (!kw) return productsRaw
@@ -265,27 +234,6 @@ export function SellerDashboardPage() {
     setFormOpen(true)
   }
 
-  async function onAdvanceOrderStatus(order: Order, nextStatus: string) {
-    try {
-      await updateOrderStatusMutation.mutateAsync({ orderId: order.id, status: nextStatus })
-      const label = isFulfillmentStatus(nextStatus) ? FULFILLMENT_LABELS[nextStatus] : nextStatus
-      toast.success(`Đơn #${order.id}: chuyển sang "${label}".`)
-    } catch (error) {
-      if (isAxiosError(error) && error.response?.status === 409) {
-        toast.error(
-          getApiErrorMessage(
-            error,
-            'Không thể chuyển trạng thái: sai thứ tự hoặc đơn chưa thanh toán.',
-          ),
-        )
-        /** 409 = dữ liệu local lệch với server → đồng bộ lại. */
-        void sellerOrdersQuery.refetch()
-        return
-      }
-      toast.error(getApiErrorMessage(error, 'Không cập nhật được trạng thái giao hàng.'))
-    }
-  }
-
   function changePage(next: number) {
     if (next < 1 || next > totalPages) return
     setFilters((prev) => ({ ...prev, page: next }))
@@ -293,9 +241,6 @@ export function SellerDashboardPage() {
 
   const productsErrorText = productsQuery.isError
     ? getApiErrorMessage(productsQuery.error, 'Không tải được sản phẩm của seller.')
-    : null
-  const ordersErrorText = sellerOrdersQuery.isError
-    ? getApiErrorMessage(sellerOrdersQuery.error, 'Không tải được lịch sử đơn của seller.')
     : null
 
   useEffect(() => {
@@ -305,52 +250,40 @@ export function SellerDashboardPage() {
   }, [filters.page, totalPages])
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Kênh người bán</h1>
-          <p className="text-sm text-muted-foreground">
-            Quản lý sản phẩm, tồn kho và đơn hàng của bạn.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={openCreateModal} className="gap-1.5">
-            <Plus className="h-4 w-4" />
-            Thêm sản phẩm
-          </Button>
-          <Link to="/">
-            <Button variant="outline">Về trang chủ</Button>
-          </Link>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       <SellerStatsCards
-        isLoading={productsQuery.isPending || sellerOrdersQuery.isPending}
+        isLoading={productsQuery.isPending}
         totalProducts={productsRaw.length}
         lowStockCount={attentionStockCount}
-        totalOrders={sellerOrders.length}
-        totalRevenue={paidRevenue}
+        totalOrders={null}
+        totalRevenue={null}
       />
 
       <Card>
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <CardTitle>Quản lý sản phẩm</CardTitle>
-              <CardDescription>
-                {productsRaw.length} sản phẩm · đã bán {totalSoldUnits} đơn vị.
-              </CardDescription>
+              <CardTitle>Danh sách sản phẩm</CardTitle>
+              <CardDescription>{productsRaw.length} sản phẩm trong cửa hàng.</CardDescription>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5"
-              onClick={() => void productsQuery.refetch()}
-              disabled={productsQuery.isFetching}
-            >
-              <RefreshCw className={cn('h-3.5 w-3.5', productsQuery.isFetching && 'animate-spin')} />
-              {productsQuery.isFetching ? 'Đang tải...' : 'Làm mới'}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => void productsQuery.refetch()}
+                disabled={productsQuery.isFetching}
+              >
+                <RefreshCw
+                  className={cn('h-3.5 w-3.5', productsQuery.isFetching && 'animate-spin')}
+                />
+                {productsQuery.isFetching ? 'Đang tải...' : 'Làm mới'}
+              </Button>
+              <Button size="sm" onClick={openCreateModal} className="gap-1.5">
+                <Plus className="h-4 w-4" />
+                Thêm sản phẩm
+              </Button>
+            </div>
           </div>
           <SellerProductsToolbar filters={filters} onChange={setFilters} counts={stockCounts} />
         </CardHeader>
@@ -366,68 +299,6 @@ export function SellerDashboardPage() {
             onPageChange={changePage}
             onEdit={onEdit}
             onDelete={(product) => setDeleteTarget(product)}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-3">
-          <div>
-            <CardTitle className="flex flex-wrap items-center gap-2">
-              Lịch sử đơn hàng sản phẩm
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium',
-                  realtimeStatus === 'connected'
-                    ? 'border-emerald-300/60 bg-emerald-50 text-emerald-700'
-                    : realtimeStatus === 'connecting'
-                      ? 'border-amber-300/60 bg-amber-50 text-amber-700'
-                      : 'border-border bg-muted/40 text-muted-foreground',
-                )}
-              >
-                <span
-                  className={cn(
-                    'h-1.5 w-1.5 rounded-full',
-                    realtimeStatus === 'connected'
-                      ? 'bg-emerald-500'
-                      : realtimeStatus === 'connecting'
-                        ? 'animate-pulse bg-amber-500'
-                        : 'bg-muted-foreground/50',
-                  )}
-                  aria-hidden
-                />
-                {realtimeStatus === 'connected'
-                  ? 'Realtime'
-                  : realtimeStatus === 'connecting'
-                    ? 'Đang kết nối...'
-                    : 'Ngoại tuyến'}
-              </span>
-            </CardTitle>
-            <CardDescription>
-              Tổng {sellerOrders.length} đơn, đã bán {totalSoldUnits} sản phẩm.
-            </CardDescription>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => void sellerOrdersQuery.refetch()}
-            disabled={sellerOrdersQuery.isFetching}
-          >
-            {sellerOrdersQuery.isFetching ? 'Đang tải...' : 'Làm mới'}
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <SellerOrdersHistoryPanel
-            orders={sellerOrders}
-            isLoading={sellerOrdersQuery.isPending}
-            isError={sellerOrdersQuery.isError}
-            errorText={ordersErrorText}
-            updatingOrderId={
-              updateOrderStatusMutation.isPending
-                ? updateOrderStatusMutation.variables?.orderId ?? null
-                : null
-            }
-            onAdvanceStatus={(order, nextStatus) => void onAdvanceOrderStatus(order, nextStatus)}
           />
         </CardContent>
       </Card>

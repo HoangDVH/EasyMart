@@ -15,50 +15,67 @@ type StatCard = {
 
 type SellerStatsCardsProps = {
   isLoading: boolean
-  totalProducts: number
-  lowStockCount: number
-  totalOrders: number
-  totalRevenue: number
+  totalProducts?: number | null
+  lowStockCount?: number | null
+  totalOrders?: number | null
+  totalRevenue?: number | null
 }
 
 export function SellerStatsCards({
   isLoading,
-  totalProducts,
-  lowStockCount,
-  totalOrders,
-  totalRevenue,
+  totalProducts = null,
+  lowStockCount = null,
+  totalOrders = null,
+  totalRevenue = null,
 }: SellerStatsCardsProps) {
-  const cards: StatCard[] = [
-    {
+  const cards: StatCard[] = []
+
+  if (totalProducts != null) {
+    cards.push({
       label: 'Sản phẩm',
       value: String(totalProducts),
       icon: Package,
       iconClass: 'bg-primary/10 text-primary',
-    },
-    {
+    })
+  }
+  if (lowStockCount != null) {
+    cards.push({
       label: 'Sắp hết / hết hàng',
       value: String(lowStockCount),
       hint: lowStockCount > 0 ? 'Cần nhập thêm hàng' : 'Kho ổn định',
       icon: AlertTriangle,
       iconClass:
         lowStockCount > 0 ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600',
-    },
-    {
+    })
+  }
+  if (totalOrders != null) {
+    cards.push({
       label: 'Đơn hàng',
       value: String(totalOrders),
       icon: ShoppingCart,
       iconClass: 'bg-sky-100 text-sky-600',
-    },
-    {
+    })
+  }
+  if (totalRevenue != null) {
+    cards.push({
       label: 'Doanh thu (đơn PAID)',
       value: formatVnd(totalRevenue),
       icon: Wallet,
       iconClass: 'bg-emerald-100 text-emerald-600',
-    },
-  ]
+    })
+  }
+
+  if (cards.length === 0) return null
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div
+      className={cn(
+        'grid gap-3',
+        cards.length === 1 && 'grid-cols-1 sm:grid-cols-2',
+        cards.length === 2 && 'grid-cols-2',
+        cards.length >= 3 && 'grid-cols-2 lg:grid-cols-4',
+      )}
+    >
       {cards.map((card) => (
         <Card key={card.label} className="overflow-hidden">
           <CardContent className="flex items-center gap-3 p-4">

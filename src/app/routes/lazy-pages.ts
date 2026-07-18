@@ -75,7 +75,15 @@ export const MyPaymentsPage = lazyPage(
   'MyPaymentsPage',
 )
 
-export const SellerDashboardPage = lazyPage(
-  () => import('@/features/seller/pages/seller-dashboard-page'),
-  'SellerDashboardPage',
+export const SellerLayout = lazyPage(
+  () => import('@/features/seller/pages/seller-layout'),
+  'SellerLayout',
+)
+export const SellerProductsPage = lazyPage(
+  () => import('@/features/seller/pages/seller-products-page'),
+  'SellerProductsPage',
+)
+export const SellerOrdersPage = lazyPage(
+  () => import('@/features/seller/pages/seller-orders-page'),
+  'SellerOrdersPage',
 )
