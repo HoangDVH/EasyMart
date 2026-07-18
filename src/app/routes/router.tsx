@@ -35,6 +35,14 @@ export const router = createBrowserRouter([
     ],
   },
   {
+    /** Link trong email backend trỏ về /reset-password?token=... (không có prefix /auth). */
+    element: <AuthLayout />,
+    children: [
+      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+      { path: '/reset-password', element: <ResetPasswordPage /> },
+    ],
+  },
+  {
     element: <AppLayout />,
     children: [
       { path: '/', element: <HomePage /> },
