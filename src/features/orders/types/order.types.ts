@@ -18,6 +18,11 @@ export type Order = {
   totalAmount: number
   status: OrderStatus
   createdAt: string | null
+  /**
+   * Phương thức thanh toán nếu backend trả về (COD/CASH/VNPAY…).
+   * COD thường vẫn có status=PAID để seller được phép giao — UI phải phân biệt.
+   */
+  paymentMethod: string | null
 }
 
 export type CreateOrderPayload = {

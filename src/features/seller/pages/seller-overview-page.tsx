@@ -6,7 +6,7 @@ import {
   useSellerOrderHistoryQuery,
   useSellerProductsQuery,
 } from '@/features/seller/hooks/use-seller'
-import { isOrderPaid } from '@/features/orders/lib/fulfillment'
+import { isCodPayment, isOrderPaid } from '@/features/orders/lib/fulfillment'
 import { formatDateTime, formatVnd } from '@/features/seller/components/seller-formatters'
 import {
   getProductStock,
@@ -168,6 +168,10 @@ export function SellerOverviewPage() {
                     {isCancelledOrder(order) ? (
                       <Badge className="border-destructive/30 bg-destructive/10 text-destructive">
                         Đã hủy
+                      </Badge>
+                    ) : isCodPayment(order) ? (
+                      <Badge className="border-amber-300/60 bg-amber-50 text-amber-700">
+                        COD · Thu khi nhận hàng
                       </Badge>
                     ) : isOrderPaid(order) ? (
                       <Badge className="border-emerald-300/60 bg-emerald-50 text-emerald-700">

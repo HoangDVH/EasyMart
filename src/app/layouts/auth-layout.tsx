@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom'
 import { AnimatedOutlet } from '@/shared/ui/page-transition'
+import { ScrollToTop } from '@/shared/ui/scroll-to-top'
 
 export function AuthLayout() {
   return (
     <div className="auth-bg flex min-h-screen flex-col bg-background">
+      <ScrollToTop />
       <header className="bg-primary/95 text-primary-foreground shadow-md shadow-primary/15 backdrop-blur-lg">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <Link

@@ -1,5 +1,5 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { ShoppingCart, Loader2 } from 'lucide-react'
+import { ShoppingCart, ShoppingBag, Loader2, CircleHelp } from 'lucide-react'
 import { useEffect } from 'react'
 import { useProfileQuery, useRestoreSessionQuery } from '@/features/auth/hooks/use-auth'
 import {
@@ -15,7 +15,6 @@ import {
 import { useAuthStore } from '@/shared/stores/auth-store'
 import { calcCartCount, useCartStore } from '@/shared/stores/cart-store'
 import { cn } from '@/shared/lib/utils'
-import { Button } from '@/shared/ui/button'
 import { Breadcrumb } from '@/shared/ui/breadcrumb'
 import { CategoryNav } from '@/shared/ui/category-nav'
 import { FullPageSpinner } from '@/shared/ui/full-page-spinner'
@@ -23,7 +22,27 @@ import { HeaderSearch } from '@/shared/ui/header-search'
 import { HeaderNotifications } from '@/shared/ui/header-notifications'
 import { UserMenu } from '@/shared/ui/user-menu'
 import { AnimatedOutlet } from '@/shared/ui/page-transition'
+import { ScrollToTop } from '@/shared/ui/scroll-to-top'
 import { useOrdersRealtime } from '@/features/orders/hooks/use-orders-realtime'
+
+/** lucide-react đã bỏ icon thương hiệu nên vẽ SVG Facebook/Instagram tại chỗ. */
+function FacebookIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.23.2 2.23.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12Z" />
+    </svg>
+  )
+}
+
+function InstagramIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+    </svg>
+  )
+}
 
 export function AppLayout() {
   const location = useLocation()
@@ -100,6 +119,14 @@ export function AppLayout() {
     if (pathname === '/payment/result') {
       return [{ label: 'Trang chủ', to: '/' }, { label: 'Kết quả thanh toán' }]
     }
+    if (/^\/seller\/orders\/[^/]+$/.test(pathname)) {
+      return [
+        { label: 'Trang chủ', to: '/' },
+        { label: 'Kênh người bán', to: '/seller' },
+        { label: 'Lịch sử đơn hàng', to: '/seller/orders' },
+        { label: 'Chi tiết đơn' },
+      ]
+    }
     if (pathname.startsWith('/seller/orders')) {
       return [
         { label: 'Trang chủ', to: '/' },
@@ -159,107 +186,140 @@ export function AppLayout() {
     return [{ label: 'Trang chủ', to: '/' }]
   })()
 
-  const headerActions = (
-    <>
-      {effectiveToken && profile?.email ? (
-        <HeaderNotifications user={profile} variant="onPrimary" />
+  const cartLink = (
+    <NavLink to="/cart" className="group relative inline-flex items-center p-1.5" aria-label="Giỏ hàng">
+      <ShoppingCart className="h-6 w-6 text-primary-foreground/90 transition group-hover:text-primary-foreground sm:h-7 sm:w-7" aria-hidden />
+      {cartCount > 0 ? (
+        <span className="absolute -right-1 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-foreground px-1 text-[10px] font-bold text-primary ring-2 ring-primary">
+          {cartCount > 99 ? '99+' : cartCount}
+        </span>
       ) : null}
-      <NavLink
-        to="/cart"
-        className={({ isActive }) =>
-          `inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm transition ${
-            isActive
-              ? 'text-primary-foreground'
-              : 'text-primary-foreground/85 hover:text-primary-foreground'
-          }`
-        }
-        aria-label="Giỏ hàng"
-      >
-        <span className="relative inline-flex">
-          <ShoppingCart className="h-5 w-5" aria-hidden />
-          {cartCount > 0 ? (
-            <span className="absolute -right-2 -top-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 text-[10px] font-semibold text-secondary-foreground ring-2 ring-primary">
-              {cartCount > 99 ? '99+' : cartCount}
-            </span>
-          ) : null}
-        </span>
-        <span className="hidden sm:inline">Giỏ hàng</span>
+    </NavLink>
+  )
+
+  const authArea = isRestoringSession ? (
+    <span className="inline-flex h-6 w-6 items-center justify-center" aria-label="Đang tải">
+      <Loader2 className="h-4 w-4 animate-spin text-primary-foreground/80" />
+    </span>
+  ) : effectiveToken && profile?.email ? (
+    <UserMenu email={profile.email} variant="onPrimary" />
+  ) : (
+    <span className="flex items-center gap-2">
+      <NavLink to="/auth/register" className="hover:text-primary-foreground">
+        Đăng ký
       </NavLink>
-      {isRestoringSession ? (
-        <span className="inline-flex h-9 w-9 items-center justify-center" aria-label="Đang tải">
-          <Loader2 className="h-4 w-4 animate-spin text-primary-foreground/80" />
-        </span>
-      ) : effectiveToken && profile?.email ? (
-        <UserMenu email={profile.email} variant="onPrimary" />
-      ) : (
-        <NavLink to="/auth/login">
-          <Button
-            size="sm"
-            variant="secondary"
-            className="shadow-sm hover:brightness-105 px-2.5 text-xs sm:px-4 sm:text-sm"
-          >
-            Đăng nhập
-          </Button>
-        </NavLink>
-      )}
-    </>
+      <span className="text-primary-foreground/40" aria-hidden>
+        |
+      </span>
+      <NavLink to="/auth/login" className="hover:text-primary-foreground">
+        Đăng nhập
+      </NavLink>
+    </span>
   )
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 bg-primary/95 text-primary-foreground shadow-md shadow-primary/15 backdrop-blur-lg supports-[backdrop-filter]:bg-primary/90">
-        <div className="mx-auto max-w-6xl px-4 pt-2.5 sm:pt-3">
+      <ScrollToTop />
+      <header className="sticky top-0 z-40 bg-gradient-to-b from-primary to-primary/95 text-primary-foreground shadow-md shadow-primary/15">
+        {/* Top bar kiểu Shopee: link phụ trái, tiện ích + tài khoản phải */}
+        <div className="hidden border-b border-primary-foreground/10 sm:block">
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-1.5 text-xs text-primary-foreground/85">
+            <div className="flex items-center gap-2">
+              {showSellerNav ? (
+                <>
+                  <NavLink to="/seller" className="hover:text-primary-foreground">
+                    Kênh người bán
+                  </NavLink>
+                  <span className="text-primary-foreground/40" aria-hidden>
+                    |
+                  </span>
+                </>
+              ) : null}
+              {profile?.role === 'ADMIN' ? (
+                <>
+                  <NavLink to="/admin" className="hover:text-primary-foreground">
+                    Admin
+                  </NavLink>
+                  <span className="text-primary-foreground/40" aria-hidden>
+                    |
+                  </span>
+                </>
+              ) : null}
+              <span className="inline-flex items-center gap-1.5">
+                Kết nối
+                <a
+                  href="https://facebook.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Facebook"
+                  className="hover:text-primary-foreground"
+                >
+                  <FacebookIcon className="h-3.5 w-3.5" />
+                </a>
+                <a
+                  href="https://instagram.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Instagram"
+                  className="hover:text-primary-foreground"
+                >
+                  <InstagramIcon className="h-3.5 w-3.5" />
+                </a>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {effectiveToken && profile?.email ? (
+                <HeaderNotifications user={profile} variant="onPrimary" label="Thông báo" />
+              ) : null}
+              <Link
+                to="/policies/shipping"
+                className="inline-flex items-center gap-1 hover:text-primary-foreground"
+              >
+                <CircleHelp className="h-3.5 w-3.5" aria-hidden />
+                Hỗ trợ
+              </Link>
+              {authArea}
+            </div>
+          </div>
+        </div>
+
+        {/* Hàng chính: logo lớn + search + giỏ hàng (bố cục Shopee) */}
+        <div className="mx-auto max-w-6xl px-4 py-2.5 sm:py-4">
           <div className="flex items-center justify-between gap-2 sm:hidden">
-            <Link
-              to="/"
-              className="shrink-0 rounded-lg bg-primary-foreground px-2.5 py-1.5 text-sm font-bold tracking-wide text-primary shadow-sm transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
-            >
+            <Link to="/" className="inline-flex items-center gap-1.5 text-lg font-extrabold tracking-tight">
+              <ShoppingBag className="h-5 w-5" aria-hidden />
               EasyMart
             </Link>
-            <div className="flex shrink-0 items-center gap-1">{headerActions}</div>
+            <div className="flex items-center gap-1.5">
+              {effectiveToken && profile?.email ? (
+                <HeaderNotifications user={profile} variant="onPrimary" />
+              ) : null}
+              {cartLink}
+              {authArea}
+            </div>
           </div>
 
-          <div className="mt-2 flex items-center gap-3 pb-2.5 sm:mt-0 sm:pb-3">
+          <div className="mt-2 flex items-center gap-3 sm:mt-0 sm:gap-6">
             <Link
               to="/"
-              className="hidden shrink-0 rounded-lg bg-primary-foreground px-3 py-1.5 text-sm font-bold tracking-wide text-primary shadow-sm transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] sm:inline-flex"
+              className="hidden shrink-0 items-center gap-2 text-2xl font-extrabold tracking-tight transition-transform duration-200 hover:scale-[1.02] sm:inline-flex"
             >
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-primary-foreground text-primary">
+                <ShoppingBag className="h-5 w-5" aria-hidden />
+              </span>
               EasyMart
             </Link>
             <div className="min-w-0 flex-1">
               <HeaderSearch />
             </div>
-            <div className="hidden shrink-0 items-center gap-3 sm:flex">{headerActions}</div>
+            <div className="hidden shrink-0 sm:block">{cartLink}</div>
           </div>
         </div>
 
         <div className="border-t border-primary-foreground/15 bg-background text-foreground">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-2">
-            <CategoryNav className="flex-1" />
-            <div className="hidden items-center gap-3 px-4 text-sm text-muted-foreground sm:flex">
-              {profile?.role === 'ADMIN' ? (
-                <NavLink
-                  to="/admin"
-                  className={({ isActive }) =>
-                    isActive ? 'font-medium text-foreground' : 'hover:text-foreground'
-                  }
-                >
-                  Admin
-                </NavLink>
-              ) : null}
-              {showSellerNav ? (
-                <NavLink
-                  to="/seller"
-                  className={() =>
-                    location.pathname.startsWith('/seller')
-                      ? 'font-medium text-foreground'
-                      : 'hover:text-foreground'
-                  }
-                >
-                  Kênh người bán
-                </NavLink>
-              ) : null}
-            </div>
+          <div className="mx-auto max-w-6xl">
+            <CategoryNav />
           </div>
           {(profile?.role === 'ADMIN' || showSellerNav) ? (
             <div className="flex items-center gap-3 border-t px-4 py-2 text-sm text-muted-foreground sm:hidden">

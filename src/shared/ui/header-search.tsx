@@ -193,8 +193,8 @@ export function HeaderSearch({ className }: { className?: string }) {
   return (
     <div ref={containerRef} className={cn('relative w-full', className)}>
       <form onSubmit={onSubmit} role="search">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground sm:left-3" aria-hidden />
+        {/* Search bar kiểu Shopee: khung trắng, nút tìm màu primary nằm bên trong */}
+        <div className="relative flex items-center rounded-md bg-background p-1 shadow-md">
           <Input
             ref={inputRef}
             type="search"
@@ -207,7 +207,7 @@ export function HeaderSearch({ className }: { className?: string }) {
             }}
             onFocus={() => setIsOpen(true)}
             onKeyDown={onKeyDown}
-            className="h-11 rounded-full border-transparent bg-background pl-10 pr-10 text-base text-foreground shadow-md sm:h-10 sm:pl-9 sm:pr-9 sm:text-sm focus-visible:ring-2 focus-visible:ring-secondary/60"
+            className="h-9 flex-1 border-none bg-transparent pl-3 pr-8 text-base text-foreground shadow-none sm:text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
             aria-label="Tìm sản phẩm"
             aria-autocomplete="list"
             aria-expanded={isOpen}
@@ -219,12 +219,19 @@ export function HeaderSearch({ className }: { className?: string }) {
                 setValue('')
                 inputRef.current?.focus()
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="absolute right-14 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground sm:right-16"
               aria-label="Xóa từ khoá"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           ) : null}
+          <button
+            type="submit"
+            className="flex h-9 w-12 shrink-0 items-center justify-center rounded bg-primary text-primary-foreground transition hover:brightness-110 sm:w-14"
+            aria-label="Tìm kiếm"
+          >
+            <Search className="h-4 w-4" aria-hidden />
+          </button>
         </div>
       </form>
 

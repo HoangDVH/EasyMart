@@ -1,8 +1,9 @@
 import { parseProductFromApi } from '@/features/products/api/products.api'
+import { parseOrder } from '@/features/orders/api/orders.api'
 import { httpClient } from '@/shared/api/http-client'
 import type { ApiEnvelope } from '@/shared/types/api-result'
 import type { Product } from '@/features/products/types/product.types'
-import type { Order, OrderItem } from '@/features/orders/types/order.types'
+import type { Order } from '@/features/orders/types/order.types'
 
 const SELLER_PRODUCTS_BASE = '/api/v1/products'
 const SELLER_ORDERS_HISTORY = '/api/v1/orders/seller/history'
@@ -28,21 +29,6 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null
 }
 
-function toIdString(value: unknown): string | null {
-  if (typeof value === 'string' && value.length > 0) return value
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value)
-  return null
-}
-
-function toNumberOrNull(value: unknown): number | null {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : null
-  if (typeof value === 'string' && value.trim().length > 0) {
-    const n = Number(value)
-    return Number.isFinite(n) ? n : null
-  }
-  return null
-}
-
 function pickArray(result: unknown): unknown[] {
   if (Array.isArray(result)) return result
   const record = asRecord(result)
@@ -55,44 +41,9 @@ function pickArray(result: unknown): unknown[] {
   return []
 }
 
-function coerceOrderItem(raw: unknown): OrderItem | null {
-  const row = asRecord(raw)
-  if (!row) return null
-  const productId = toIdString(row.productId)
-  if (!productId) return null
-  return {
-    productId,
-    productName: typeof row.productName === 'string' ? row.productName : '',
-    unitPrice: toNumberOrNull(row.unitPrice) ?? 0,
-    quantity: toNumberOrNull(row.quantity) ?? 0,
-    sellerEmail: typeof row.sellerEmail === 'string' ? row.sellerEmail : null,
-    fulfillmentStatus:
-      typeof row.fulfillmentStatus === 'string' && row.fulfillmentStatus.length > 0
-        ? row.fulfillmentStatus
-        : null,
-  }
-}
-
-function coerceOrder(raw: unknown): Order | null {
-  const row = asRecord(raw)
-  if (!row) return null
-  const id = toIdString(row.id)
-  if (!id) return null
-  const itemsRaw = Array.isArray(row.items) ? row.items : []
-  const items = itemsRaw.map(coerceOrderItem).filter((item): item is OrderItem => item !== null)
-  return {
-    id,
-    userEmail: typeof row.userEmail === 'string' ? row.userEmail : '',
-    items,
-    totalAmount: toNumberOrNull(row.totalAmount) ?? 0,
-    status: typeof row.status === 'string' ? row.status : 'PENDING',
-    createdAt: typeof row.createdAt === 'string' ? row.createdAt : null,
-  }
-}
-
 /** Parse đơn từ payload realtime / API envelope. */
 export function parseSellerOrder(raw: unknown): Order | null {
-  return coerceOrder(raw)
+  return parseOrder(raw)
 }
 
 export const sellerApi = {
@@ -133,7 +84,7 @@ export const sellerApi = {
   async sellerOrderHistory(): Promise<Order[]> {
     const { data } = await httpClient.get<ApiEnvelope<unknown>>(SELLER_ORDERS_HISTORY)
     return pickArray(data.result)
-      .map((row) => coerceOrder(row))
+      .map((row) => parseOrder(row))
       .filter((order): order is Order => order !== null)
   },
 
@@ -143,6 +94,6 @@ export const sellerApi = {
       `/api/v1/orders/${orderId}/seller-status`,
       { status },
     )
-    return coerceOrder(data.result)
+    return parseOrder(data.result)
   },
 }

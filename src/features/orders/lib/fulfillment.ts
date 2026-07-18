@@ -52,7 +52,13 @@ export function getNextFulfillmentStatus(current: FulfillmentStatus): Fulfillmen
   return FULFILLMENT_FLOW[idx + 1]
 }
 
-/** Chỉ đơn đã thanh toán mới được seller cập nhật trạng thái. */
+/** Chỉ đơn đã thanh toán (hoặc COD đã ghi nhận) mới được seller cập nhật trạng thái. */
 export function isOrderPaid(order: Order): boolean {
   return order.status === 'PAID'
+}
+
+/** COD / CASH = thanh toán khi nhận hàng (backend hay map COD → CASH). */
+export function isCodPayment(order: Order): boolean {
+  const method = (order.paymentMethod ?? '').toUpperCase()
+  return method === 'COD' || method === 'CASH' || method.includes('COD')
 }

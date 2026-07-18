@@ -8,6 +8,7 @@ import {
   FULFILLMENT_LABELS,
   getNextFulfillmentStatus,
   getOrderFulfillmentStatus,
+  isCodPayment,
   isOrderPaid,
 } from '@/features/orders/lib/fulfillment'
 import { cn } from '@/shared/lib/utils'
@@ -36,6 +37,23 @@ function PaymentBadge({ order }: { order: Order }) {
   if (isCancelledOrder(order)) {
     return <Badge className="border-destructive/30 bg-destructive/10 text-destructive">Đã hủy</Badge>
   }
+
+  const fulfillment = getOrderFulfillmentStatus(order)
+
+  /** COD: backend vẫn set PAID để được giao — UI không được gọi là "đã thanh toán". */
+  if (isCodPayment(order)) {
+    if (fulfillment === 'DELIVERED') {
+      return (
+        <Badge className="border-emerald-300/60 bg-emerald-50 text-emerald-700">Đã thu COD</Badge>
+      )
+    }
+    return (
+      <Badge className="border-amber-300/60 bg-amber-50 text-amber-700">
+        COD · Thu khi nhận hàng
+      </Badge>
+    )
+  }
+
   if (isOrderPaid(order)) {
     return (
       <Badge className="border-emerald-300/60 bg-emerald-50 text-emerald-700">Đã thanh toán</Badge>

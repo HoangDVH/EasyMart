@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bell, BellOff, CheckCheck, ShoppingBag, Truck } from 'lucide-react'
+import { Bell, BellOff, CheckCheck, ImageOff, ShoppingBag, Truck } from 'lucide-react'
 import {
   useOrderNotificationsStore,
   type NotificationAudience,
@@ -8,6 +8,7 @@ import {
 } from '@/features/orders/stores/order-notifications-store'
 import type { User } from '@/features/auth/types/auth.types'
 import { cn } from '@/shared/lib/utils'
+import { formatVnd } from '@/shared/lib/product-price'
 import { Button } from '@/shared/ui/button'
 
 function formatRelativeTime(iso: string): string {
@@ -42,43 +43,100 @@ function NotificationRow({
 }) {
   const isNewOrder = notification.type === 'new-order'
   return (
-    <Link
-      to={notification.href}
-      onClick={() => onRead(notification.id)}
+    <div
       className={cn(
-        'flex items-start gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-muted/70',
+        'rounded-lg px-2 py-2.5 transition-colors hover:bg-muted/70',
         !notification.read && 'bg-primary/5',
       )}
     >
-      <div
-        className={cn(
-          'mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full',
-          isNewOrder ? 'bg-emerald-100 text-emerald-600' : 'bg-sky-100 text-sky-600',
-        )}
+      {/* Tiêu đề mở đúng đơn hàng; từng sản phẩm bên dưới có link riêng. */}
+      <Link
+        to={notification.href}
+        onClick={() => onRead(notification.id)}
+        className="flex items-start gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
-        {isNewOrder ? (
-          <ShoppingBag className="h-3.5 w-3.5" aria-hidden />
-        ) : (
-          <Truck className="h-3.5 w-3.5" aria-hidden />
-        )}
+        <div
+          className={cn(
+            'mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full',
+            isNewOrder ? 'bg-emerald-100 text-emerald-600' : 'bg-sky-100 text-sky-600',
+          )}
+        >
+          {isNewOrder ? (
+            <ShoppingBag className="h-3.5 w-3.5" aria-hidden />
+          ) : (
+            <Truck className="h-3.5 w-3.5" aria-hidden />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              'text-sm leading-snug text-foreground hover:text-primary',
+              !notification.read && 'font-medium',
+            )}
+          >
+            {notification.message}
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            {formatRelativeTime(notification.createdAt)}
+            {notification.audience === 'seller'
+              ? ' · Người bán'
+              : notification.audience === 'admin'
+                ? ' · Admin'
+                : ' · Đơn mua'}
+          </p>
+        </div>
+        {!notification.read ? (
+          <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="Chưa đọc" />
+        ) : null}
+      </Link>
+
+      <div className="ml-11">
+        {notification.products.length > 0 ? (
+          <div className="mt-2 space-y-1.5">
+            {notification.products.slice(0, 2).map((product) => (
+              <Link
+                key={product.productId}
+                to={notification.href}
+                onClick={() => onRead(notification.id)}
+                aria-label={`Xem trạng thái đơn ${notification.orderId} có sản phẩm ${product.name}`}
+                className="flex items-center gap-2 rounded-md border border-transparent p-1 transition-colors hover:border-border hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-md border bg-background">
+                  {product.imageUrl ? (
+                    <img
+                      src={product.imageUrl}
+                      alt=""
+                      className="h-full w-full object-contain"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <ImageOff className="h-3.5 w-3.5 text-muted-foreground/50" aria-hidden />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-medium text-foreground">{product.name}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {formatVnd(product.unitPrice)} × {product.quantity}
+                  </p>
+                </div>
+                <p className="shrink-0 text-xs font-semibold tabular-nums text-foreground">
+                  {formatVnd(product.unitPrice * product.quantity)}
+                </p>
+              </Link>
+            ))}
+            {notification.products.length > 2 ? (
+              <Link
+                to={notification.href}
+                onClick={() => onRead(notification.id)}
+                className="block pl-11 text-[11px] text-primary hover:underline"
+              >
+                +{notification.products.length - 2} sản phẩm khác
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
       </div>
-      <div className="min-w-0 flex-1">
-        <p className={cn('text-sm leading-snug text-foreground', !notification.read && 'font-medium')}>
-          {notification.message}
-        </p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
-          {formatRelativeTime(notification.createdAt)}
-          {notification.audience === 'seller'
-            ? ' · Người bán'
-            : notification.audience === 'admin'
-              ? ' · Admin'
-              : ' · Đơn mua'}
-        </p>
-      </div>
-      {!notification.read ? (
-        <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="Chưa đọc" />
-      ) : null}
-    </Link>
+    </div>
   )
 }
 
@@ -86,10 +144,12 @@ type HeaderNotificationsProps = {
   user: User | null | undefined
   /** `onPrimary` = chuông trên header xanh */
   variant?: 'default' | 'onPrimary'
+  /** Hiện chữ cạnh chuông (top bar kiểu Shopee) */
+  label?: string
 }
 
 /** Chuông thông báo trên navbar — lọc theo role của user đang đăng nhập. */
-export function HeaderNotifications({ user, variant = 'onPrimary' }: HeaderNotificationsProps) {
+export function HeaderNotifications({ user, variant = 'onPrimary', label }: HeaderNotificationsProps) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const notifications = useOrderNotificationsStore((state) => state.notifications)
@@ -137,18 +197,21 @@ export function HeaderNotifications({ user, variant = 'onPrimary' }: HeaderNotif
             : cn('text-muted-foreground hover:text-foreground', open && 'text-foreground'),
         )}
       >
-        <Bell className="h-5 w-5" aria-hidden />
-        {unreadCount > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 text-[10px] font-semibold text-secondary-foreground ring-2 ring-primary">
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        ) : null}
+        <span className="relative inline-flex">
+          <Bell className={cn(label ? 'h-4 w-4' : 'h-5 w-5')} aria-hidden />
+          {unreadCount > 0 ? (
+            <span className="absolute -right-2 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 text-[10px] font-semibold text-secondary-foreground ring-2 ring-primary">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          ) : null}
+        </span>
+        {label ? <span className="ml-1.5">{label}</span> : null}
       </button>
 
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border bg-background text-foreground shadow-xl"
+          className="absolute right-0 z-50 mt-2 w-[min(25rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border bg-background text-foreground shadow-xl"
         >
           <div className="flex items-center justify-between gap-2 border-b px-3 py-2.5">
             <div>

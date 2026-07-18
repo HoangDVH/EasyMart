@@ -379,10 +379,6 @@ export function ProductCatalog() {
 
   const categoriesQuery = useCategoriesQuery()
   const categories = categoriesQuery.data ?? []
-  const activeCategoryName = useMemo(() => {
-    if (categoryFilter === 'all') return null
-    return categories.find((c) => c.id === categoryFilter)?.name ?? null
-  }, [categories, categoryFilter])
 
   const isFeaturedParam: boolean | undefined =
     featuredFilter === 'featured' ? true : featuredFilter === 'non-featured' ? false : undefined
@@ -493,24 +489,8 @@ export function ProductCatalog() {
     filterBarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  const heroTitle = keyword
-    ? `Kết quả cho "${keyword}"`
-    : activeCategoryName
-      ? `Danh mục: ${activeCategoryName}`
-      : 'Gợi ý nổi bật hôm nay'
-  const heroSubtitle = keyword
-    ? 'Hiển thị sản phẩm khớp với từ khoá tìm kiếm.'
-    : activeCategoryName
-      ? 'Sản phẩm thuộc danh mục đã chọn.'
-      : 'Chọn nhanh sản phẩm đang được quan tâm, giá tốt và sẵn hàng.'
-
   return (
     <div className="space-y-6">
-      <div className="border-b pb-4">
-        <h2 className="text-lg font-semibold tracking-tight">{heroTitle}</h2>
-        <p className="mt-0.5 text-sm text-muted-foreground">{heroSubtitle}</p>
-      </div>
-
       {listQuery.isError ? (
         <Card>
           <EmptyState

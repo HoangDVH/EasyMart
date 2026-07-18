@@ -2,12 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 import { Client } from '@stomp/stompjs'
 import { useQueryClient } from '@tanstack/react-query'
 import { parseOrder } from '@/features/orders/api/orders.api'
+import { productsApi } from '@/features/products/api/products.api'
 import { ordersQueryKeyRoot } from '@/features/orders/hooks/use-orders'
 import {
   FULFILLMENT_LABELS,
   getOrderFulfillmentStatus,
 } from '@/features/orders/lib/fulfillment'
-import { useOrderNotificationsStore } from '@/features/orders/stores/order-notifications-store'
+import {
+  useOrderNotificationsStore,
+  type OrderNotificationProduct,
+} from '@/features/orders/stores/order-notifications-store'
 import {
   useOrdersRealtimeStore,
   type RealtimeStatus,
@@ -83,10 +87,46 @@ function resyncOrders(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: sellerOrdersHistoryQueryKey })
 }
 
+function orderProductSnapshots(order: Order): OrderNotificationProduct[] {
+  return order.items.map((item) => ({
+    productId: item.productId,
+    name: item.productName || `Sản phẩm #${item.productId}`,
+    imageUrl: null,
+    unitPrice: item.unitPrice,
+    quantity: item.quantity,
+  }))
+}
+
+async function enrichNotificationProducts(order: Order) {
+  const products = await Promise.all(
+    order.items.map(async (item): Promise<OrderNotificationProduct> => {
+      try {
+        const product = await productsApi.getById(item.productId)
+        return {
+          productId: item.productId,
+          name: product.name || item.productName || `Sản phẩm #${item.productId}`,
+          imageUrl: product.images?.[0] ?? product.imageUrl ?? null,
+          unitPrice: item.unitPrice,
+          quantity: item.quantity,
+        }
+      } catch {
+        return {
+          productId: item.productId,
+          name: item.productName || `Sản phẩm #${item.productId}`,
+          imageUrl: null,
+          unitPrice: item.unitPrice,
+          quantity: item.quantity,
+        }
+      }
+    }),
+  )
+  useOrderNotificationsStore.getState().updateProducts(order.id, products)
+}
+
 /**
- * Đẩy thông báo theo role:
- * - Buyer (đúng email đơn): cập nhật đơn mua
- * - Seller/Admin (không phải người mua của đơn): đơn mới / trạng thái giao
+ * Đẩy thông báo theo role (buyer / seller / admin) — cùng một quy tắc chống trùng:
+ * Backend thường bắn 2–3 event khi tạo đơn (CREATED + FULFILLMENT khởi tạo + đôi khi STATUS).
+ * Chỉ giữ 1 tin "đơn mới / đặt hàng thành công"; các bước trạng thái thật sau đó vẫn báo.
  */
 function notifyOrderEvent(event: OrderRealtimeEvent, rawOrder: unknown) {
   const order = parseOrder(rawOrder)
@@ -101,52 +141,72 @@ function notifyOrderEvent(event: OrderRealtimeEvent, rawOrder: unknown) {
   const sellerCapable = hasSellerCapability(roles, role)
   const adminCapable = isAdmin(roles, role)
 
-  const add = useOrderNotificationsStore.getState().add
+  const store = useOrderNotificationsStore.getState()
   const eventType = (event.type ?? '').toUpperCase()
   const fulfillment = getOrderFulfillmentStatus(order)
   const statusLabel = fulfillment ? FULFILLMENT_LABELS[fulfillment] : order.status
+  const isCreatedEvent = eventType.includes('CREATED')
+  const products = orderProductSnapshots(order)
 
-  if (eventType.includes('CREATED')) {
+  if (isCreatedEvent) {
+    /** CREATED đến sau STATUS → bỏ tin trạng thái vừa gắn với cùng đơn. */
+    store.dropRecentStatusUpdates(order.id)
+
     if (isBuyerOfOrder) {
-      add({
+      store.addUnique({
         orderId: order.id,
         type: 'new-order',
         audience: 'buyer',
         message: `Đặt hàng thành công — đơn #${order.id}.`,
         href: `/account/orders/${order.id}`,
+        products,
       })
     }
     if (sellerCapable && !isBuyerOfOrder) {
-      add({
+      store.addUnique({
         orderId: order.id,
         type: 'new-order',
         audience: adminCapable ? 'admin' : 'seller',
         message: `Có đơn hàng mới #${order.id} cần xử lý.`,
-        href: '/seller/orders',
+        href: `/seller/orders/${order.id}`,
+        products,
       })
     }
+    void enrichNotificationProducts(order)
     return
   }
 
+  /** Trạng thái khởi tạo (= vừa tạo đơn) — không báo lần 2 cho mọi role. */
+  if (fulfillment === 'AWAITING_CONFIRMATION') return
+
+  /**
+   * Vừa có tin "đơn mới / đặt hàng thành công" rồi thì bỏ qua các STATUS đi kèm
+   * trong cửa sổ dedupe (áp dụng buyer + seller + admin).
+   */
+  if (store.hasRecent(order.id, { type: 'new-order' })) return
+
   if (isBuyerOfOrder) {
-    add({
+    store.addUnique({
       orderId: order.id,
       type: 'status-update',
       audience: 'buyer',
       message: `Đơn #${order.id} của bạn đã chuyển sang "${statusLabel}".`,
       href: `/account/orders/${order.id}`,
+      products,
     })
   }
 
   if (sellerCapable && !isBuyerOfOrder) {
-    add({
+    store.addUnique({
       orderId: order.id,
       type: 'status-update',
       audience: adminCapable ? 'admin' : 'seller',
       message: `Đơn #${order.id} cập nhật trạng thái: "${statusLabel}".`,
-      href: '/seller/orders',
+      href: `/seller/orders/${order.id}`,
+      products,
     })
   }
+  void enrichNotificationProducts(order)
 }
 
 /**

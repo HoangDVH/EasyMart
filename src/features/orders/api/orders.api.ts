@@ -45,6 +45,38 @@ function coerceItem(raw: Record<string, unknown>): OrderItem | null {
   }
 }
 
+function pickPaymentMethod(row: Record<string, unknown>): string | null {
+  const directKeys = ['paymentMethod', 'paymentType', 'payment_method', 'method']
+  for (const key of directKeys) {
+    const value = row[key]
+    if (typeof value === 'string' && value.trim().length > 0) {
+      const upper = value.trim().toUpperCase()
+      /** Tránh nhầm `method` với field khác không phải thanh toán. */
+      if (key === 'method' && !['COD', 'CASH', 'VNPAY', 'VN_PAY', 'BANK'].includes(upper)) {
+        continue
+      }
+      return value.trim()
+    }
+  }
+  const payment = asRecord(row.payment)
+  if (payment) {
+    for (const key of ['method', 'paymentMethod', 'type']) {
+      const value = payment[key]
+      if (typeof value === 'string' && value.trim().length > 0) return value.trim()
+    }
+  }
+  const payments = Array.isArray(row.payments) ? row.payments : []
+  for (const entry of payments) {
+    const rec = asRecord(entry)
+    if (!rec) continue
+    for (const key of ['method', 'paymentMethod', 'type']) {
+      const value = rec[key]
+      if (typeof value === 'string' && value.trim().length > 0) return value.trim()
+    }
+  }
+  return null
+}
+
 function coerceOrder(raw: unknown): Order | null {
   const row = asRecord(raw)
   if (!row) return null
@@ -63,6 +95,7 @@ function coerceOrder(raw: unknown): Order | null {
     totalAmount: toNumber(row.totalAmount),
     status: typeof row.status === 'string' ? row.status : 'PENDING',
     createdAt: typeof row.createdAt === 'string' ? row.createdAt : null,
+    paymentMethod: pickPaymentMethod(row),
   }
 }
 
