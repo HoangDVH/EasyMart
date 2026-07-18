@@ -4,6 +4,8 @@ export type OrderItem = {
   unitPrice: number
   quantity: number
   sellerEmail: string | null
+  /** Trạng thái giao hàng phía seller: AWAITING_CONFIRMATION → ... → DELIVERED */
+  fulfillmentStatus: string | null
 }
 
 /** Backend tự free-form, FE chỉ hiển thị; map nhãn ở UI khi cần. */

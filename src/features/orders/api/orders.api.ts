@@ -38,6 +38,10 @@ function coerceItem(raw: Record<string, unknown>): OrderItem | null {
     unitPrice: toNumber(raw.unitPrice),
     quantity: toNumber(raw.quantity, 1),
     sellerEmail: typeof raw.sellerEmail === 'string' ? raw.sellerEmail : null,
+    fulfillmentStatus:
+      typeof raw.fulfillmentStatus === 'string' && raw.fulfillmentStatus.length > 0
+        ? raw.fulfillmentStatus
+        : null,
   }
 }
 

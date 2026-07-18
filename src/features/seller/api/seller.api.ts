@@ -66,6 +66,10 @@ function coerceOrderItem(raw: unknown): OrderItem | null {
     unitPrice: toNumberOrNull(row.unitPrice) ?? 0,
     quantity: toNumberOrNull(row.quantity) ?? 0,
     sellerEmail: typeof row.sellerEmail === 'string' ? row.sellerEmail : null,
+    fulfillmentStatus:
+      typeof row.fulfillmentStatus === 'string' && row.fulfillmentStatus.length > 0
+        ? row.fulfillmentStatus
+        : null,
   }
 }
 
@@ -84,6 +88,11 @@ function coerceOrder(raw: unknown): Order | null {
     status: typeof row.status === 'string' ? row.status : 'PENDING',
     createdAt: typeof row.createdAt === 'string' ? row.createdAt : null,
   }
+}
+
+/** Parse đơn từ payload realtime / API envelope. */
+export function parseSellerOrder(raw: unknown): Order | null {
+  return coerceOrder(raw)
 }
 
 export const sellerApi = {
@@ -126,5 +135,14 @@ export const sellerApi = {
     return pickArray(data.result)
       .map((row) => coerceOrder(row))
       .filter((order): order is Order => order !== null)
+  },
+
+  /** Chuyển trạng thái giao hàng (chỉ tuần tự, đơn PAID). Backend trả 409 nếu sai thứ tự. */
+  async updateSellerStatus(orderId: string, status: string): Promise<Order | null> {
+    const { data } = await httpClient.patch<ApiEnvelope<unknown>>(
+      `/api/v1/orders/${orderId}/seller-status`,
+      { status },
+    )
+    return coerceOrder(data.result)
   },
 }

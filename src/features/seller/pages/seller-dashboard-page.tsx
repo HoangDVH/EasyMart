@@ -12,9 +12,15 @@ import {
   useDeleteSellerProductMutation,
   useSellerOrderHistoryQuery,
   useSellerProductsQuery,
+  useUpdateSellerOrderStatusMutation,
   useUpdateSellerProductMutation,
   useUploadSellerImagesMutation,
 } from '@/features/seller/hooks/use-seller'
+import { useSellerOrdersRealtime } from '@/features/seller/hooks/use-seller-orders-realtime'
+import { FULFILLMENT_LABELS, isFulfillmentStatus } from '@/features/seller/lib/fulfillment'
+import type { Order } from '@/features/orders/types/order.types'
+import { isAxiosError } from 'axios'
+import { cn } from '@/shared/lib/utils'
 import type { Product } from '@/features/products/types/product.types'
 import type { SellerProductPayload } from '@/features/seller/api/seller.api'
 import type { SellerProductFormParsed } from '@/features/seller/schemas/seller-product.schema'
@@ -57,6 +63,8 @@ export function SellerDashboardPage() {
   const updateMutation = useUpdateSellerProductMutation()
   const deleteMutation = useDeleteSellerProductMutation()
   const uploadImagesMutation = useUploadSellerImagesMutation()
+  const updateOrderStatusMutation = useUpdateSellerOrderStatusMutation()
+  const realtimeStatus = useSellerOrdersRealtime(Boolean(accessToken))
   const categoriesQuery = useCategoriesQuery()
 
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -207,6 +215,27 @@ export function SellerDashboardPage() {
     setFormOpen(true)
   }
 
+  async function onAdvanceOrderStatus(order: Order, nextStatus: string) {
+    try {
+      await updateOrderStatusMutation.mutateAsync({ orderId: order.id, status: nextStatus })
+      const label = isFulfillmentStatus(nextStatus) ? FULFILLMENT_LABELS[nextStatus] : nextStatus
+      toast.success(`Đơn #${order.id}: chuyển sang "${label}".`)
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 409) {
+        toast.error(
+          getApiErrorMessage(
+            error,
+            'Không thể chuyển trạng thái: sai thứ tự hoặc đơn chưa thanh toán.',
+          ),
+        )
+        /** 409 = dữ liệu local lệch với server → đồng bộ lại. */
+        void sellerOrdersQuery.refetch()
+        return
+      }
+      toast.error(getApiErrorMessage(error, 'Không cập nhật được trạng thái giao hàng.'))
+    }
+  }
+
   function changePage(next: number) {
     if (next < 1 || next > totalPages) return
     setFilters((prev) => ({ ...prev, page: next }))
@@ -277,7 +306,36 @@ export function SellerDashboardPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <div>
-            <CardTitle>Lịch sử đơn hàng sản phẩm</CardTitle>
+            <CardTitle className="flex flex-wrap items-center gap-2">
+              Lịch sử đơn hàng sản phẩm
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                  realtimeStatus === 'connected'
+                    ? 'border-emerald-300/60 bg-emerald-50 text-emerald-700'
+                    : realtimeStatus === 'connecting'
+                      ? 'border-amber-300/60 bg-amber-50 text-amber-700'
+                      : 'border-border bg-muted/40 text-muted-foreground',
+                )}
+              >
+                <span
+                  className={cn(
+                    'h-1.5 w-1.5 rounded-full',
+                    realtimeStatus === 'connected'
+                      ? 'bg-emerald-500'
+                      : realtimeStatus === 'connecting'
+                        ? 'animate-pulse bg-amber-500'
+                        : 'bg-muted-foreground/50',
+                  )}
+                  aria-hidden
+                />
+                {realtimeStatus === 'connected'
+                  ? 'Realtime'
+                  : realtimeStatus === 'connecting'
+                    ? 'Đang kết nối...'
+                    : 'Ngoại tuyến'}
+              </span>
+            </CardTitle>
             <CardDescription>
               Tổng {sellerOrders.length} đơn, đã bán {totalSoldUnits} sản phẩm.
             </CardDescription>
@@ -297,6 +355,12 @@ export function SellerDashboardPage() {
             isLoading={sellerOrdersQuery.isPending}
             isError={sellerOrdersQuery.isError}
             errorText={ordersErrorText}
+            updatingOrderId={
+              updateOrderStatusMutation.isPending
+                ? updateOrderStatusMutation.variables?.orderId ?? null
+                : null
+            }
+            onAdvanceStatus={(order, nextStatus) => void onAdvanceOrderStatus(order, nextStatus)}
           />
         </CardContent>
       </Card>
