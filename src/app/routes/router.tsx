@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/app/layouts/app-layout'
 import { AuthLayout } from '@/app/layouts/auth-layout'
 import { ProtectedRoute, RoleGuard } from '@/app/routes/guards'
+import { RouteErrorBoundary } from '@/shared/ui/route-error-boundary'
 import {
   AccountLayout,
   AdminPage,
@@ -27,6 +28,7 @@ export const router = createBrowserRouter([
   {
     path: '/auth',
     element: <AuthLayout />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
@@ -37,6 +39,7 @@ export const router = createBrowserRouter([
   {
     /** Link trong email backend trỏ về /reset-password?token=... (không có prefix /auth). */
     element: <AuthLayout />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       { path: '/forgot-password', element: <ForgotPasswordPage /> },
       { path: '/reset-password', element: <ResetPasswordPage /> },
@@ -44,6 +47,7 @@ export const router = createBrowserRouter([
   },
   {
     element: <AppLayout />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       { path: '/', element: <HomePage /> },
       { path: '/products/:id', element: <ProductDetailPage /> },
