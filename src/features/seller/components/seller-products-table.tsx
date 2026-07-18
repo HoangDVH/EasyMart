@@ -1,8 +1,14 @@
+import { ChevronLeft, ChevronRight, ImageOff, PackageSearch, Pencil, Star, Trash2 } from 'lucide-react'
 import type { Product } from '@/features/products/types/product.types'
 import { formatDateTime, formatVnd } from '@/features/seller/components/seller-formatters'
+import {
+  getProductStock,
+  LOW_STOCK_THRESHOLD,
+} from '@/features/seller/components/seller-types'
+import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
-import { Card, CardContent } from '@/shared/ui/card'
+import { EmptyState } from '@/shared/ui/empty-state'
 import { Skeleton } from '@/shared/ui/skeleton'
 
 type SellerProductsTableProps = {
@@ -12,9 +18,141 @@ type SellerProductsTableProps = {
   errorText: string | null
   page: number
   totalPages: number
+  totalItems: number
   onPageChange: (next: number) => void
   onEdit: (product: Product) => void
   onDelete: (product: Product) => void
+}
+
+function ProductThumb({ product }: { product: Product }) {
+  const src = product.images?.[0] ?? product.imageUrl ?? null
+  return (
+    <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-lg border bg-muted/40">
+      {src ? (
+        <img src={src} alt="" className="h-full w-full object-contain" loading="lazy" />
+      ) : (
+        <ImageOff className="h-4 w-4 text-muted-foreground/60" aria-hidden />
+      )}
+    </div>
+  )
+}
+
+function StockBadge({ stock }: { stock: number }) {
+  if (stock <= 0) {
+    return <Badge className="border-destructive/30 bg-destructive/10 text-destructive">Hết hàng</Badge>
+  }
+  if (stock <= LOW_STOCK_THRESHOLD) {
+    return <Badge className="border-amber-300/60 bg-amber-50 text-amber-700">Sắp hết · {stock}</Badge>
+  }
+  return <Badge className="border-emerald-300/60 bg-emerald-50 text-emerald-700">Còn hàng · {stock}</Badge>
+}
+
+function PriceCell({ product }: { product: Product }) {
+  const price = product.price ?? 0
+  const discount = product.discountPrice
+  const hasDiscount = discount != null && discount > 0 && discount < price
+  return (
+    <div className="leading-tight">
+      <p className="font-medium tabular-nums">{formatVnd(hasDiscount ? discount : price)}</p>
+      {hasDiscount ? (
+        <p className="text-xs text-muted-foreground line-through tabular-nums">{formatVnd(price)}</p>
+      ) : null}
+    </div>
+  )
+}
+
+function RowActions({
+  product,
+  onEdit,
+  onDelete,
+}: {
+  product: Product
+  onEdit: (product: Product) => void
+  onDelete: (product: Product) => void
+}) {
+  return (
+    <div className="flex justify-end gap-1">
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+        aria-label={`Sửa ${product.name}`}
+        title="Sửa"
+        onClick={() => onEdit(product)}
+      >
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 w-8 p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+        aria-label={`Xóa ${product.name}`}
+        title="Xóa"
+        onClick={() => onDelete(product)}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}
+
+function Pagination({
+  page,
+  totalPages,
+  totalItems,
+  onPageChange,
+}: {
+  page: number
+  totalPages: number
+  totalItems: number
+  onPageChange: (next: number) => void
+}) {
+  /** Tối đa 5 số trang, luôn bám quanh trang hiện tại. */
+  const start = Math.max(1, Math.min(page - 2, totalPages - 4))
+  const pages = Array.from({ length: Math.min(5, totalPages) }, (_, i) => start + i)
+
+  return (
+    <div className="flex flex-col items-center justify-between gap-2 sm:flex-row">
+      <p className="text-xs text-muted-foreground">
+        {totalItems} sản phẩm · trang {page}/{totalPages}
+      </p>
+      <div className="flex items-center gap-1">
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 w-8 p-0"
+          aria-label="Trang trước"
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        {pages.map((p) => (
+          <Button
+            key={p}
+            size="sm"
+            variant={p === page ? 'default' : 'outline'}
+            className="h-8 w-8 p-0 tabular-nums"
+            aria-label={`Trang ${p}`}
+            aria-current={p === page ? 'page' : undefined}
+            onClick={() => onPageChange(p)}
+          >
+            {p}
+          </Button>
+        ))}
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 w-8 p-0"
+          aria-label="Trang sau"
+          onClick={() => onPageChange(page + 1)}
+          disabled={page >= totalPages}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  )
 }
 
 export function SellerProductsTable({
@@ -24,6 +162,7 @@ export function SellerProductsTable({
   errorText,
   page,
   totalPages,
+  totalItems,
   onPageChange,
   onEdit,
   onDelete,
@@ -31,9 +170,9 @@ export function SellerProductsTable({
   if (isLoading) {
     return (
       <div className="space-y-2">
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
+        {Array.from({ length: 5 }, (_, i) => (
+          <Skeleton key={i} className="h-14 w-full" />
+        ))}
       </div>
     )
   }
@@ -43,97 +182,107 @@ export function SellerProductsTable({
   }
 
   if (products.length === 0) {
-    return <p className="text-sm text-muted-foreground">Không có sản phẩm phù hợp bộ lọc.</p>
+    return (
+      <EmptyState
+        icon={PackageSearch}
+        title="Không có sản phẩm"
+        description="Không tìm thấy sản phẩm phù hợp bộ lọc hiện tại. Thử đổi từ khóa hoặc trạng thái kho."
+      />
+    )
   }
 
   return (
     <div className="space-y-3">
-      <div className="space-y-3 md:hidden">
-        {products.map((product) => (
-          <Card key={product.id}>
-            <CardContent className="space-y-3 pt-4">
-              <div>
-                <p className="font-medium">{product.name}</p>
-                <p className="line-clamp-2 text-xs text-muted-foreground">{product.description || '—'}</p>
+      {/* Mobile: card list */}
+      <div className="space-y-2 md:hidden">
+        {products.map((product) => {
+          const stock = getProductStock(product)
+          return (
+            <div key={product.id} className="rounded-lg border p-3">
+              <div className="flex items-start gap-3">
+                <ProductThumb product={product} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{product.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {product.categoryName ?? product.categoryId ?? '—'}
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <PriceCell product={product} />
+                    <StockBadge stock={stock} />
+                  </div>
+                </div>
+                <RowActions product={product} onEdit={onEdit} onDelete={onDelete} />
               </div>
-              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                <span>{formatVnd(product.price)}</span>
-                <span>• Kho: {product.stock ?? product.stockQuantity ?? 0}</span>
-                <Badge>{product.categoryName ?? product.categoryId ?? '—'}</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">{formatDateTime(product.createdAt)}</p>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" className="flex-1" onClick={() => onEdit(product)}>
-                  Sửa
-                </Button>
-                <Button
-                  size="sm"
-                  className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  onClick={() => onDelete(product)}
-                >
-                  Xóa
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+            </div>
+          )
+        })}
       </div>
 
-      <div className="hidden overflow-x-auto rounded-md border md:block">
-        <table className="w-full min-w-[720px] text-sm">
-          <thead className="bg-muted/40 text-left">
-            <tr>
-              <th className="px-3 py-2 font-medium">Tên</th>
-              <th className="px-3 py-2 font-medium">Giá</th>
-              <th className="px-3 py-2 font-medium">Kho</th>
-              <th className="px-3 py-2 font-medium">Danh mục</th>
-              <th className="px-3 py-2 font-medium">Tạo lúc</th>
-              <th className="px-3 py-2 font-medium text-right">Thao tác</th>
+      {/* Desktop: data table */}
+      <div className="hidden overflow-x-auto rounded-lg border md:block">
+        <table className="w-full min-w-[860px] text-sm">
+          <thead>
+            <tr className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <th className="px-4 py-3 font-medium">Sản phẩm</th>
+              <th className="px-4 py-3 font-medium">Giá bán</th>
+              <th className="px-4 py-3 font-medium">Tồn kho</th>
+              <th className="px-4 py-3 font-medium">Danh mục</th>
+              <th className="px-4 py-3 font-medium">Đánh giá</th>
+              <th className="px-4 py-3 font-medium">Ngày tạo</th>
+              <th className="px-4 py-3 text-right font-medium">Thao tác</th>
             </tr>
           </thead>
-          <tbody>
-            {products.map((product) => (
-              <tr key={product.id} className="border-t">
-                <td className="px-3 py-2">
-                  <p className="font-medium">{product.name}</p>
-                  <p className="line-clamp-1 text-xs text-muted-foreground">{product.description || '—'}</p>
-                </td>
-                <td className="px-3 py-2">{formatVnd(product.price)}</td>
-                <td className="px-3 py-2">{product.stock ?? product.stockQuantity ?? 0}</td>
-                <td className="px-3 py-2">
-                  <Badge>{product.categoryName ?? product.categoryId ?? '—'}</Badge>
-                </td>
-                <td className="px-3 py-2">{formatDateTime(product.createdAt)}</td>
-                <td className="px-3 py-2">
-                  <div className="flex justify-end gap-2">
-                    <Button size="sm" variant="outline" onClick={() => onEdit(product)}>
-                      Sửa
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      onClick={() => onDelete(product)}
-                    >
-                      Xóa
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+          <tbody className="divide-y">
+            {products.map((product) => {
+              const stock = getProductStock(product)
+              return (
+                <tr key={product.id} className="transition-colors hover:bg-muted/30">
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center gap-3">
+                      <ProductThumb product={product} />
+                      <div className="min-w-0">
+                        <p className="max-w-[280px] truncate font-medium">{product.name}</p>
+                        <p className="max-w-[280px] truncate text-xs text-muted-foreground">
+                          {product.description || '—'}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <PriceCell product={product} />
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <StockBadge stock={stock} />
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <span className="text-muted-foreground">
+                      {product.categoryName ?? product.categoryId ?? '—'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {product.rating != null && product.rating > 0 ? (
+                      <span className="inline-flex items-center gap-1 tabular-nums">
+                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" aria-hidden />
+                        {product.rating.toFixed(1)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className={cn('px-4 py-2.5 text-xs text-muted-foreground')}>
+                    {formatDateTime(product.createdAt)}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <RowActions product={product} onEdit={onEdit} onDelete={onDelete} />
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-end gap-2">
-        <Button size="sm" variant="outline" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>
-          Trước
-        </Button>
-        <span className="text-xs text-muted-foreground">
-          Trang {page}/{totalPages}
-        </span>
-        <Button size="sm" variant="outline" onClick={() => onPageChange(page + 1)} disabled={page >= totalPages}>
-          Sau
-        </Button>
-      </div>
+
+      <Pagination page={page} totalPages={totalPages} totalItems={totalItems} onPageChange={onPageChange} />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Plus, RefreshCw } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useCategoriesQuery } from '@/features/products/hooks/use-catalog'
 import { productsApi } from '@/features/products/api/products.api'
@@ -29,8 +30,11 @@ import { ConfirmDeleteModal } from '@/features/seller/components/confirm-delete-
 import { SellerProductsToolbar } from '@/features/seller/components/seller-products-toolbar'
 import { SellerProductsTable } from '@/features/seller/components/seller-products-table'
 import { SellerOrdersHistoryPanel } from '@/features/seller/components/seller-orders-history-panel'
+import { SellerStatsCards } from '@/features/seller/components/seller-stats-cards'
 import {
   defaultSellerProductFormValues,
+  getProductStock,
+  LOW_STOCK_THRESHOLD,
   productToFormValues,
   type SellerProductsFilters,
 } from '@/features/seller/components/seller-types'
@@ -93,28 +97,74 @@ export function SellerDashboardPage() {
     [sellerOrders],
   )
 
-  const filteredProducts = useMemo(() => {
-    let rows = [...productsRaw]
+  /** Doanh thu từ các đơn đã thanh toán (totalAmount seller đã được backend filter theo items của seller). */
+  const paidRevenue = useMemo(
+    () =>
+      sellerOrders.reduce(
+        (sum, order) => (order.status === 'PAID' ? sum + order.totalAmount : sum),
+        0,
+      ),
+    [sellerOrders],
+  )
+
+  const attentionStockCount = useMemo(
+    () =>
+      productsRaw.reduce(
+        (count, p) => (getProductStock(p) <= LOW_STOCK_THRESHOLD ? count + 1 : count),
+        0,
+      ),
+    [productsRaw],
+  )
+
+  /** Danh sách sau khi search — dùng chung cho tabs đếm và lọc kho. */
+  const searchedProducts = useMemo(() => {
     const kw = filters.keyword.trim().toLowerCase()
-    if (kw) {
-      rows = rows.filter((p) =>
-        [p.name, p.description ?? '', p.categoryName ?? '', p.categoryId ?? '']
-          .join(' ')
-          .toLowerCase()
-          .includes(kw),
-      )
+    if (!kw) return productsRaw
+    return productsRaw.filter((p) =>
+      [p.name, p.description ?? '', p.categoryName ?? '', p.categoryId ?? '']
+        .join(' ')
+        .toLowerCase()
+        .includes(kw),
+    )
+  }, [productsRaw, filters.keyword])
+
+  const stockCounts = useMemo(() => {
+    let inStock = 0
+    let lowStock = 0
+    let outOfStock = 0
+    for (const p of searchedProducts) {
+      const stock = getProductStock(p)
+      if (stock <= 0) outOfStock += 1
+      else if (stock <= LOW_STOCK_THRESHOLD) lowStock += 1
+      else inStock += 1
     }
+    return {
+      all: searchedProducts.length,
+      'in-stock': inStock,
+      'low-stock': lowStock,
+      'out-of-stock': outOfStock,
+    }
+  }, [searchedProducts])
+
+  const filteredProducts = useMemo(() => {
+    let rows = [...searchedProducts]
     if (filters.stockStatus === 'in-stock') {
-      rows = rows.filter((p) => (p.stock ?? p.stockQuantity ?? 0) > 0)
+      rows = rows.filter((p) => getProductStock(p) > LOW_STOCK_THRESHOLD)
+    }
+    if (filters.stockStatus === 'low-stock') {
+      rows = rows.filter((p) => {
+        const stock = getProductStock(p)
+        return stock > 0 && stock <= LOW_STOCK_THRESHOLD
+      })
     }
     if (filters.stockStatus === 'out-of-stock') {
-      rows = rows.filter((p) => (p.stock ?? p.stockQuantity ?? 0) <= 0)
+      rows = rows.filter((p) => getProductStock(p) <= 0)
     }
     rows.sort((a, b) => {
       const aPrice = a.price ?? 0
       const bPrice = b.price ?? 0
-      const aStock = a.stock ?? a.stockQuantity ?? 0
-      const bStock = b.stock ?? b.stockQuantity ?? 0
+      const aStock = getProductStock(a)
+      const bStock = getProductStock(b)
       const aName = a.name.toLowerCase()
       const bName = b.name.toLowerCase()
       switch (filters.sort) {
@@ -134,7 +184,7 @@ export function SellerDashboardPage() {
       }
     })
     return rows
-  }, [productsRaw, filters.keyword, filters.sort, filters.stockStatus])
+  }, [searchedProducts, filters.sort, filters.stockStatus])
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / filters.pageSize))
   const pagedProducts = useMemo(() => {
@@ -258,35 +308,51 @@ export function SellerDashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Quản lý sản phẩm</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Kênh người bán</h1>
           <p className="text-sm text-muted-foreground">
-            Quản lý danh sách sản phẩm và theo dõi đơn hàng liên quan.
+            Quản lý sản phẩm, tồn kho và đơn hàng của bạn.
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={openCreateModal}>Thêm sản phẩm</Button>
+          <Button onClick={openCreateModal} className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            Thêm sản phẩm
+          </Button>
           <Link to="/">
             <Button variant="outline">Về trang chủ</Button>
           </Link>
         </div>
       </div>
 
+      <SellerStatsCards
+        isLoading={productsQuery.isPending || sellerOrdersQuery.isPending}
+        totalProducts={productsRaw.length}
+        lowStockCount={attentionStockCount}
+        totalOrders={sellerOrders.length}
+        totalRevenue={paidRevenue}
+      />
+
       <Card>
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <CardTitle>Sản phẩm của tôi</CardTitle>
+              <CardTitle>Quản lý sản phẩm</CardTitle>
+              <CardDescription>
+                {productsRaw.length} sản phẩm · đã bán {totalSoldUnits} đơn vị.
+              </CardDescription>
             </div>
             <Button
               size="sm"
               variant="outline"
+              className="gap-1.5"
               onClick={() => void productsQuery.refetch()}
               disabled={productsQuery.isFetching}
             >
+              <RefreshCw className={cn('h-3.5 w-3.5', productsQuery.isFetching && 'animate-spin')} />
               {productsQuery.isFetching ? 'Đang tải...' : 'Làm mới'}
             </Button>
           </div>
-          <SellerProductsToolbar filters={filters} onChange={setFilters} />
+          <SellerProductsToolbar filters={filters} onChange={setFilters} counts={stockCounts} />
         </CardHeader>
         <CardContent>
           <SellerProductsTable
@@ -296,6 +362,7 @@ export function SellerDashboardPage() {
             errorText={productsErrorText}
             page={Math.min(filters.page, totalPages)}
             totalPages={totalPages}
+            totalItems={filteredProducts.length}
             onPageChange={changePage}
             onEdit={onEdit}
             onDelete={(product) => setDeleteTarget(product)}

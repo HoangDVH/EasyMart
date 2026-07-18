@@ -16,9 +16,16 @@ export type SellerProductFormValues = {
 export type SellerProductsFilters = {
   keyword: string
   sort: 'newest' | 'name-asc' | 'price-asc' | 'price-desc' | 'stock-asc' | 'stock-desc'
-  stockStatus: 'all' | 'in-stock' | 'out-of-stock'
+  stockStatus: 'all' | 'in-stock' | 'low-stock' | 'out-of-stock'
   page: number
   pageSize: number
+}
+
+/** Ngưỡng cảnh báo sắp hết hàng — đồng bộ với badge trang chi tiết sản phẩm. */
+export const LOW_STOCK_THRESHOLD = 5
+
+export function getProductStock(product: Product): number {
+  return product.stock ?? product.stockQuantity ?? 0
 }
 
 export const defaultSellerProductFormValues: SellerProductFormValues = {
