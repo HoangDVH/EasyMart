@@ -9,12 +9,13 @@ import { useAuthStore } from '@/shared/stores/auth-store'
 import {
   formatOrderDate,
   formatVnd,
-  orderStatusMeta,
+  orderDisplayMeta,
 } from '@/features/orders/components/order-formatters'
 import { OrderCancelButton } from '@/features/orders/components/order-cancel-button'
 import { OrderIdDisplay } from '@/features/orders/components/order-id-display'
 import { OrderItemThumb } from '@/features/orders/components/order-item-thumb'
 import { OrderStatusTimeline } from '@/features/orders/components/order-status-timeline'
+import { getOrderFulfillmentStatus } from '@/features/orders/lib/fulfillment'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
 import { loadOrderShipping } from '@/shared/lib/shipping-storage'
 import { Badge } from '@/shared/ui/badge'
@@ -71,7 +72,8 @@ export function OrderDetailPage() {
   }
 
   const order = orderQuery.data
-  const meta = orderStatusMeta(order.status, { paymentMethod: shipping?.paymentMethod })
+  const fulfillmentStatus = getOrderFulfillmentStatus(order)
+  const meta = orderDisplayMeta(order, { paymentMethod: shipping?.paymentMethod })
   const totalQty = order.items.reduce((sum, it) => sum + it.quantity, 0)
   const showVnpayRetry =
     shipping?.paymentMethod === 'VNPAY' && isPendingPayment(order.status)
@@ -119,7 +121,11 @@ export function OrderDetailPage() {
           <Badge className={cn('w-fit border', meta.tone)}>{meta.label}</Badge>
         </CardHeader>
         <CardContent className="space-y-6">
-          <OrderStatusTimeline status={order.status} paymentMethod={shipping?.paymentMethod} />
+          <OrderStatusTimeline
+            status={order.status}
+            paymentMethod={shipping?.paymentMethod}
+            fulfillmentStatus={fulfillmentStatus}
+          />
 
           {shipping ? (
             <div className="rounded-lg border bg-muted/20 p-4">

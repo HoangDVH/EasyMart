@@ -4,7 +4,7 @@ import { useMyOrdersQuery } from '@/features/orders/hooks/use-orders'
 import {
   formatOrderDate,
   formatVnd,
-  orderStatusMeta,
+  orderDisplayMeta,
 } from '@/features/orders/components/order-formatters'
 import { OrderCancelButton } from '@/features/orders/components/order-cancel-button'
 import { OrderIdDisplay } from '@/features/orders/components/order-id-display'
@@ -22,7 +22,7 @@ import type { Order } from '@/features/orders/types/order.types'
 
 function OrderCard({ order }: { order: Order }) {
   const shipping = loadOrderShipping(order.id)
-  const meta = orderStatusMeta(order.status, { paymentMethod: shipping?.paymentMethod })
+  const meta = orderDisplayMeta(order, { paymentMethod: shipping?.paymentMethod })
   const totalQty = order.items.reduce((sum, it) => sum + it.quantity, 0)
 
   return (

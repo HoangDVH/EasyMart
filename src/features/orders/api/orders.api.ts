@@ -66,6 +66,11 @@ function coerceOrder(raw: unknown): Order | null {
   }
 }
 
+/** Parse đơn từ API / payload realtime STOMP (`event.order`). */
+export function parseOrder(raw: unknown): Order | null {
+  return coerceOrder(raw)
+}
+
 export const ordersApi = {
   async listMyOrders(): Promise<Order[]> {
     const { data } = await httpClient.get<ApiEnvelope<unknown>>(ORDERS_BASE)

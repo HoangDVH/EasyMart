@@ -1,4 +1,12 @@
 import { formatVnd } from '@/shared/lib/product-price'
+import {
+  FULFILLMENT_BADGE_CLASSES,
+  FULFILLMENT_LABELS,
+  getOrderFulfillmentStatus,
+  isFulfillmentStatus,
+  type FulfillmentStatus,
+} from '@/features/orders/lib/fulfillment'
+import type { Order } from '@/features/orders/types/order.types'
 
 export function formatOrderDate(value: string | null | undefined) {
   if (!value) return '—'
@@ -23,9 +31,18 @@ function isUnpaidOrderStatus(status: string): boolean {
 
 export type OrderStatusDisplayOptions = {
   paymentMethod?: 'COD' | 'VNPAY' | string | null
+  /** Trạng thái giao hàng từ seller — ưu tiên hiển thị khi đơn đã PAID. */
+  fulfillmentStatus?: string | null
 }
 
-/** Map nhãn trạng thái dễ đọc + tone màu (status backend free-form) */
+function fulfillmentMeta(status: FulfillmentStatus): { label: string; tone: string } {
+  return {
+    label: FULFILLMENT_LABELS[status],
+    tone: `border ${FULFILLMENT_BADGE_CLASSES[status]}`,
+  }
+}
+
+/** Map nhãn trạng thái dễ đọc + tone màu (ưu tiên fulfillmentStatus khi có). */
 export function orderStatusMeta(
   status: string,
   options?: OrderStatusDisplayOptions,
@@ -36,6 +53,23 @@ export function orderStatusMeta(
   if (code.includes('CANCEL') || code.includes('FAIL') || code.includes('REJECT')) {
     return { label: 'Đã huỷ', tone: 'border-destructive/30 bg-destructive/10 text-destructive' }
   }
+
+  const fulfillment = isFulfillmentStatus(options?.fulfillmentStatus)
+    ? options!.fulfillmentStatus!
+    : null
+
+  /** Đơn đã thanh toán / đang xử lý → hiện tiến trình giao hàng của seller. */
+  if (
+    fulfillment &&
+    (code.includes('PAID') ||
+      code.includes('PROCESS') ||
+      code.includes('CONFIRM') ||
+      code.includes('SHIP') ||
+      code.includes('DELIVER'))
+  ) {
+    return fulfillmentMeta(fulfillment)
+  }
+
   if (code.includes('COMPLETE') || code.includes('SUCCESS') || code.includes('DELIVERED')) {
     return { label: 'Hoàn tất', tone: 'border-emerald-300/60 bg-emerald-50 text-emerald-700' }
   }
@@ -51,6 +85,10 @@ export function orderStatusMeta(
       }
     }
     return { label: 'Chưa thanh toán', tone: 'border-amber-300/60 bg-amber-50 text-amber-700' }
+  }
+
+  if (fulfillment) {
+    return fulfillmentMeta(fulfillment)
   }
 
   if (code.includes('PAID')) {
@@ -74,6 +112,17 @@ export function orderStatusMeta(
   }
 
   return { label: status || 'Khác', tone: 'border-border bg-muted text-foreground' }
+}
+
+/** Badge meta cho cả đơn (đọc fulfillment từ items). */
+export function orderDisplayMeta(
+  order: Order,
+  options?: Omit<OrderStatusDisplayOptions, 'fulfillmentStatus'>,
+) {
+  return orderStatusMeta(order.status, {
+    ...options,
+    fulfillmentStatus: getOrderFulfillmentStatus(order),
+  })
 }
 
 export function canCancelOrder(status: string) {

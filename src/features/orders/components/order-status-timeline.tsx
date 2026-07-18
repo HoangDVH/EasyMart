@@ -1,6 +1,7 @@
 import { Check, Circle, X } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import type { OrderStatusDisplayOptions } from '@/features/orders/components/order-formatters'
+import { isFulfillmentStatus, type FulfillmentStatus } from '@/features/orders/lib/fulfillment'
 
 const STEPS = [
   { id: 'placed', label: 'Đặt hàng' },
@@ -9,9 +10,32 @@ const STEPS = [
   { id: 'done', label: 'Hoàn tất' },
 ] as const
 
-function resolveStepIndex(status: string, options?: OrderStatusDisplayOptions): number {
+function fulfillmentStepIndex(status: FulfillmentStatus): number {
+  switch (status) {
+    case 'AWAITING_CONFIRMATION':
+    case 'CONFIRMED':
+    case 'PROCESSING':
+      return 1
+    case 'SHIPPED':
+      return 2
+    case 'DELIVERED':
+      return 3
+    default:
+      return 1
+  }
+}
+
+function resolveStepIndex(
+  status: string,
+  options?: OrderStatusDisplayOptions,
+): number {
   const code = status.toUpperCase()
   if (code.includes('CANCEL') || code.includes('FAIL') || code.includes('REJECT')) return -1
+
+  if (isFulfillmentStatus(options?.fulfillmentStatus)) {
+    return fulfillmentStepIndex(options.fulfillmentStatus)
+  }
+
   if (code.includes('COMPLETE') || code.includes('SUCCESS') || code.includes('DELIVERED')) return 3
   if (code.includes('SHIP') || code.includes('DELIVER')) return 2
   if (code.includes('PAID') || code.includes('PROCESS') || code.includes('CONFIRM')) return 1
@@ -25,15 +49,26 @@ type OrderStatusTimelineProps = {
   status: string
   className?: string
   paymentMethod?: OrderStatusDisplayOptions['paymentMethod']
+  fulfillmentStatus?: string | null
 }
 
-export function OrderStatusTimeline({ status, className, paymentMethod }: OrderStatusTimelineProps) {
-  const activeIndex = resolveStepIndex(status, { paymentMethod })
+export function OrderStatusTimeline({
+  status,
+  className,
+  paymentMethod,
+  fulfillmentStatus,
+}: OrderStatusTimelineProps) {
+  const activeIndex = resolveStepIndex(status, { paymentMethod, fulfillmentStatus })
   const isCancelled = activeIndex === -1
 
   if (isCancelled) {
     return (
-      <div className={cn('flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive', className)}>
+      <div
+        className={cn(
+          'flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive',
+          className,
+        )}
+      >
         <X className="h-4 w-4 shrink-0" />
         <span>Đơn hàng đã bị huỷ hoặc không thành công.</span>
       </div>
@@ -55,7 +90,13 @@ export function OrderStatusTimeline({ status, className, paymentMethod }: OrderS
                 !done && !current && 'border-muted-foreground/30 bg-muted text-muted-foreground',
               )}
             >
-              {done ? <Check className="h-4 w-4" /> : current ? <Circle className="h-3 w-3 fill-current" /> : index + 1}
+              {done ? (
+                <Check className="h-4 w-4" />
+              ) : current ? (
+                <Circle className="h-3 w-3 fill-current" />
+              ) : (
+                index + 1
+              )}
             </div>
             <span
               className={cn(

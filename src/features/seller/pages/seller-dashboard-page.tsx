@@ -17,7 +17,7 @@ import {
   useUploadSellerImagesMutation,
 } from '@/features/seller/hooks/use-seller'
 import { useSellerOrdersRealtime } from '@/features/seller/hooks/use-seller-orders-realtime'
-import { FULFILLMENT_LABELS, isFulfillmentStatus } from '@/features/seller/lib/fulfillment'
+import { FULFILLMENT_LABELS, isFulfillmentStatus } from '@/features/orders/lib/fulfillment'
 import type { Order } from '@/features/orders/types/order.types'
 import { isAxiosError } from 'axios'
 import { cn } from '@/shared/lib/utils'

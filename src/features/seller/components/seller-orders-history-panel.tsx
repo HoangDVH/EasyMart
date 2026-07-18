@@ -8,7 +8,7 @@ import {
   getNextFulfillmentStatus,
   getOrderFulfillmentStatus,
   isOrderPaid,
-} from '@/features/seller/lib/fulfillment'
+} from '@/features/orders/lib/fulfillment'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
