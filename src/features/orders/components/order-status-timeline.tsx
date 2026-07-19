@@ -79,45 +79,106 @@ export function OrderStatusTimeline({
     ? fulfillmentStepIndex(fulfillmentStatus)
     : resolveFallbackStepIndex(status, { paymentMethod, fulfillmentStatus })
 
+  const renderIcon = (index: number) => {
+    const done = index < activeIndex
+    const current = index === activeIndex
+    return (
+      <div
+        className={cn(
+          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-xs font-semibold transition',
+          done && 'border-emerald-500 bg-emerald-500 text-white',
+          current && 'border-primary bg-primary text-primary-foreground',
+          !done && !current && 'border-muted-foreground/30 bg-muted text-muted-foreground',
+        )}
+      >
+        {done ? (
+          <Check className="h-4 w-4" />
+        ) : current ? (
+          <Circle className="h-3 w-3 fill-current" />
+        ) : (
+          index + 1
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className={cn('space-y-3', className)}>
       <p className="text-sm font-semibold">Tiến trình đơn hàng</p>
+
+      {/* Mobile: timeline dọc có đường nối — tránh lưới 2 cột bị lệch hàng */}
+      <ol className="space-y-0 sm:hidden" aria-label="Tiến trình đơn hàng">
+        {steps.map((step, index) => {
+          const done = index < activeIndex
+          const current = index === activeIndex
+          const isLast = index === steps.length - 1
+          return (
+            <li key={step.id} className="flex gap-3">
+              <div className="flex flex-col items-center">
+                {renderIcon(index)}
+                {!isLast ? (
+                  <span
+                    className={cn(
+                      'w-0.5 flex-1 rounded-full',
+                      done ? 'bg-emerald-500' : 'bg-muted-foreground/20',
+                    )}
+                    aria-hidden
+                  />
+                ) : null}
+              </div>
+              <div className={cn('pb-5 pt-1.5', isLast && 'pb-1')}>
+                <p
+                  className={cn(
+                    'text-sm leading-snug',
+                    current
+                      ? 'font-semibold text-foreground'
+                      : done
+                        ? 'text-foreground'
+                        : 'text-muted-foreground',
+                  )}
+                >
+                  {step.label}
+                </p>
+                {current ? (
+                  <p className="mt-0.5 text-xs text-primary">Đang ở bước này</p>
+                ) : null}
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+
+      {/* Desktop: hàng ngang có đường nối giữa các bước */}
       <ol
-        className={cn(
-          'grid gap-2',
-          steps.length === 5 ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-4',
-        )}
+        className="hidden items-start sm:flex"
         aria-label="Tiến trình đơn hàng"
       >
         {steps.map((step, index) => {
           const done = index < activeIndex
           const current = index === activeIndex
+          const isLast = index === steps.length - 1
           return (
-            <li key={step.id} className="flex flex-col items-center text-center">
-              <div
-                className={cn(
-                  'mb-1.5 flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-semibold transition',
-                  done && 'border-emerald-500 bg-emerald-500 text-white',
-                  current && 'border-primary bg-primary text-primary-foreground',
-                  !done && !current && 'border-muted-foreground/30 bg-muted text-muted-foreground',
-                )}
-              >
-                {done ? (
-                  <Check className="h-4 w-4" />
-                ) : current ? (
-                  <Circle className="h-3 w-3 fill-current" />
-                ) : (
-                  index + 1
-                )}
+            <li key={step.id} className={cn('flex items-start', !isLast && 'flex-1')}>
+              <div className="flex w-20 flex-col items-center text-center">
+                {renderIcon(index)}
+                <span
+                  className={cn(
+                    'mt-1.5 text-xs leading-tight',
+                    current ? 'font-medium text-foreground' : 'text-muted-foreground',
+                  )}
+                >
+                  {step.label}
+                </span>
               </div>
-              <span
-                className={cn(
-                  'text-[10px] leading-tight sm:text-xs',
-                  current ? 'font-medium text-foreground' : 'text-muted-foreground',
-                )}
-              >
-                {step.label}
-              </span>
+              {!isLast ? (
+                <span
+                  className={cn(
+                    'mt-4 h-0.5 flex-1 rounded-full',
+                    done ? 'bg-emerald-500' : 'bg-muted-foreground/20',
+                  )}
+                  aria-hidden
+                />
+              ) : null}
             </li>
           )
         })}

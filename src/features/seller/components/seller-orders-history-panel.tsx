@@ -64,6 +64,7 @@ function PaymentBadge({ order }: { order: Order }) {
 
 function CopyOrderId({ orderId }: { orderId: string }) {
   const [copied, setCopied] = useState(false)
+  const shortId = orderId.length > 8 ? `${orderId.slice(0, 8)}…` : orderId
 
   async function onCopy() {
     try {
@@ -78,15 +79,16 @@ function CopyOrderId({ orderId }: { orderId: string }) {
   return (
     <button
       type="button"
-      className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 font-medium transition-colors hover:bg-muted"
-      title="Sao chép mã đơn"
+      className="inline-flex min-h-10 items-center gap-1.5 rounded-md px-2 py-1.5 font-medium transition-colors hover:bg-muted"
+      title={`Sao chép mã đơn ${orderId}`}
       onClick={() => void onCopy()}
     >
-      Đơn #{orderId}
+      <span className="sm:hidden">Đơn #{shortId}</span>
+      <span className="hidden sm:inline">Đơn #{orderId}</span>
       {copied ? (
-        <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden />
+        <Check className="h-4 w-4 text-emerald-600" aria-hidden />
       ) : (
-        <Copy className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+        <Copy className="h-4 w-4 text-muted-foreground" aria-hidden />
       )}
     </button>
   )

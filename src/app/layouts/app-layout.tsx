@@ -1,5 +1,5 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { ShoppingCart, ShoppingBag, Loader2, CircleHelp } from 'lucide-react'
+import { ShoppingCart, Loader2, CircleHelp } from 'lucide-react'
 import { useEffect } from 'react'
 import { useProfileQuery, useRestoreSessionQuery } from '@/features/auth/hooks/use-auth'
 import {
@@ -14,7 +14,6 @@ import {
 } from '@/features/payments/lib/vnpay-return'
 import { useAuthStore } from '@/shared/stores/auth-store'
 import { calcCartCount, useCartStore } from '@/shared/stores/cart-store'
-import { cn } from '@/shared/lib/utils'
 import { Breadcrumb } from '@/shared/ui/breadcrumb'
 import { CategoryNav } from '@/shared/ui/category-nav'
 import { FullPageSpinner } from '@/shared/ui/full-page-spinner'
@@ -187,10 +186,14 @@ export function AppLayout() {
   })()
 
   const cartLink = (
-    <NavLink to="/cart" className="group relative inline-flex items-center p-1.5" aria-label="Giỏ hàng">
+    <NavLink
+      to="/cart"
+      className="group relative inline-flex h-11 w-11 items-center justify-center rounded-md sm:h-auto sm:w-auto sm:p-1.5"
+      aria-label="Giỏ hàng"
+    >
       <ShoppingCart className="h-6 w-6 text-primary-foreground/90 transition group-hover:text-primary-foreground sm:h-7 sm:w-7" aria-hidden />
       {cartCount > 0 ? (
-        <span className="absolute -right-1 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-foreground px-1 text-[10px] font-bold text-primary ring-2 ring-primary">
+        <span className="absolute right-1 top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-foreground px-1 text-[10px] font-bold text-primary ring-2 ring-primary sm:-right-1 sm:-top-0.5">
           {cartCount > 99 ? '99+' : cartCount}
         </span>
       ) : null}
@@ -198,20 +201,26 @@ export function AppLayout() {
   )
 
   const authArea = isRestoringSession ? (
-    <span className="inline-flex h-6 w-6 items-center justify-center" aria-label="Đang tải">
+    <span className="inline-flex h-11 w-11 items-center justify-center sm:h-6 sm:w-6" aria-label="Đang tải">
       <Loader2 className="h-4 w-4 animate-spin text-primary-foreground/80" />
     </span>
   ) : effectiveToken && profile?.email ? (
     <UserMenu email={profile.email} variant="onPrimary" />
   ) : (
-    <span className="flex items-center gap-2">
-      <NavLink to="/auth/register" className="hover:text-primary-foreground">
+    <span className="flex items-center gap-1.5 text-sm sm:gap-2">
+      <NavLink
+        to="/auth/register"
+        className="hidden rounded-md px-2 py-2 hover:text-primary-foreground sm:inline"
+      >
         Đăng ký
       </NavLink>
-      <span className="text-primary-foreground/40" aria-hidden>
+      <span className="hidden text-primary-foreground/40 sm:inline" aria-hidden>
         |
       </span>
-      <NavLink to="/auth/login" className="hover:text-primary-foreground">
+      <NavLink
+        to="/auth/login"
+        className="rounded-md px-2 py-2 font-medium hover:text-primary-foreground"
+      >
         Đăng nhập
       </NavLink>
     </span>
@@ -285,13 +294,20 @@ export function AppLayout() {
         </div>
 
         {/* Hàng chính: logo lớn + search + giỏ hàng (bố cục Shopee) */}
-        <div className="mx-auto max-w-6xl px-4 py-2.5 sm:py-4">
+        <div className="mx-auto max-w-6xl px-4 py-2 sm:py-4">
           <div className="flex items-center justify-between gap-2 sm:hidden">
-            <Link to="/" className="inline-flex items-center gap-1.5 text-lg font-extrabold tracking-tight">
-              <ShoppingBag className="h-5 w-5" aria-hidden />
+            <Link to="/" className="inline-flex min-w-0 items-center gap-1.5 text-base font-extrabold tracking-tight">
+              <span className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-lg">
+                <img
+                  src="/favicon-192.png"
+                  alt=""
+                  className="h-full w-full object-cover"
+                  aria-hidden
+                />
+              </span>
               EasyMart
             </Link>
-            <div className="flex items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-0.5">
               {effectiveToken && profile?.email ? (
                 <HeaderNotifications user={profile} variant="onPrimary" />
               ) : null}
@@ -300,13 +316,18 @@ export function AppLayout() {
             </div>
           </div>
 
-          <div className="mt-2 flex items-center gap-3 sm:mt-0 sm:gap-6">
+          <div className="mt-1.5 flex items-center gap-3 sm:mt-0 sm:gap-6">
             <Link
               to="/"
               className="hidden shrink-0 items-center gap-2 text-2xl font-extrabold tracking-tight transition-transform duration-200 hover:scale-[1.02] sm:inline-flex"
             >
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-primary-foreground text-primary">
-                <ShoppingBag className="h-5 w-5" aria-hidden />
+              <span className="grid h-9 w-9 place-items-center overflow-hidden rounded-xl">
+                <img
+                  src="/favicon-192.png"
+                  alt=""
+                  className="h-full w-full object-cover"
+                  aria-hidden
+                />
               </span>
               EasyMart
             </Link>
@@ -349,15 +370,7 @@ export function AppLayout() {
           ) : null}
         </div>
       </header>
-      <main
-        className={cn(
-          'mx-auto p-4 pb-8',
-          /** Dashboard seller/admin dùng bố cục full-bleed như các trang quản trị: sidebar sát mép, bảng chiếm phần còn lại. */
-          location.pathname.startsWith('/seller') || location.pathname.startsWith('/admin')
-            ? 'w-full max-w-none px-4 lg:px-6'
-            : 'max-w-6xl',
-        )}
-      >
+      <main className="mx-auto max-w-6xl p-4 pb-8">
         <Breadcrumb items={breadcrumbItems} />
         <AnimatedOutlet />
       </main>

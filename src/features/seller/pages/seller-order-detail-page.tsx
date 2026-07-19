@@ -65,16 +65,18 @@ export function SellerOrderDetailPage() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-3">
-        <div>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <Link
             to="/seller/orders"
-            className="mb-2 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-primary"
+            className="mb-2 inline-flex min-h-10 items-center gap-1 text-xs font-medium text-muted-foreground hover:text-primary"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Quay lại danh sách đơn
           </Link>
-          <CardTitle>Trạng thái đơn #{id}</CardTitle>
+          <CardTitle className="break-all text-base sm:text-lg">
+            Trạng thái đơn #{id.length > 12 ? `${id.slice(0, 8)}…` : id}
+          </CardTitle>
           <CardDescription>
             Xem sản phẩm, thanh toán và cập nhật tiến trình giao hàng của riêng đơn này.
           </CardDescription>
@@ -82,7 +84,7 @@ export function SellerOrderDetailPage() {
         <Button
           size="sm"
           variant="outline"
-          className="gap-1.5"
+          className="h-10 w-full gap-1.5 sm:h-9 sm:w-auto"
           onClick={() => void ordersQuery.refetch()}
           disabled={ordersQuery.isFetching}
         >

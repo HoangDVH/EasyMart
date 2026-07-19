@@ -135,14 +135,14 @@ export function CategoryNav({ className }: { className?: string }) {
   return (
     <nav
       aria-label="Danh mục sản phẩm"
-      className={cn('flex items-center gap-1 overflow-x-auto px-4 py-2 sm:gap-2', className)}
+      className={cn('flex items-center gap-1 overflow-x-auto px-3 py-1.5 sm:gap-2 sm:px-4 sm:py-2', className)}
     >
       <Link
         to={buildHref(null)}
         onMouseEnter={() => prefetchCategoryProducts(null)}
         onFocus={() => prefetchCategoryProducts(null)}
         className={cn(
-          'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 sm:text-sm',
+          'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all duration-200 sm:h-auto sm:py-1.5 sm:text-sm',
           activeCategoryId == null
             ? 'border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/25'
             : 'border-border bg-background hover:-translate-y-0.5 hover:border-primary/50 hover:text-primary hover:shadow-sm',
@@ -161,7 +161,7 @@ export function CategoryNav({ className }: { className?: string }) {
             onMouseEnter={() => prefetchCategoryProducts(c.id)}
             onFocus={() => prefetchCategoryProducts(c.id)}
             className={cn(
-              'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 sm:text-sm',
+              'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all duration-200 sm:h-auto sm:py-1.5 sm:text-sm',
               isActive
                 ? 'border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/25'
                 : 'border-border bg-background hover:-translate-y-0.5 hover:border-primary/50 hover:text-primary hover:shadow-sm',

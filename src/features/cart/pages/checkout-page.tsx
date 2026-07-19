@@ -244,7 +244,7 @@ export function CheckoutPage() {
     <CheckoutSteps current="checkout" />
     <form
       id="checkout-form"
-      className="grid gap-4 pb-28 lg:grid-cols-3 lg:pb-0"
+      className="grid gap-4 lg:grid-cols-3"
       onSubmit={handleSubmit(onSubmit)}
     >
       <div className="lg:col-span-2 space-y-4">
@@ -339,7 +339,7 @@ export function CheckoutPage() {
             </div>
           </div>
         </CardContent>
-        <CardFooter className="hidden flex-col gap-2 sm:flex">
+        <CardFooter className="flex flex-col gap-2">
           <Button
             type="submit"
             className="w-full"
@@ -366,35 +366,6 @@ export function CheckoutPage() {
       </Card>
     </form>
 
-    <div className="mobile-bottom-bar fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm sm:hidden">
-      <div className="mx-auto flex max-w-6xl items-center gap-2">
-        <Link
-          to={isBuyNow && items[0] ? `/products/${items[0].productId}` : '/cart'}
-          className="shrink-0"
-          onClick={() => {
-            if (isBuyNow) clearBuyNow()
-          }}
-        >
-          <Button type="button" variant="outline" size="sm">
-            Quay lại
-          </Button>
-        </Link>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted-foreground">Tổng thanh toán</p>
-          <p className="truncate text-base font-semibold text-primary">{formatVnd(subtotal)}</p>
-        </div>
-        <Button
-          type="submit"
-          form="checkout-form"
-          size="lg"
-          className="shrink-0"
-          disabled={isProcessing || isSyncing}
-        >
-          {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {selectedPaymentMethod === 'VNPAY' ? 'VNPay' : 'Xác nhận'}
-        </Button>
-      </div>
-    </div>
     </>
   )
 }

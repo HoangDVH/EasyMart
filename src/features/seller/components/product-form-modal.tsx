@@ -73,15 +73,18 @@ export function ProductFormModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
-      <div className="w-full max-w-2xl rounded-xl border bg-background shadow-xl">
-        <div className="flex items-center justify-between border-b px-4 py-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-3 sm:p-4">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border bg-background shadow-xl">
+        <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
           <h3 className="text-base font-semibold">{mode === 'create' ? 'Thêm sản phẩm' : 'Sửa sản phẩm'}</h3>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
+          <Button type="button" variant="ghost" size="sm" className="h-10 w-10 p-0" onClick={onClose} aria-label="Đóng">
+            <X className="h-5 w-5" />
           </Button>
         </div>
-        <form className="space-y-4 p-4" onSubmit={handleSubmit(onSubmit)}>
+        <form
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4"
+          onSubmit={handleSubmit(onSubmit)}
+        >
           <div className="grid gap-2">
             <Label htmlFor="seller-product-name">Tên sản phẩm *</Label>
             <Input id="seller-product-name" {...register('name')} />
@@ -159,17 +162,15 @@ export function ProductFormModal({
               />
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <label htmlFor="seller-product-featured" className="flex min-h-11 items-center gap-3">
             <input
               id="seller-product-featured"
               type="checkbox"
-              className="h-4 w-4 rounded border-input"
+              className="h-5 w-5 rounded border-input accent-primary"
               {...register('isFeatured')}
             />
-            <Label htmlFor="seller-product-featured" className="font-normal">
-              Sản phẩm nổi bật (isFeatured)
-            </Label>
-          </div>
+            <span className="text-sm font-normal">Sản phẩm nổi bật</span>
+          </label>
           <div className="grid gap-2">
             <Label htmlFor="seller-product-images">Upload ảnh</Label>
             <Input
@@ -209,11 +210,15 @@ export function ProductFormModal({
             ) : null}
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="flex gap-2 border-t pt-3 sm:justify-end">
+            <Button type="button" variant="outline" className="h-11 flex-1 sm:h-10 sm:flex-none" onClick={onClose}>
               Hủy
             </Button>
-            <Button type="submit" disabled={isSubmitting || isUploading || isLoading}>
+            <Button
+              type="submit"
+              className="h-11 flex-1 sm:h-10 sm:flex-none"
+              disabled={isSubmitting || isUploading || isLoading}
+            >
               {isSubmitting ? 'Đang lưu...' : isLoading ? 'Đang tải...' : mode === 'create' ? 'Tạo sản phẩm' : 'Cập nhật'}
             </Button>
           </div>

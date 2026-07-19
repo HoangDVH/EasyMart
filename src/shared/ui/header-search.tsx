@@ -11,8 +11,8 @@ const RECENT_KEY = 'easymart.recent-searches'
 const RECENT_MAX = 6
 const SUGGEST_LIMIT = 6
 const CATALOG_PAGE_SIZE = 8
-const DEBOUNCE_MS = 320
-const MIN_SEARCH_CHARS = 2
+const DEBOUNCE_MS = 0
+const MIN_SEARCH_CHARS = 1
 const SEARCH_SORT = 'createdAt,desc'
 
 function formatVnd(n: number | null | undefined) {
@@ -86,8 +86,9 @@ export function HeaderSearch({ className }: { className?: string }) {
   const suggestQuery = useQuery({
     queryKey: getProductsQueryKey(searchListParams),
     queryFn: ({ signal }) => productsApi.listWindow(searchListParams, signal),
-    enabled: isOpen && canSuggest,
-    staleTime: 2 * 60 * 1000,
+    /** Tiếp tục tải khi dropdown đóng để trang kết quả dùng ngay cùng cache. */
+    enabled: canSuggest,
+    staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     placeholderData: (prev) => prev,
@@ -197,7 +198,7 @@ export function HeaderSearch({ className }: { className?: string }) {
         <div className="relative flex items-center rounded-md bg-background p-1 shadow-md">
           <Input
             ref={inputRef}
-            type="search"
+            type="text"
             enterKeyHint="search"
             placeholder="Tìm kiếm sản phẩm…"
             value={value}

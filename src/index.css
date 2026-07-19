@@ -235,7 +235,7 @@ html {
 }
 
 .sticky-below-header {
-  top: 10rem;
+  top: 8.25rem;
 }
 @media (min-width: 640px) {
   .sticky-below-header {
@@ -246,10 +246,6 @@ html {
   .sticky-below-header {
     top: 7.25rem;
   }
-}
-
-.mobile-bottom-bar {
-  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
 }
 
 .animate-float-once {

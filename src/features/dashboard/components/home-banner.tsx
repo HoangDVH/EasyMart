@@ -87,7 +87,7 @@ export function HomeBanner() {
     >
       {/* Banner lớn — carousel ảnh */}
       <div
-        className="relative h-32 w-full overflow-hidden rounded-xl border bg-muted/40 shadow-sm sm:h-40 lg:h-44"
+        className="relative h-40 w-full overflow-hidden rounded-xl border bg-muted/40 shadow-sm sm:h-44 lg:h-48"
         aria-roledescription="carousel"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
@@ -120,29 +120,29 @@ export function HomeBanner() {
 
         <button
           type="button"
-          className="absolute left-1.5 top-1/2 z-20 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-black/25 text-white backdrop-blur-sm transition hover:bg-black/40 sm:left-2"
+          className="absolute left-1.5 top-1/2 z-20 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-black/35 text-white backdrop-blur-sm transition hover:bg-black/50 sm:left-2 sm:h-9 sm:w-9"
           onClick={goPrev}
           aria-label="Slide trước"
         >
-          <ChevronLeft className="h-3.5 w-3.5" />
+          <ChevronLeft className="h-5 w-5" />
         </button>
         <button
           type="button"
-          className="absolute right-1.5 top-1/2 z-20 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-black/25 text-white backdrop-blur-sm transition hover:bg-black/40 sm:right-2"
+          className="absolute right-1.5 top-1/2 z-20 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-black/35 text-white backdrop-blur-sm transition hover:bg-black/50 sm:right-2 sm:h-9 sm:w-9"
           onClick={goNext}
           aria-label="Slide sau"
         >
-          <ChevronRight className="h-3.5 w-3.5" />
+          <ChevronRight className="h-5 w-5" />
         </button>
 
-        <div className="absolute bottom-1.5 left-1/2 z-20 flex -translate-x-1/2 gap-1.5">
+        <div className="absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 gap-2">
           {MAIN_SLIDES.map((item, index) => (
             <button
               key={item.id}
               type="button"
               className={cn(
-                'h-1.5 rounded-full transition-all',
-                index === activeIndex ? 'w-5 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/75',
+                'h-2.5 rounded-full transition-all',
+                index === activeIndex ? 'w-6 bg-white' : 'w-2.5 bg-white/50 hover:bg-white/75',
               )}
               onClick={() => goTo(index)}
               aria-label={`Chuyển tới slide ${index + 1}`}
@@ -153,7 +153,7 @@ export function HomeBanner() {
       </div>
 
       {/* 2 banner nhỏ bên phải — cùng chiều cao tổng với banner lớn */}
-      <div className="grid h-32 grid-cols-2 gap-2 sm:h-40 sm:gap-3 lg:h-44 lg:grid-cols-1 lg:grid-rows-2">
+      <div className="grid h-40 grid-cols-2 gap-2 sm:h-44 sm:gap-3 lg:h-48 lg:grid-cols-1 lg:grid-rows-2">
         {SIDE_BANNERS.map((banner) => (
           <Link
             key={banner.id}

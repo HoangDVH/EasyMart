@@ -40,7 +40,7 @@ export function SellerStatsCards({
   }
   if (lowStockCount != null) {
     cards.push({
-      label: 'Sắp hết / hết hàng',
+      label: 'Sắp hết hàng',
       value: String(lowStockCount),
       hint: lowStockCount > 0 ? 'Cần nhập thêm hàng' : 'Kho ổn định',
       icon: AlertTriangle,
@@ -58,7 +58,7 @@ export function SellerStatsCards({
   }
   if (totalRevenue != null) {
     cards.push({
-      label: 'Doanh thu (đơn PAID)',
+      label: 'Doanh thu',
       value: formatVnd(totalRevenue),
       icon: Wallet,
       iconClass: 'bg-emerald-100 text-emerald-600',

@@ -20,6 +20,8 @@ export default defineConfig({
           if (id.includes('@tanstack/react-query')) return 'query'
           if (id.includes('react-dom') || id.includes('/react/')) return 'react'
           if (id.includes('lucide-react')) return 'icons'
+          if (id.includes('recharts') || id.includes('d3-') || id.includes('victory-vendor'))
+            return 'charts'
           return 'vendor'
         },
       },

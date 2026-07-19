@@ -58,7 +58,7 @@ export function UserMenu({ email, className, variant = 'default' }: UserMenuProp
         aria-haspopup="menu"
         aria-expanded={open}
         className={cn(
-          'inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm transition-colors',
+          'inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-md px-2 py-2 text-sm transition-colors sm:min-h-0 sm:min-w-0 sm:py-1.5',
           variant === 'onPrimary'
             ? cn(
                 'text-primary-foreground/85 hover:text-primary-foreground',
@@ -70,13 +70,13 @@ export function UserMenu({ email, className, variant = 'default' }: UserMenuProp
               ),
         )}
       >
-        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-foreground/20 text-[10px] font-bold sm:hidden">
+        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-foreground/20 text-[10px] font-bold sm:hidden">
           {initials}
         </span>
         <UserRound className="hidden h-4 w-4 sm:block" aria-hidden />
         <span className="hidden max-w-[160px] truncate sm:inline">{email}</span>
         <ChevronDown
-          className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-180')}
+          className={cn('hidden h-3.5 w-3.5 transition-transform sm:inline', open && 'rotate-180')}
           aria-hidden
         />
       </button>

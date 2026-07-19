@@ -200,6 +200,192 @@ function FilterDropdownPanel({
   )
 }
 
+type DraftFilters = {
+  price: PriceFilterKey
+  rating: number
+  featured: FeaturedFilterKey
+  discount: boolean
+  stock: boolean
+  sort: SortFilterKey
+}
+
+const DEFAULT_DRAFT: DraftFilters = {
+  price: 'all',
+  rating: 0,
+  featured: 'all',
+  discount: false,
+  stock: false,
+  sort: 'default',
+}
+
+/** Pill chọn trong bottom sheet — kiểu lưới nút của Thế Giới Di Động. */
+function SheetPill({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'rounded-lg border px-3 py-2 text-sm transition-colors',
+        selected
+          ? 'border-primary bg-primary/10 font-medium text-primary'
+          : 'border-border bg-background text-foreground hover:bg-muted/50',
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
+function SheetSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+  )
+}
+
+/** Bottom sheet bộ lọc mobile kiểu Thế Giới Di Động: chọn nháp, bấm "Xem kết quả" mới áp dụng. */
+function MobileFilterSheet({
+  open,
+  draft,
+  onDraftChange,
+  onClose,
+  onApply,
+}: {
+  open: boolean
+  draft: DraftFilters
+  onDraftChange: (next: DraftFilters) => void
+  onClose: () => void
+  onApply: () => void
+}) {
+  useEffect(() => {
+    if (!open) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [open])
+
+  if (!open) return null
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] sm:hidden" role="dialog" aria-modal="true" aria-label="Bộ lọc sản phẩm">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden />
+      <div className="absolute inset-x-0 bottom-0 flex max-h-[85vh] flex-col rounded-t-2xl bg-background shadow-2xl">
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <p className="text-base font-semibold">Bộ lọc</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            aria-label="Đóng bộ lọc"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
+          <SheetSection title="Sắp xếp theo">
+            {SORT_OPTIONS.map((option) => (
+              <SheetPill
+                key={option.key}
+                selected={draft.sort === option.key}
+                onClick={() => onDraftChange({ ...draft, sort: option.key })}
+              >
+                {option.label}
+              </SheetPill>
+            ))}
+          </SheetSection>
+
+          <SheetSection title="Mức giá">
+            {PRICE_OPTIONS.map((option) => (
+              <SheetPill
+                key={option.key}
+                selected={draft.price === option.key}
+                onClick={() => onDraftChange({ ...draft, price: option.key })}
+              >
+                {option.label}
+              </SheetPill>
+            ))}
+          </SheetSection>
+
+          <SheetSection title="Đánh giá">
+            {RATING_OPTIONS.map((option) => (
+              <SheetPill
+                key={option.value}
+                selected={draft.rating === option.value}
+                onClick={() => onDraftChange({ ...draft, rating: option.value })}
+              >
+                <span className="inline-flex items-center gap-1">
+                  {option.value > 0 ? (
+                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" aria-hidden />
+                  ) : null}
+                  {option.label}
+                </span>
+              </SheetPill>
+            ))}
+          </SheetSection>
+
+          <SheetSection title="Loại sản phẩm">
+            {FEATURED_OPTIONS.map((option) => (
+              <SheetPill
+                key={option.key}
+                selected={draft.featured === option.key}
+                onClick={() => onDraftChange({ ...draft, featured: option.key })}
+              >
+                {option.label}
+              </SheetPill>
+            ))}
+          </SheetSection>
+
+          <SheetSection title="Khuyến mãi & tồn kho">
+            <SheetPill
+              selected={draft.discount}
+              onClick={() => onDraftChange({ ...draft, discount: !draft.discount })}
+            >
+              Đang giảm giá
+            </SheetPill>
+            <SheetPill
+              selected={draft.stock}
+              onClick={() => onDraftChange({ ...draft, stock: !draft.stock })}
+            >
+              Còn hàng
+            </SheetPill>
+          </SheetSection>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            onClick={() => onDraftChange({ ...DEFAULT_DRAFT })}
+            className="rounded-lg border border-primary px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/5"
+          >
+            Thiết lập lại
+          </button>
+          <button
+            type="button"
+            onClick={onApply}
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:brightness-110"
+          >
+            Xem kết quả
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 export function CatalogFilterBar({
   keyword = '',
   onClearKeyword,
@@ -233,6 +419,31 @@ export function CatalogFilterBar({
   const sortAnchorRef = useRef<HTMLDivElement>(null)
   const [openDropdown, setOpenDropdown] = useState<DropdownKey | null>(null)
   const panelId = 'catalog-filter-panel'
+
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [draft, setDraft] = useState<DraftFilters>(DEFAULT_DRAFT)
+
+  const openSheet = () => {
+    setDraft({
+      price: priceFilter,
+      rating: minRatingFilter,
+      featured: featuredFilter,
+      discount: onlyDiscountFilter,
+      stock: onlyInStockFilter,
+      sort: sortFilter,
+    })
+    setSheetOpen(true)
+  }
+
+  const applyDraft = () => {
+    onPriceFilterChange(draft.price)
+    onMinRatingFilterChange(draft.rating)
+    onFeaturedFilterChange(draft.featured)
+    onOnlyDiscountFilterChange(draft.discount)
+    onOnlyInStockFilterChange(draft.stock)
+    onSortFilterChange(draft.sort)
+    setSheetOpen(false)
+  }
 
   const priceLabel = PRICE_OPTIONS.find((x) => x.key === priceFilter)?.label ?? 'Mức giá'
   const ratingLabel =
@@ -365,7 +576,77 @@ export function CatalogFilterBar({
   return (
     <div ref={barRef} className="space-y-3">
       <div className="sticky-below-header sticky z-20 rounded-xl border border-border/70 bg-background/95 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/90">
-        <div className="flex items-stretch gap-2 border-b border-border/60 p-2 sm:p-3">
+        {/* Thanh lọc mobile kiểu Thế Giới Di Động: nút Lọc mở bottom sheet + chip lọc nhanh cuộn ngang */}
+        <div className="flex items-center gap-2 overflow-x-auto border-b border-border/60 p-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden">
+          <button
+            type="button"
+            onClick={openSheet}
+            className={cn(
+              'inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-colors',
+              activeFilterCount > 0
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border bg-background text-foreground',
+            )}
+          >
+            <SlidersHorizontal className="h-4 w-4" aria-hidden />
+            Lọc
+            {activeFilterCount > 0 ? (
+              <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                {activeFilterCount}
+              </span>
+            ) : null}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onOnlyDiscountFilterChange(!onlyDiscountFilter)}
+            className={cn(
+              'inline-flex h-10 shrink-0 items-center rounded-lg border px-3 text-sm font-medium transition-colors',
+              onlyDiscountFilter
+                ? 'border-secondary bg-secondary/10 text-secondary'
+                : 'border-border bg-background',
+            )}
+          >
+            Giảm giá
+          </button>
+          <button
+            type="button"
+            onClick={() => onOnlyInStockFilterChange(!onlyInStockFilter)}
+            className={cn(
+              'inline-flex h-10 shrink-0 items-center rounded-lg border px-3 text-sm font-medium transition-colors',
+              onlyInStockFilter
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border bg-background',
+            )}
+          >
+            Còn hàng
+          </button>
+          {PRICE_OPTIONS.filter((option) => option.key !== 'all').map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => onPriceFilterChange(priceFilter === option.key ? 'all' : option.key)}
+              className={cn(
+                'inline-flex h-10 shrink-0 items-center rounded-lg border px-3 text-sm font-medium transition-colors',
+                priceFilter === option.key
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border bg-background',
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <MobileFilterSheet
+          open={sheetOpen}
+          draft={draft}
+          onDraftChange={setDraft}
+          onClose={() => setSheetOpen(false)}
+          onApply={applyDraft}
+        />
+
+        <div className="hidden items-stretch gap-2 border-b border-border/60 p-2 sm:flex sm:p-3">
           <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <span className="hidden shrink-0 items-center gap-1.5 pr-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:inline-flex">
               <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
@@ -541,10 +822,10 @@ export function CatalogFilterBar({
               key={chip.id}
               type="button"
               onClick={chip.onRemove}
-              className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-primary/25 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
             >
               {chip.label}
-              <X className="h-3 w-3" aria-hidden />
+              <X className="h-3.5 w-3.5" aria-hidden />
             </button>
           ))}
         </div>

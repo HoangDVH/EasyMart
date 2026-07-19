@@ -188,7 +188,7 @@ export function HeaderNotifications({ user, variant = 'onPrimary', label }: Head
         aria-expanded={open}
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          'relative inline-flex items-center justify-center rounded-md p-1.5 transition',
+          'relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-2 transition sm:min-h-0 sm:min-w-0 sm:p-1.5',
           variant === 'onPrimary'
             ? cn(
                 'text-primary-foreground/85 hover:text-primary-foreground',

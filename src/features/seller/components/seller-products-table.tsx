@@ -80,7 +80,7 @@ function RowActions({
       <Button
         size="sm"
         variant="ghost"
-        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+        className="h-10 w-10 p-0 text-muted-foreground hover:text-foreground sm:h-8 sm:w-8"
         aria-label={`Sửa ${product.name}`}
         title="Sửa"
         onClick={() => onEdit(product)}
@@ -90,7 +90,7 @@ function RowActions({
       <Button
         size="sm"
         variant="ghost"
-        className="h-8 w-8 p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+        className="h-10 w-10 p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:h-8 sm:w-8"
         aria-label={`Xóa ${product.name}`}
         title="Xóa"
         onClick={() => onDelete(product)}
@@ -125,7 +125,7 @@ function Pagination({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 w-8 p-0"
+          className="h-10 w-10 p-0 sm:h-8 sm:w-8"
           aria-label="Trang trước"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
@@ -137,7 +137,7 @@ function Pagination({
             key={p}
             size="sm"
             variant={p === page ? 'default' : 'outline'}
-            className="h-8 w-8 p-0 tabular-nums"
+            className="h-10 w-10 p-0 tabular-nums sm:h-8 sm:w-8"
             aria-label={`Trang ${p}`}
             aria-current={p === page ? 'page' : undefined}
             onClick={() => onPageChange(p)}
@@ -148,7 +148,7 @@ function Pagination({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 w-8 p-0"
+          className="h-10 w-10 p-0 sm:h-8 sm:w-8"
           aria-label="Trang sau"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
@@ -218,7 +218,7 @@ export function SellerProductsTable({
               <div className="flex items-start gap-3">
                 <input
                   type="checkbox"
-                  className="mt-3 h-4 w-4 shrink-0 accent-primary"
+                  className="mt-2 h-5 w-5 shrink-0 accent-primary"
                   checked={checked}
                   aria-label={`Chọn ${product.name}`}
                   onChange={() => onToggleSelect(String(product.id))}
@@ -249,7 +249,7 @@ export function SellerProductsTable({
               <th className="w-10 px-4 py-3">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 accent-primary"
+                  className="h-5 w-5 accent-primary"
                   checked={allPageSelected}
                   ref={(el) => {
                     if (el) el.indeterminate = !allPageSelected && somePageSelected
@@ -264,7 +264,9 @@ export function SellerProductsTable({
               <th className="px-4 py-3 font-medium">Danh mục</th>
               <th className="px-4 py-3 font-medium">Đánh giá</th>
               <th className="px-4 py-3 font-medium">Ngày tạo</th>
-              <th className="px-4 py-3 text-right font-medium">Thao tác</th>
+              <th className="sticky right-0 z-10 border-l bg-[color-mix(in_oklab,var(--color-muted)_40%,var(--color-background))] px-4 py-3 text-right font-medium">
+                Thao tác
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -274,12 +276,12 @@ export function SellerProductsTable({
               return (
                 <tr
                   key={product.id}
-                  className={cn('transition-colors hover:bg-muted/30', checked && 'bg-primary/5')}
+                  className={cn('group transition-colors hover:bg-muted/30', checked && 'bg-primary/5')}
                 >
                   <td className="px-4 py-2.5">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 accent-primary"
+                      className="h-5 w-5 accent-primary"
                       checked={checked}
                       aria-label={`Chọn ${product.name}`}
                       onChange={() => onToggleSelect(String(product.id))}
@@ -288,9 +290,10 @@ export function SellerProductsTable({
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-3">
                       <ProductThumb product={product} />
-                      <div className="min-w-0">
-                        <p className="max-w-[280px] truncate font-medium">{product.name}</p>
-                        <p className="max-w-[280px] truncate text-xs text-muted-foreground">
+                      {/* Tên dài không cắt — bảng nở ra và cuộn ngang, cột Thao tác vẫn ghim bên phải. */}
+                      <div>
+                        <p className="whitespace-nowrap font-medium">{product.name}</p>
+                        <p className="max-w-[420px] truncate text-xs text-muted-foreground">
                           {product.description || '—'}
                         </p>
                       </div>
@@ -299,10 +302,10 @@ export function SellerProductsTable({
                   <td className="px-4 py-2.5">
                     <PriceCell product={product} />
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td className="whitespace-nowrap px-4 py-2.5">
                     <StockBadge stock={stock} />
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td className="whitespace-nowrap px-4 py-2.5">
                     <span className="text-muted-foreground">
                       {product.categoryName ?? product.categoryId ?? '—'}
                     </span>
@@ -317,10 +320,17 @@ export function SellerProductsTable({
                       <span className="text-muted-foreground">—</span>
                     )}
                   </td>
-                  <td className={cn('px-4 py-2.5 text-xs text-muted-foreground')}>
+                  <td className="whitespace-nowrap px-4 py-2.5 text-xs text-muted-foreground">
                     {formatDateTime(product.createdAt)}
                   </td>
-                  <td className="px-4 py-2.5">
+                  <td
+                    className={cn(
+                      'sticky right-0 z-10 border-l bg-background px-4 py-2.5 transition-colors',
+                      'group-hover:bg-[color-mix(in_oklab,var(--color-muted)_30%,var(--color-background))]',
+                      checked &&
+                        'bg-[color-mix(in_oklab,var(--color-primary)_5%,var(--color-background))]',
+                    )}
+                  >
                     <RowActions product={product} onEdit={onEdit} onDelete={onDelete} />
                   </td>
                 </tr>

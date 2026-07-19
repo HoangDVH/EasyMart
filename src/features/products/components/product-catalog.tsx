@@ -250,7 +250,7 @@ function ProductCatalogCard({ product }: { product: Product }) {
   }
 
   return (
-    <Card className="group overflow-hidden border-border/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/20 hover:shadow-xl hover:shadow-primary/15">
+    <Card className="group relative overflow-hidden border-border/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/20 hover:shadow-xl hover:shadow-primary/15">
       <div className="relative px-3 pt-3">
         <Link
           to={`/products/${product.id}`}
@@ -278,34 +278,6 @@ function ProductCatalogCard({ product }: { product: Product }) {
           <Badge className="pointer-events-none absolute right-5 top-5 z-[1] bg-destructive text-destructive-foreground">
             Hết hàng
           </Badge>
-        ) : null}
-        {!isOutOfStock ? (
-          <>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              className="absolute bottom-5 right-5 z-[2] h-9 w-9 rounded-full p-0 shadow-md md:hidden"
-              onClick={handleAddToCart}
-              aria-label="Thêm vào giỏ"
-            >
-              <ShoppingCart className="h-4 w-4" />
-            </Button>
-            <div className="pointer-events-none absolute inset-x-3 bottom-3 top-3 hidden translate-y-0 overflow-hidden rounded-lg md:block">
-              <div className="absolute inset-x-0 bottom-0 translate-y-full bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:pointer-events-auto">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="w-full gap-1.5 shadow-md"
-                  onClick={handleAddToCart}
-                >
-                  <ShoppingCart className="h-3.5 w-3.5" />
-                  Thêm vào giỏ
-                </Button>
-              </div>
-            </div>
-          </>
         ) : null}
       </div>
       <CardHeader className="space-y-2 pb-3">
@@ -335,7 +307,8 @@ function ProductCatalogCard({ product }: { product: Product }) {
                     </span>
                   ) : null}
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                {/* pr-12 chừa chỗ cho icon giỏ hàng ghim góc dưới phải */}
+                <div className="flex flex-wrap items-center gap-2 pr-12">
                   {rating ? (
                     <span className="inline-flex w-fit items-center text-xs font-medium text-amber-700">
                       <Star className="mr-1 h-3.5 w-3.5 fill-amber-400 text-amber-500" />
@@ -354,6 +327,18 @@ function ProductCatalogCard({ product }: { product: Product }) {
             )
           })()}
         </CardDescription>
+        {!isOutOfStock ? (
+          <Button
+            type="button"
+            size="sm"
+            aria-label={`Thêm ${product.name} vào giỏ hàng`}
+            title="Thêm vào giỏ"
+            className="absolute bottom-3 right-3 h-10 w-10 rounded-full p-0 shadow-md"
+            onClick={handleAddToCart}
+          >
+            <ShoppingCart className="h-4 w-4" />
+          </Button>
+        ) : null}
       </CardHeader>
     </Card>
   )

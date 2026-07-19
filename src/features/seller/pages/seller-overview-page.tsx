@@ -1,47 +1,78 @@
-import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
-import { AlertTriangle, ImageOff } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import {
+  Bar,
+  CartesianGrid,
+  ComposedChart,
+  Legend,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { useAuthStore } from '@/shared/stores/auth-store'
 import {
   useSellerOrderHistoryQuery,
   useSellerProductsQuery,
 } from '@/features/seller/hooks/use-seller'
-import { isCodPayment, isOrderPaid } from '@/features/orders/lib/fulfillment'
-import { formatDateTime, formatVnd } from '@/features/seller/components/seller-formatters'
+import { isOrderPaid } from '@/features/orders/lib/fulfillment'
+import { formatVnd } from '@/features/seller/components/seller-formatters'
 import {
   getProductStock,
   LOW_STOCK_THRESHOLD,
 } from '@/features/seller/components/seller-types'
-import type { Order } from '@/features/orders/types/order.types'
-import type { Product } from '@/features/products/types/product.types'
-import { Badge } from '@/shared/ui/badge'
+import { cn } from '@/shared/lib/utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { SellerStatsCards } from '@/features/seller/components/seller-stats-cards'
 
-function isCancelledOrder(order: Order): boolean {
-  const code = order.status.toUpperCase()
-  return code.includes('CANCEL') || code.includes('FAIL') || code.includes('REJECT')
+const RANGE_OPTIONS = [
+  { days: 7, label: '7 ngày' },
+  { days: 14, label: '14 ngày' },
+  { days: 30, label: '30 ngày' },
+] as const
+
+type RangeDays = (typeof RANGE_OPTIONS)[number]['days']
+
+type RevenuePoint = {
+  /** yyyy-mm-dd để so khớp đơn theo ngày */
+  key: string
+  /** Nhãn hiển thị trên trục X, ví dụ "19/7" */
+  label: string
+  revenue: number
+  orders: number
 }
 
-function LowStockRow({ product }: { product: Product }) {
-  const stock = getProductStock(product)
-  const src = product.images?.[0] ?? product.imageUrl ?? null
+function toDayKey(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+const compactVnd = new Intl.NumberFormat('vi-VN', {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+})
+
+function RevenueTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean
+  payload?: Array<{ payload: RevenuePoint }>
+}) {
+  if (!active || !payload?.length) return null
+  const point = payload[0].payload
   return (
-    <div className="flex items-center gap-3 py-2.5">
-      <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-lg border bg-muted/40">
-        {src ? (
-          <img src={src} alt="" className="h-full w-full object-contain" loading="lazy" />
-        ) : (
-          <ImageOff className="h-4 w-4 text-muted-foreground/60" aria-hidden />
-        )}
-      </div>
-      <p className="min-w-0 flex-1 truncate text-sm">{product.name}</p>
-      {stock <= 0 ? (
-        <Badge className="border-destructive/30 bg-destructive/10 text-destructive">Hết hàng</Badge>
-      ) : (
-        <Badge className="border-amber-300/60 bg-amber-50 text-amber-700">Còn {stock}</Badge>
-      )}
+    <div className="rounded-lg border bg-background px-3 py-2 text-sm shadow-md">
+      <p className="font-medium">Ngày {point.label}</p>
+      <p className="text-muted-foreground">
+        Doanh thu: <span className="font-semibold text-foreground">{formatVnd(point.revenue)}</span>
+      </p>
+      <p className="text-muted-foreground">
+        Đơn đã thanh toán: <span className="font-semibold text-foreground">{point.orders}</span>
+      </p>
     </div>
   )
 }
@@ -50,34 +81,13 @@ export function SellerOverviewPage() {
   const accessToken = useAuthStore((state) => state.accessToken)
   const productsQuery = useSellerProductsQuery(Boolean(accessToken))
   const ordersQuery = useSellerOrderHistoryQuery(Boolean(accessToken))
+  const [rangeDays, setRangeDays] = useState<RangeDays>(14)
 
   const products = productsQuery.data ?? []
   const orders = ordersQuery.data ?? []
 
   const paidRevenue = useMemo(
-    () =>
-      orders.reduce((sum, order) => (order.status === 'PAID' ? sum + order.totalAmount : sum), 0),
-    [orders],
-  )
-
-  const lowStockProducts = useMemo(
-    () =>
-      [...products]
-        .filter((p) => getProductStock(p) <= LOW_STOCK_THRESHOLD)
-        .sort((a, b) => getProductStock(a) - getProductStock(b))
-        .slice(0, 5),
-    [products],
-  )
-
-  const recentOrders = useMemo(
-    () =>
-      [...orders]
-        .sort(
-          (a, b) =>
-            (new Date(b.createdAt ?? 0).getTime() || 0) -
-            (new Date(a.createdAt ?? 0).getTime() || 0),
-        )
-        .slice(0, 5),
+    () => orders.reduce((sum, order) => (isOrderPaid(order) ? sum + order.totalAmount : sum), 0),
     [orders],
   )
 
@@ -85,6 +95,46 @@ export function SellerOverviewPage() {
     () => products.filter((p) => getProductStock(p) <= LOW_STOCK_THRESHOLD).length,
     [products],
   )
+
+  const chartData = useMemo<RevenuePoint[]>(() => {
+    const byDay = new Map<string, { revenue: number; orders: number }>()
+    for (const order of orders) {
+      if (!isOrderPaid(order) || !order.createdAt) continue
+      const created = new Date(order.createdAt)
+      if (Number.isNaN(created.getTime())) continue
+      const key = toDayKey(created)
+      const entry = byDay.get(key) ?? { revenue: 0, orders: 0 }
+      entry.revenue += order.totalAmount
+      entry.orders += 1
+      byDay.set(key, entry)
+    }
+
+    const points: RevenuePoint[] = []
+    const today = new Date()
+    for (let i = rangeDays - 1; i >= 0; i -= 1) {
+      const day = new Date(today)
+      day.setDate(today.getDate() - i)
+      const key = toDayKey(day)
+      const entry = byDay.get(key)
+      points.push({
+        key,
+        label: `${day.getDate()}/${day.getMonth() + 1}`,
+        revenue: entry?.revenue ?? 0,
+        orders: entry?.orders ?? 0,
+      })
+    }
+    return points
+  }, [orders, rangeDays])
+
+  const rangeRevenue = useMemo(
+    () => chartData.reduce((sum, point) => sum + point.revenue, 0),
+    [chartData],
+  )
+  const rangeOrders = useMemo(
+    () => chartData.reduce((sum, point) => sum + point.orders, 0),
+    [chartData],
+  )
+  const hasRevenue = chartData.some((point) => point.revenue > 0)
 
   return (
     <div className="space-y-4">
@@ -96,102 +146,103 @@ export function SellerOverviewPage() {
         totalRevenue={paidRevenue}
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Cảnh báo tồn kho */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <AlertTriangle className="h-4 w-4 text-amber-500" aria-hidden />
-                Cảnh báo tồn kho
-              </CardTitle>
-              <CardDescription>Sản phẩm sắp hết hoặc đã hết hàng.</CardDescription>
+      <Card>
+        <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="text-base">Biểu đồ doanh thu</CardTitle>
+            <CardDescription>
+              {formatVnd(rangeRevenue)} · {rangeOrders} đơn đã thanh toán trong {rangeDays} ngày qua
+            </CardDescription>
+          </div>
+          <div className="flex shrink-0 gap-1 rounded-lg border bg-muted/40 p-1">
+            {RANGE_OPTIONS.map((option) => (
+              <button
+                key={option.days}
+                type="button"
+                onClick={() => setRangeDays(option.days)}
+                className={cn(
+                  'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                  rangeDays === option.days
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {ordersQuery.isPending ? (
+            <Skeleton className="h-72 w-full" />
+          ) : (
+            <div className="relative h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                {/* Combo cột + đường như dashboard bán hàng (KiotViet/Sapo): cột = doanh thu, đường = số đơn. */}
+                <ComposedChart data={chartData} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 11 }}
+                    interval="preserveStartEnd"
+                    minTickGap={16}
+                  />
+                  <YAxis
+                    yAxisId="revenue"
+                    width={52}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(value: number) => (value === 0 ? '0' : compactVnd.format(value))}
+                  />
+                  <YAxis
+                    yAxisId="orders"
+                    orientation="right"
+                    width={32}
+                    allowDecimals={false}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <Tooltip content={<RevenueTooltip />} cursor={{ fill: 'var(--color-muted)', opacity: 0.5 }} />
+                  <Legend
+                    verticalAlign="top"
+                    height={28}
+                    iconSize={10}
+                    wrapperStyle={{ fontSize: 12 }}
+                  />
+                  <Bar
+                    yAxisId="revenue"
+                    dataKey="revenue"
+                    name="Doanh thu"
+                    fill="var(--color-primary)"
+                    fillOpacity={0.85}
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={28}
+                  />
+                  <Line
+                    yAxisId="orders"
+                    type="monotone"
+                    dataKey="orders"
+                    name="Số đơn"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    dot={{ r: 2.5, fill: '#f59e0b', strokeWidth: 0 }}
+                    activeDot={{ r: 4 }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+              {!hasRevenue ? (
+                <p className="pointer-events-none absolute inset-0 grid place-items-center text-sm text-muted-foreground">
+                  Chưa có doanh thu trong {rangeDays} ngày qua.
+                </p>
+              ) : null}
             </div>
-            <Link
-              to="/seller/products"
-              className="text-xs font-medium text-primary hover:underline"
-            >
-              Xem tất cả
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {productsQuery.isPending ? (
-              <div className="space-y-2">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ) : lowStockProducts.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">
-                Kho ổn định — chưa có sản phẩm nào sắp hết hàng.
-              </p>
-            ) : (
-              <div className="divide-y">
-                {lowStockProducts.map((product) => (
-                  <LowStockRow key={product.id} product={product} />
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Đơn hàng gần đây */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-            <div>
-              <CardTitle className="text-base">Đơn hàng gần đây</CardTitle>
-              <CardDescription>5 đơn mới nhất của cửa hàng.</CardDescription>
-            </div>
-            <Link to="/seller/orders" className="text-xs font-medium text-primary hover:underline">
-              Xem tất cả
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {ordersQuery.isPending ? (
-              <div className="space-y-2">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ) : recentOrders.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">
-                Chưa có đơn hàng nào.
-              </p>
-            ) : (
-              <div className="divide-y">
-                {recentOrders.map((order) => (
-                  <div key={order.id} className="flex items-center gap-3 py-2.5">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">Đơn #{order.id}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {formatDateTime(order.createdAt)} · {order.userEmail || '—'}
-                      </p>
-                    </div>
-                    {isCancelledOrder(order) ? (
-                      <Badge className="border-destructive/30 bg-destructive/10 text-destructive">
-                        Đã hủy
-                      </Badge>
-                    ) : isCodPayment(order) ? (
-                      <Badge className="border-amber-300/60 bg-amber-50 text-amber-700">
-                        COD · Thu khi nhận hàng
-                      </Badge>
-                    ) : isOrderPaid(order) ? (
-                      <Badge className="border-emerald-300/60 bg-emerald-50 text-emerald-700">
-                        Đã thanh toán
-                      </Badge>
-                    ) : (
-                      <Badge className="border-amber-300/60 bg-amber-50 text-amber-700">
-                        Chưa thanh toán
-                      </Badge>
-                    )}
-                    <p className="shrink-0 text-sm font-semibold tabular-nums">
-                      {formatVnd(order.totalAmount)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

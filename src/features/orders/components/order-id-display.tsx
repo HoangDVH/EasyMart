@@ -38,7 +38,7 @@ export function OrderIdDisplay({ id, className, showCopy = true }: OrderIdDispla
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 w-7 px-0"
+          className="h-10 w-10 px-0 sm:h-8 sm:w-8"
           onClick={() => void copy()}
           aria-label="Sao chép mã đơn hàng"
         >

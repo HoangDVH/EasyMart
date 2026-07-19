@@ -71,7 +71,7 @@ export function ProductDetailPage() {
 
   if (detailQuery.isPending) {
     return (
-      <div className="pb-28 sm:pb-0">
+      <div>
         <Breadcrumb
           className="mb-6"
           items={[{ label: 'Trang chủ', to: '/' }, { label: 'Đang tải sản phẩm...' }]}
@@ -123,7 +123,7 @@ export function ProductDetailPage() {
   const isOutOfStock = product.stockQuantity != null && product.stockQuantity <= 0
 
   return (
-    <div className="pb-28 sm:pb-0">
+    <div>
       <Breadcrumb className="mb-6" items={[{ label: 'Trang chủ', to: '/' }, { label: product.name }]} />
 
       <Card className="w-full overflow-hidden">
@@ -230,26 +230,26 @@ export function ProductDetailPage() {
                   onChange={setQty}
                 />
               </div>
-              <div className="hidden gap-2 sm:grid sm:grid-cols-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <Button
                   type="button"
                   variant="outline"
-                  className="gap-2"
+                  className="h-11 gap-2 sm:h-10"
                   onClick={handleAddToCart}
                   disabled={isOutOfStock}
                 >
-                  <ShoppingCart className="h-4 w-4" />
-                  Thêm vào giỏ
+                  <ShoppingCart className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Thêm vào giỏ</span>
                 </Button>
                 <Button
                   type="button"
                   variant="secondary"
-                  className="gap-2 shadow-sm hover:brightness-105"
+                  className="h-11 gap-2 shadow-sm hover:brightness-105 sm:h-10"
                   onClick={handleOrderNow}
                   disabled={isOutOfStock}
                 >
-                  <Zap className="h-4 w-4" />
-                  Mua ngay
+                  <Zap className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Mua ngay</span>
                 </Button>
               </div>
               <Link
@@ -268,24 +268,6 @@ export function ProductDetailPage() {
         <RelatedProducts productId={product.id} categoryId={product.categoryId} />
       </div>
 
-      {!isOutOfStock ? (
-        <div className="mobile-bottom-bar fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm sm:hidden">
-          <div className="mx-auto flex max-w-6xl items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs text-muted-foreground">{product.name}</p>
-              <p className="text-lg font-semibold text-primary">{formatVnd(price.current)}</p>
-            </div>
-            <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1" onClick={handleAddToCart}>
-              <ShoppingCart className="h-4 w-4" />
-              Giỏ
-            </Button>
-            <Button type="button" variant="secondary" size="sm" className="shrink-0 gap-1" onClick={handleOrderNow}>
-              <Zap className="h-4 w-4" />
-              Mua ngay
-            </Button>
-          </div>
-        </div>
-      ) : null}
     </div>
   )
 }

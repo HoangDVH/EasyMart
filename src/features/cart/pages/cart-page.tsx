@@ -58,7 +58,7 @@ export function CartPage() {
   }
 
   return (
-    <div className="space-y-4 pb-28 sm:pb-0">
+    <div className="space-y-4">
       <CheckoutSteps current="cart" />
       <Card>
         <CardHeader className="flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -125,7 +125,7 @@ export function CartPage() {
             </div>
           ))}
         </CardContent>
-        <CardFooter className="hidden flex-col items-stretch gap-3 border-t pt-4 sm:flex sm:flex-row sm:items-center sm:justify-between">
+        <CardFooter className="flex flex-col items-stretch gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-muted-foreground">Tạm tính</p>
             <p className="text-xl font-semibold text-primary">{formatVnd(subtotal)}</p>
@@ -145,29 +145,6 @@ export function CartPage() {
           </Button>
         </CardFooter>
       </Card>
-
-      <div className="mobile-bottom-bar fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm sm:hidden">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-          <div>
-            <p className="text-xs text-muted-foreground">Tạm tính ({itemCount})</p>
-            <p className="text-lg font-semibold text-primary">{formatVnd(subtotal)}</p>
-          </div>
-          <Button
-            size="lg"
-            className="shrink-0"
-            onClick={() => {
-              clearBuyNow()
-              if (!accessToken) {
-                navigate(buildLoginPath('/checkout'))
-                return
-              }
-              navigate('/checkout')
-            }}
-          >
-            Thanh toán
-          </Button>
-        </div>
-      </div>
 
       <ConfirmDialog
         open={confirmClearOpen}

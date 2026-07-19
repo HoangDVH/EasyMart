@@ -1,6 +1,6 @@
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { LayoutDashboard, Package, Receipt, Store } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LayoutDashboard, Package, Receipt } from 'lucide-react'
 import type { SellerOutletContext } from '@/features/seller/hooks/use-seller-outlet'
 import { useOrdersRealtimeStore } from '@/features/orders/stores/orders-realtime-store'
 import { cn } from '@/shared/lib/utils'
@@ -32,41 +32,31 @@ const navItems: NavItem[] = [
   },
 ]
 
-function RealtimeBadge({ status }: { status: string }) {
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
-        status === 'connected'
-          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-          : status === 'connecting'
-            ? 'border-amber-200 bg-amber-50 text-amber-700'
-            : 'border-border bg-muted text-muted-foreground',
-      )}
-    >
-      <span
-        className={cn(
-          'h-1.5 w-1.5 rounded-full',
-          status === 'connected'
-            ? 'bg-emerald-500'
-            : status === 'connecting'
-              ? 'animate-pulse bg-amber-500'
-              : 'bg-muted-foreground/50',
-        )}
-        aria-hidden
-      />
-      {status === 'connected'
-        ? 'Realtime đang bật'
-        : status === 'connecting'
-          ? 'Đang kết nối...'
-          : 'Realtime tạm ngắt'}
-    </span>
-  )
-}
+const SIDEBAR_COLLAPSED_KEY = 'seller-sidebar-collapsed'
 
 export function SellerLayout() {
   /** Trạng thái kết nối lấy từ AppLayout — không mở STOMP lần 2. */
   const realtimeStatus = useOrdersRealtimeStore((state) => state.status)
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      /** Mặc định mở; chỉ thu gọn khi user đã chủ động chọn (1). */
+      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? '1' : '0')
+      } catch {
+        /* localStorage bị chặn thì bỏ qua, chỉ mất ghi nhớ */
+      }
+      return next
+    })
+  }
 
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
@@ -95,16 +85,39 @@ export function SellerLayout() {
         ))}
       </nav>
 
-      <aside className="sticky-below-header hidden w-56 shrink-0 lg:sticky lg:block lg:self-start">
+      <aside
+        className={cn(
+          'sticky-below-header hidden shrink-0 transition-[width] duration-300 lg:sticky lg:block lg:self-start',
+          collapsed ? 'w-[4.25rem]' : 'w-56',
+        )}
+      >
         <div className="rounded-xl border bg-card shadow-sm">
-          <div className="flex items-center gap-3 border-b p-4">
-            <div className="grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 text-primary">
-              <Store className="h-5 w-5" aria-hidden />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">Kênh người bán</p>
-              <p className="text-xs text-muted-foreground">Sản phẩm & đơn hàng</p>
-            </div>
+          <div
+            className={cn(
+              'flex items-center border-b',
+              collapsed ? 'justify-center p-2.5' : 'gap-2 p-3',
+            )}
+          >
+            {/* Nút đóng/mở đứng trước tiêu đề */}
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+              title={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              {collapsed ? (
+                <ChevronRight className="h-4 w-4" aria-hidden />
+              ) : (
+                <ChevronLeft className="h-4 w-4" aria-hidden />
+              )}
+            </button>
+            {collapsed ? null : (
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">Kênh người bán</p>
+                <p className="text-xs text-muted-foreground">Sản phẩm & đơn hàng</p>
+              </div>
+            )}
           </div>
 
           <nav className="flex flex-col gap-1 p-2" aria-label="Menu người bán">
@@ -113,24 +126,25 @@ export function SellerLayout() {
                 key={item.to}
                 to={item.to}
                 end={item.end}
+                title={collapsed ? item.label : undefined}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-200',
+                    'flex items-center rounded-lg text-sm transition-all duration-200',
+                    collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5',
                     isActive
                       ? 'bg-primary/10 font-medium text-primary shadow-sm shadow-primary/10'
-                      : 'text-muted-foreground hover:translate-x-0.5 hover:bg-muted hover:text-foreground',
+                      : cn(
+                          'text-muted-foreground hover:bg-muted hover:text-foreground',
+                          !collapsed && 'hover:translate-x-0.5',
+                        ),
                   )
                 }
               >
-                <item.icon className="h-4 w-4" aria-hidden />
-                <span>{item.label}</span>
+                <item.icon className="h-4 w-4 shrink-0" aria-hidden />
+                {collapsed ? <span className="sr-only">{item.label}</span> : <span>{item.label}</span>}
               </NavLink>
             ))}
           </nav>
-
-          <div className="border-t p-3">
-            <RealtimeBadge status={realtimeStatus} />
-          </div>
         </div>
       </aside>
 
