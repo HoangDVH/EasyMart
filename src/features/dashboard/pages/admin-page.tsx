@@ -1,5 +1,15 @@
-import { useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  KeyRound,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Shield,
+  Store,
+  Trash2,
+  UserRound,
+  Users,
+} from 'lucide-react'
 import { toast } from 'react-toastify'
 import type { UserRole } from '@/features/auth/types/auth.types'
 import {
@@ -9,19 +19,18 @@ import {
   useUpdateUserMutation,
   useUsersQuery,
 } from '@/features/account/hooks/use-users'
+import { AdminCreateUserModal } from '@/features/dashboard/components/admin-create-user-modal'
 import { AdminResetPasswordModal } from '@/features/dashboard/components/admin-reset-password-modal'
-import {
-  adminCreateUserSchema,
-  type AdminCreateUserFormValues,
-} from '@/features/dashboard/schemas/admin.schemas'
+import type { AdminCreateUserFormValues } from '@/features/dashboard/schemas/admin.schemas'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { FullPageSpinner } from '@/shared/ui/full-page-spinner'
+import { Card, CardContent } from '@/shared/ui/card'
+import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
+import { EmptyState } from '@/shared/ui/empty-state'
 import { Input } from '@/shared/ui/input'
-import { Label } from '@/shared/ui/label'
+import { PaginationBar } from '@/shared/ui/pagination-bar'
 import { Select } from '@/shared/ui/select'
 import { Skeleton } from '@/shared/ui/skeleton'
 
@@ -30,11 +39,13 @@ type RoleOption = {
   label: string
 }
 
-const roleOptions: RoleOption[] = [
-  { value: 'USER', label: 'USER' },
-  { value: 'SELLER', label: 'SELLER' },
-  { value: 'ADMIN', label: 'ADMIN' },
+const ROLE_OPTIONS: RoleOption[] = [
+  { value: 'USER', label: 'Người mua' },
+  { value: 'SELLER', label: 'Người bán' },
+  { value: 'ADMIN', label: 'Quản trị' },
 ]
+
+const PAGE_SIZE = 10
 
 function normalizeRoleToken(value: string): UserRole | null {
   const normalized = value.replace(/^ROLE_/i, '').toUpperCase()
@@ -42,6 +53,25 @@ function normalizeRoleToken(value: string): UserRole | null {
     return normalized
   }
   return null
+}
+
+function roleLabel(role: UserRole) {
+  return ROLE_OPTIONS.find((r) => r.value === role)?.label ?? role
+}
+
+function RoleBadge({ role }: { role: UserRole }) {
+  return (
+    <Badge
+      className={cn(
+        'border-transparent font-medium',
+        role === 'ADMIN' && 'bg-violet-100 text-violet-800',
+        role === 'SELLER' && 'bg-sky-100 text-sky-800',
+        role === 'USER' && 'bg-slate-100 text-slate-700',
+      )}
+    >
+      {roleLabel(role)}
+    </Badge>
+  )
 }
 
 export function AdminPage() {
@@ -53,20 +83,13 @@ export function AdminPage() {
 
   const [searchKeyword, setSearchKeyword] = useState('')
   const [roleFilter, setRoleFilter] = useState<'ALL' | UserRole>('ALL')
+  const [page, setPage] = useState(0)
+  const [createOpen, setCreateOpen] = useState(false)
   const [roleUpdatingUserId, setRoleUpdatingUserId] = useState<string | null>(null)
   const [resetPasswordTarget, setResetPasswordTarget] = useState<{ id: string; email: string } | null>(
     null,
   )
-
-  const {
-    register: registerCreateUser,
-    handleSubmit: handleCreateUserSubmit,
-    reset: resetCreateUserForm,
-    formState: { errors: createUserErrors, isSubmitting: isCreatingUserForm },
-  } = useForm<AdminCreateUserFormValues>({
-    resolver: zodResolver(adminCreateUserSchema),
-    defaultValues: { email: '', password: '' },
-  })
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; email: string } | null>(null)
 
   const users = usersQuery.data ?? []
   const summary = useMemo(() => {
@@ -86,17 +109,32 @@ export function AdminPage() {
     return users.filter((u) => {
       if (roleFilter !== 'ALL' && u.role !== roleFilter) return false
       if (!keyword) return true
-      return u.email.toLowerCase().includes(keyword) || u.id.toLowerCase().includes(keyword)
+      return u.email.toLowerCase().includes(keyword)
     })
   }, [users, searchKeyword, roleFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE))
+
+  useEffect(() => {
+    setPage(0)
+  }, [searchKeyword, roleFilter])
+
+  useEffect(() => {
+    if (page > totalPages - 1) setPage(Math.max(0, totalPages - 1))
+  }, [page, totalPages])
+
+  const pageUsers = useMemo(() => {
+    const start = page * PAGE_SIZE
+    return filteredUsers.slice(start, start + PAGE_SIZE)
+  }, [filteredUsers, page])
 
   async function onCreateUser(data: AdminCreateUserFormValues) {
     try {
       await createUserMutation.mutateAsync(data)
-      resetCreateUserForm()
-      toast.success('Đã tạo user mới.')
+      toast.success('Đã tạo người dùng mới.')
+      setCreateOpen(false)
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không tạo được user.'))
+      toast.error(getApiErrorMessage(error, 'Không tạo được người dùng.'))
     }
   }
 
@@ -107,21 +145,21 @@ export function AdminPage() {
         id: resetPasswordTarget.id,
         payload: { password },
       })
-      toast.success('Đã cập nhật mật khẩu user.')
+      toast.success('Đã cập nhật mật khẩu.')
       setResetPasswordTarget(null)
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không cập nhật được mật khẩu user.'))
+      toast.error(getApiErrorMessage(error, 'Không cập nhật được mật khẩu.'))
     }
   }
 
-  async function handleDeleteUser(id: string, email: string) {
-    const ok = window.confirm(`Xóa user ${email}?`)
-    if (!ok) return
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return
     try {
-      await deleteUserMutation.mutateAsync(id)
-      toast.success('Đã xóa user.')
+      await deleteUserMutation.mutateAsync(deleteTarget.id)
+      toast.success('Đã xóa người dùng.')
+      setDeleteTarget(null)
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không xóa được user.'))
+      toast.error(getApiErrorMessage(error, 'Không xóa được người dùng.'))
     }
   }
 
@@ -134,11 +172,10 @@ export function AdminPage() {
         const token = normalizeRoleToken(raw)
         if (token) enabledRoles.add(token)
       }
-      // fallback cho dữ liệu cũ: nếu `roles` trống thì dựa vào role tổng hợp
       if (enabledRoles.size === 0 && targetUser?.role) enabledRoles.add(targetUser.role)
 
       const roleMutations: Promise<unknown>[] = []
-      for (const option of roleOptions) {
+      for (const option of ROLE_OPTIONS) {
         const shouldEnable = option.value === role
         const currentlyEnabled = enabledRoles.has(option.value)
         if (shouldEnable === currentlyEnabled) continue
@@ -150,251 +187,304 @@ export function AdminPage() {
         )
       }
       if (roleMutations.length > 0) await Promise.all(roleMutations)
-      toast.success(`Đã gán role ${role}.`)
+      toast.success(`Đã gán quyền ${roleLabel(role)}.`)
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Không gán được role.'))
+      toast.error(getApiErrorMessage(error, 'Không gán được quyền.'))
     } finally {
       setRoleUpdatingUserId(null)
     }
   }
 
+  const kpiCards = [
+    {
+      label: 'Tổng người dùng',
+      value: summary.total,
+      icon: Users,
+      iconClass: 'bg-primary/10 text-primary',
+    },
+    {
+      label: 'Quản trị',
+      value: summary.admin,
+      icon: Shield,
+      iconClass: 'bg-violet-100 text-violet-700',
+    },
+    {
+      label: 'Người bán',
+      value: summary.seller,
+      icon: Store,
+      iconClass: 'bg-sky-100 text-sky-700',
+    },
+    {
+      label: 'Người mua',
+      value: summary.user,
+      icon: UserRound,
+      iconClass: 'bg-slate-100 text-slate-700',
+    },
+  ]
+
   return (
-    <div className="space-y-6">
-      {roleUpdatingUserId ? <FullPageSpinner message="Đang cập nhật phân quyền..." /> : null}
-      <Card>
-        <CardHeader>
-          <CardTitle>Admin Dashboard</CardTitle>
-          <CardDescription>
-            Quyền quản trị toàn bộ hệ thống: tạo user, xóa user, reset mật khẩu, phân role.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border p-3">
-            <p className="text-xs text-muted-foreground">Tổng user</p>
-            <p className="text-2xl font-semibold">{summary.total}</p>
-          </div>
-          <div className="rounded-lg border p-3">
-            <p className="text-xs text-muted-foreground">ADMIN</p>
-            <p className="text-2xl font-semibold">{summary.admin}</p>
-          </div>
-          <div className="rounded-lg border p-3">
-            <p className="text-xs text-muted-foreground">SELLER</p>
-            <p className="text-2xl font-semibold">{summary.seller}</p>
-          </div>
-          <div className="rounded-lg border p-3">
-            <p className="text-xs text-muted-foreground">USER</p>
-            <p className="text-2xl font-semibold">{summary.user}</p>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {kpiCards.map((card) => (
+          <Card key={card.label} className="overflow-hidden">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-lg', card.iconClass)}>
+                <card.icon className="h-5 w-5" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-xs text-muted-foreground">{card.label}</p>
+                {usersQuery.isPending ? (
+                  <Skeleton className="mt-1 h-5 w-12" />
+                ) : (
+                  <p className="text-lg font-semibold tabular-nums">{card.value}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Tạo tài khoản mới</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form
-            className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-start"
-            onSubmit={handleCreateUserSubmit(onCreateUser)}
+        <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Danh sách người dùng</h2>
+            <p className="text-sm text-muted-foreground">
+              {usersQuery.isPending
+                ? 'Đang tải…'
+                : `${filteredUsers.length} / ${summary.total} tài khoản`}
+            </p>
+          </div>
+          <Button type="button" className="gap-2 self-start sm:self-auto" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4" aria-hidden />
+            Thêm người dùng
+          </Button>
+        </div>
+
+        <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center">
+          <Input
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            placeholder="Tìm theo email…"
+            className="md:max-w-sm"
+            aria-label="Tìm người dùng theo email"
+          />
+          <Select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value as 'ALL' | UserRole)}
+            className="md:w-48"
+            aria-label="Lọc theo quyền"
           >
-            <div className="grid gap-1.5">
-              <Label htmlFor="admin-create-email">Email</Label>
-              <Input
-                id="admin-create-email"
-                type="email"
-                placeholder="new.user@gmail.com"
-                {...registerCreateUser('email')}
-              />
-              {createUserErrors.email ? (
-                <p className="text-xs text-destructive">{createUserErrors.email.message}</p>
-              ) : null}
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="admin-create-password">Mật khẩu</Label>
-              <Input
-                id="admin-create-password"
-                type="password"
-                placeholder="Tối thiểu 8 ký tự"
-                {...registerCreateUser('password')}
-              />
-              {createUserErrors.password ? (
-                <p className="text-xs text-destructive">{createUserErrors.password.message}</p>
-              ) : null}
-            </div>
-            <Button
-              type="submit"
-              className="md:mt-6"
-              disabled={createUserMutation.isPending || isCreatingUserForm}
-            >
-              {createUserMutation.isPending ? 'Đang tạo...' : 'Tạo user'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+            <option value="ALL">Tất cả quyền</option>
+            {ROLE_OPTIONS.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.label}
+              </option>
+            ))}
+          </Select>
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2 md:ml-auto"
+            onClick={() => void usersQuery.refetch()}
+            disabled={usersQuery.isFetching}
+          >
+            <RefreshCw className={cn('h-4 w-4', usersQuery.isFetching && 'animate-spin')} aria-hidden />
+            Làm mới
+          </Button>
+        </div>
 
-      <Card>
-        <CardHeader className="space-y-3">
-          <CardTitle>Quản lý người dùng & phân quyền</CardTitle>
-          <div className="grid gap-3 md:grid-cols-[1fr_200px_auto]">
-            <Input
-              value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-              placeholder="Tìm theo email hoặc ID"
-            />
-            <Select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as 'ALL' | UserRole)}
-            >
-              <option value="ALL">Role: Tất cả</option>
-              {roleOptions.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </Select>
-            <Button variant="outline" onClick={() => void usersQuery.refetch()} disabled={usersQuery.isFetching}>
-              {usersQuery.isFetching ? 'Đang tải...' : 'Làm mới'}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {usersQuery.isPending ? (
-            <div className="space-y-2">
+            <div className="space-y-2 p-4">
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />
             </div>
           ) : usersQuery.isError ? (
-            <p className="text-sm text-destructive">
+            <p className="p-4 text-sm text-destructive">
               {getApiErrorMessage(usersQuery.error, 'Không tải được danh sách người dùng.')}
             </p>
           ) : filteredUsers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Không có user phù hợp bộ lọc.</p>
+            <EmptyState
+              icon={Users}
+              title="Không có người dùng phù hợp"
+              description={
+                searchKeyword || roleFilter !== 'ALL'
+                  ? 'Thử đổi từ khóa hoặc bộ lọc quyền.'
+                  : 'Tạo tài khoản đầu tiên để bắt đầu quản trị.'
+              }
+              action={
+                !searchKeyword && roleFilter === 'ALL' ? (
+                  <Button type="button" className="gap-2" onClick={() => setCreateOpen(true)}>
+                    <Plus className="h-4 w-4" aria-hidden />
+                    Thêm người dùng
+                  </Button>
+                ) : undefined
+              }
+            />
           ) : (
             <>
-            <div className="space-y-3 md:hidden">
-              {filteredUsers.map((user) => (
-                <Card key={user.id}>
-                  <CardContent className="space-y-3 pt-4">
-                    <div>
-                      <p className="font-medium">{user.email}</p>
-                      <p className="text-xs text-muted-foreground">{user.id}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      <Badge>{user.role}</Badge>
-                      {(user.roles.length > 0 ? user.roles : ['(none)']).map((r) => (
-                        <Badge key={`${user.id}-m-${r}`} className="border-border/70 bg-muted/30 text-foreground">
-                          {r}
-                        </Badge>
-                      ))}
-                    </div>
-                    <Select
-                      value={user.role}
-                      onChange={(e) => void handleAssignRoleExclusive(user.id, e.target.value as UserRole)}
-                      className="w-full"
-                      disabled={Boolean(roleUpdatingUserId)}
-                    >
-                      {roleOptions.map((r) => (
-                        <option key={r.value} value={r.value}>
-                          {r.label}
-                        </option>
-                      ))}
-                    </Select>
-                    <div className="flex flex-col gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setResetPasswordTarget({ id: user.id, email: user.email })}
-                        disabled={updateUserMutation.isPending || Boolean(roleUpdatingUserId)}
-                      >
-                        Reset mật khẩu
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        onClick={() => void handleDeleteUser(user.id, user.email)}
-                        disabled={deleteUserMutation.isPending || Boolean(roleUpdatingUserId)}
-                      >
-                        Xóa user
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            <div className="hidden overflow-x-auto rounded-md border md:block">
-              <table className="w-full min-w-[900px] text-sm">
-                <thead className="bg-muted/40 text-left">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">Email</th>
-                    <th className="px-3 py-2 font-medium">ID</th>
-                    <th className="px-3 py-2 font-medium">Role hiện tại</th>
-                    <th className="px-3 py-2 font-medium">Roles từ backend</th>
-                    <th className="px-3 py-2 font-medium text-right">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((user) => (
-                    <tr key={user.id} className="border-t">
-                      <td className="px-3 py-2">{user.email}</td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">{user.id}</td>
-                      <td className="px-3 py-2">
-                        <Badge>{user.role}</Badge>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex flex-wrap gap-1">
-                          {(user.roles.length > 0 ? user.roles : ['(none)']).map((r) => (
-                            <Badge key={`${user.id}-${r}`} className="border-border/70 bg-muted/30 text-foreground">
-                              {r}
-                            </Badge>
-                          ))}
+              {/* Mobile cards */}
+              <div className="divide-y md:hidden">
+                {pageUsers.map((user) => {
+                  const busy = roleUpdatingUserId === user.id
+                  return (
+                    <div key={user.id} className="space-y-3 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{user.email}</p>
+                          <div className="mt-1.5">
+                            <RoleBadge role={user.role} />
+                          </div>
                         </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex justify-end gap-2">
-                          <Select
-                            value={user.role}
-                            onChange={(e) =>
-                              void handleAssignRoleExclusive(user.id, e.target.value as UserRole)
-                            }
-                            className="w-36"
-                            disabled={Boolean(roleUpdatingUserId)}
-                          >
-                            {roleOptions.map((r) => (
-                              <option key={r.value} value={r.value}>
-                                {r.label}
-                              </option>
-                            ))}
-                          </Select>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              setResetPasswordTarget({ id: user.id, email: user.email })
-                            }
-                            disabled={updateUserMutation.isPending || Boolean(roleUpdatingUserId)}
-                          >
-                            Reset mật khẩu
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            onClick={() => void handleDeleteUser(user.id, user.email)}
-                            disabled={deleteUserMutation.isPending || Boolean(roleUpdatingUserId)}
-                          >
-                            Xóa
-                          </Button>
-                        </div>
-                      </td>
+                        {busy ? (
+                          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" aria-hidden />
+                        ) : null}
+                      </div>
+                      <Select
+                        value={user.role}
+                        onChange={(e) => void handleAssignRoleExclusive(user.id, e.target.value as UserRole)}
+                        disabled={Boolean(roleUpdatingUserId)}
+                        aria-label={`Quyền của ${user.email}`}
+                      >
+                        {ROLE_OPTIONS.map((r) => (
+                          <option key={r.value} value={r.value}>
+                            {r.label}
+                          </option>
+                        ))}
+                      </Select>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 gap-1.5"
+                          onClick={() => setResetPasswordTarget({ id: user.id, email: user.email })}
+                          disabled={updateUserMutation.isPending || Boolean(roleUpdatingUserId)}
+                        >
+                          <KeyRound className="h-3.5 w-3.5" aria-hidden />
+                          Đặt lại MK
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => setDeleteTarget({ id: user.id, email: user.email })}
+                          disabled={deleteUserMutation.isPending || Boolean(roleUpdatingUserId)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                          Xóa
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[720px] text-sm">
+                  <thead className="border-b bg-muted/40 text-left text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Email</th>
+                      <th className="px-4 py-3 font-medium">Quyền</th>
+                      <th className="px-4 py-3 font-medium">Đổi quyền</th>
+                      <th className="px-4 py-3 text-right font-medium">Thao tác</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {pageUsers.map((user) => {
+                      const busy = roleUpdatingUserId === user.id
+                      return (
+                        <tr
+                          key={user.id}
+                          className={cn('border-b last:border-b-0', busy && 'bg-muted/20')}
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{user.email}</span>
+                              {busy ? (
+                                <Loader2
+                                  className="h-3.5 w-3.5 animate-spin text-muted-foreground"
+                                  aria-label="Đang cập nhật quyền"
+                                />
+                              ) : null}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <RoleBadge role={user.role} />
+                          </td>
+                          <td className="px-4 py-3">
+                            <Select
+                              value={user.role}
+                              onChange={(e) =>
+                                void handleAssignRoleExclusive(user.id, e.target.value as UserRole)
+                              }
+                              className="w-40"
+                              disabled={Boolean(roleUpdatingUserId)}
+                              aria-label={`Đổi quyền ${user.email}`}
+                            >
+                              {ROLE_OPTIONS.map((r) => (
+                                <option key={r.value} value={r.value}>
+                                  {r.label}
+                                </option>
+                              ))}
+                            </Select>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-1.5">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="gap-1.5"
+                                title="Đặt lại mật khẩu"
+                                onClick={() =>
+                                  setResetPasswordTarget({ id: user.id, email: user.email })
+                                }
+                                disabled={updateUserMutation.isPending || Boolean(roleUpdatingUserId)}
+                              >
+                                <KeyRound className="h-3.5 w-3.5" aria-hidden />
+                                Đặt lại MK
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                title="Xóa người dùng"
+                                aria-label={`Xóa ${user.email}`}
+                                onClick={() => setDeleteTarget({ id: user.id, email: user.email })}
+                                disabled={deleteUserMutation.isPending || Boolean(roleUpdatingUserId)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {filteredUsers.length > PAGE_SIZE ? (
+                <div className="px-4 pb-4">
+                  <PaginationBar page={page} totalPages={totalPages} onPageChange={setPage} />
+                </div>
+              ) : null}
             </>
           )}
         </CardContent>
       </Card>
+
+      <AdminCreateUserModal
+        open={createOpen}
+        isSubmitting={createUserMutation.isPending}
+        onClose={() => setCreateOpen(false)}
+        onSubmit={onCreateUser}
+      />
 
       <AdminResetPasswordModal
         open={Boolean(resetPasswordTarget)}
@@ -402,6 +492,21 @@ export function AdminPage() {
         isSubmitting={updateUserMutation.isPending}
         onClose={() => setResetPasswordTarget(null)}
         onSubmit={handleResetPasswordSubmit}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Xóa người dùng?"
+        description={
+          deleteTarget
+            ? `Tài khoản ${deleteTarget.email} sẽ bị xóa vĩnh viễn và không thể khôi phục.`
+            : ''
+        }
+        confirmLabel="Xóa"
+        destructive
+        loading={deleteUserMutation.isPending}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => void handleDeleteConfirm()}
       />
     </div>
   )

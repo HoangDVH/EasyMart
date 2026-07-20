@@ -3,25 +3,11 @@ import { Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useCategoriesQuery } from '@/features/products/hooks/use-catalog'
 import { productsApi } from '@/features/products/api/products.api'
-import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { getApiErrorMessage } from '@/shared/lib/api-error'
-import { useAuthStore } from '@/shared/stores/auth-store'
-import {
-  useCreateSellerProductMutation,
-  useDeleteSellerProductMutation,
-  useSellerProductsQuery,
-  useUpdateSellerProductMutation,
-  useUploadSellerImagesMutation,
-} from '@/features/seller/hooks/use-seller'
-import { cn } from '@/shared/lib/utils'
 import type { Product } from '@/features/products/types/product.types'
 import type { SellerProductPayload } from '@/features/seller/api/seller.api'
-import type { SellerProductFormParsed } from '@/features/seller/schemas/seller-product.schema'
 import { ProductFormModal } from '@/features/seller/components/product-form-modal'
-import { ConfirmDeleteModal } from '@/features/seller/components/confirm-delete-modal'
-import { SellerProductsToolbar } from '@/features/seller/components/seller-products-toolbar'
 import { SellerProductsTable } from '@/features/seller/components/seller-products-table'
+import { SellerProductsToolbar } from '@/features/seller/components/seller-products-toolbar'
 import { SellerStatsCards } from '@/features/seller/components/seller-stats-cards'
 import {
   defaultSellerProductFormValues,
@@ -30,6 +16,20 @@ import {
   productToFormValues,
   type SellerProductsFilters,
 } from '@/features/seller/components/seller-types'
+import {
+  useCreateSellerProductMutation,
+  useDeleteSellerProductMutation,
+  useSellerProductsQuery,
+  useUpdateSellerProductMutation,
+  useUploadSellerImagesMutation,
+} from '@/features/seller/hooks/use-seller'
+import type { SellerProductFormParsed } from '@/features/seller/schemas/seller-product.schema'
+import { getApiErrorMessage } from '@/shared/lib/api-error'
+import { cn } from '@/shared/lib/utils'
+import { useAuthStore } from '@/shared/stores/auth-store'
+import { Button } from '@/shared/ui/button'
+import { Card, CardContent } from '@/shared/ui/card'
+import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
 
 function buildPayload(form: SellerProductFormParsed): SellerProductPayload {
   const price = Math.round(Number(form.price))
@@ -297,7 +297,7 @@ export function SellerProductsPage() {
   }, [filters.page, totalPages])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <SellerStatsCards
         isLoading={productsQuery.isPending}
         totalProducts={productsRaw.length}
@@ -307,56 +307,64 @@ export function SellerProductsPage() {
       />
 
       <Card>
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <CardTitle>Danh sách sản phẩm</CardTitle>
-              <CardDescription>{productsRaw.length} sản phẩm trong cửa hàng.</CardDescription>
-            </div>
+        <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Danh sách sản phẩm</h2>
+            <p className="text-sm text-muted-foreground">
+              {productsQuery.isPending
+                ? 'Đang tải…'
+                : `${filteredProducts.length} / ${productsRaw.length} sản phẩm`}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-2"
+              onClick={() => void productsQuery.refetch()}
+              disabled={productsQuery.isFetching}
+            >
+              <RefreshCw
+                className={cn('h-4 w-4', productsQuery.isFetching && 'animate-spin')}
+                aria-hidden
+              />
+              Làm mới
+            </Button>
+            <Button type="button" className="gap-2" onClick={openCreateModal}>
+              <Plus className="h-4 w-4" aria-hidden />
+              Thêm sản phẩm
+            </Button>
+          </div>
+        </div>
+
+        <div className="border-b p-4">
+          <SellerProductsToolbar filters={filters} onChange={setFilters} counts={stockCounts} />
+        </div>
+
+        {selectedIds.size > 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-primary/5 px-4 py-2.5">
+            <p className="text-sm">
+              Đã chọn <span className="font-semibold tabular-nums">{selectedIds.size}</span> sản phẩm
+            </p>
             <div className="flex gap-2">
+              <Button type="button" size="sm" variant="outline" onClick={() => setSelectedIds(new Set())}>
+                Bỏ chọn
+              </Button>
               <Button
+                type="button"
                 size="sm"
                 variant="outline"
-                className="gap-1.5"
-                onClick={() => void productsQuery.refetch()}
-                disabled={productsQuery.isFetching}
+                className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setBulkDeleteOpen(true)}
               >
-                <RefreshCw
-                  className={cn('h-3.5 w-3.5', productsQuery.isFetching && 'animate-spin')}
-                />
-                {productsQuery.isFetching ? 'Đang tải...' : 'Làm mới'}
-              </Button>
-              <Button size="sm" onClick={openCreateModal} className="gap-1.5">
-                <Plus className="h-4 w-4" />
-                Thêm sản phẩm
+                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                Xóa đã chọn
               </Button>
             </div>
           </div>
-          <SellerProductsToolbar filters={filters} onChange={setFilters} counts={stockCounts} />
-        </CardHeader>
-        <CardContent>
-          {selectedIds.size > 0 ? (
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
-              <p className="text-sm">
-                Đã chọn <span className="font-semibold tabular-nums">{selectedIds.size}</span> sản
-                phẩm
-              </p>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => setSelectedIds(new Set())}>
-                  Bỏ chọn
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => setBulkDeleteOpen(true)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Xóa đã chọn
-                </Button>
-              </div>
-            </div>
-          ) : null}
+        ) : null}
+
+        <CardContent className="p-4">
           <SellerProductsTable
             products={pagedProducts}
             isLoading={productsQuery.isPending}
@@ -388,18 +396,22 @@ export function SellerProductsPage() {
         onClose={resetFormAndClose}
         onUploadFiles={onUploadFiles}
       />
-      <ConfirmDeleteModal
+      <ConfirmDialog
         open={Boolean(deleteTarget)}
-        title="Xóa sản phẩm"
-        description={`Bạn có chắc muốn xóa "${deleteTarget?.name ?? ''}" không?`}
+        title="Xóa sản phẩm?"
+        description={`Sản phẩm "${deleteTarget?.name ?? ''}" sẽ bị xóa và không thể khôi phục.`}
+        confirmLabel="Xóa"
+        destructive
         loading={deleteMutation.isPending}
         onCancel={() => setDeleteTarget(null)}
         onConfirm={() => void onDeleteConfirmed()}
       />
-      <ConfirmDeleteModal
+      <ConfirmDialog
         open={bulkDeleteOpen}
-        title="Xóa nhiều sản phẩm"
-        description={`Bạn có chắc muốn xóa ${selectedIds.size} sản phẩm đã chọn không? Hành động này không thể hoàn tác.`}
+        title="Xóa nhiều sản phẩm?"
+        description={`Bạn sắp xóa ${selectedIds.size} sản phẩm đã chọn. Hành động này không thể hoàn tác.`}
+        confirmLabel="Xóa tất cả"
+        destructive
         loading={bulkDeleting}
         onCancel={() => setBulkDeleteOpen(false)}
         onConfirm={() => void onBulkDeleteConfirmed()}

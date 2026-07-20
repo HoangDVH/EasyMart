@@ -1,14 +1,20 @@
 import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, RefreshCw } from 'lucide-react'
+import { ArrowLeft, ImageOff, Loader2, PackageCheck, RefreshCw } from 'lucide-react'
 import { isAxiosError } from 'axios'
 import { toast } from 'react-toastify'
 import {
+  FULFILLMENT_ACTION_LABELS,
+  FULFILLMENT_BADGE_CLASSES,
   FULFILLMENT_LABELS,
+  getNextFulfillmentStatus,
+  getOrderFulfillmentStatus,
+  isCodPayment,
   isFulfillmentStatus,
+  isOrderPaid,
 } from '@/features/orders/lib/fulfillment'
 import type { Order } from '@/features/orders/types/order.types'
-import { SellerOrdersHistoryPanel } from '@/features/seller/components/seller-orders-history-panel'
+import { formatDateTime, formatVnd } from '@/features/seller/components/seller-formatters'
 import {
   useSellerOrderHistoryQuery,
   useSellerProductsQuery,
@@ -17,8 +23,40 @@ import {
 import { getApiErrorMessage } from '@/shared/lib/api-error'
 import { cn } from '@/shared/lib/utils'
 import { useAuthStore } from '@/shared/stores/auth-store'
+import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { Card, CardContent } from '@/shared/ui/card'
+import { Skeleton } from '@/shared/ui/skeleton'
+
+function isCancelledOrder(order: Order): boolean {
+  const code = order.status.toUpperCase()
+  return code.includes('CANCEL') || code.includes('FAIL') || code.includes('REJECT')
+}
+
+function PaymentBadge({ order }: { order: Order }) {
+  if (isCancelledOrder(order)) {
+    return <Badge className="border-destructive/30 bg-destructive/10 text-destructive">Đã hủy</Badge>
+  }
+  const fulfillment = getOrderFulfillmentStatus(order)
+  if (isCodPayment(order)) {
+    if (fulfillment === 'DELIVERED') {
+      return (
+        <Badge className="border-emerald-300/60 bg-emerald-50 text-emerald-700">Đã thu COD</Badge>
+      )
+    }
+    return (
+      <Badge className="border-amber-300/60 bg-amber-50 text-amber-700">
+        COD · Thu khi nhận hàng
+      </Badge>
+    )
+  }
+  if (isOrderPaid(order)) {
+    return (
+      <Badge className="border-emerald-300/60 bg-emerald-50 text-emerald-700">Đã thanh toán</Badge>
+    )
+  }
+  return <Badge className="border-amber-300/60 bg-amber-50 text-amber-700">Chưa thanh toán</Badge>
+}
 
 export function SellerOrderDetailPage() {
   const { id = '' } = useParams()
@@ -59,67 +97,164 @@ export function SellerOrderDetailPage() {
     }
   }
 
-  const errorText = ordersQuery.isError
-    ? getApiErrorMessage(ordersQuery.error, 'Không tải được chi tiết đơn hàng.')
-    : null
+  const fulfillment = order ? getOrderFulfillmentStatus(order) : null
+  const nextStatus = fulfillment ? getNextFulfillmentStatus(fulfillment) : null
+  const paid = order ? isOrderPaid(order) : false
+  const canAdvance = Boolean(order && paid && fulfillment && nextStatus)
+  const isUpdating =
+    updateStatusMutation.isPending && updateStatusMutation.variables?.orderId === order?.id
 
   return (
-    <Card>
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <Link
-            to="/seller/orders"
-            className="mb-2 inline-flex min-h-10 items-center gap-1 text-xs font-medium text-muted-foreground hover:text-primary"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Quay lại danh sách đơn
-          </Link>
-          <CardTitle className="break-all text-base sm:text-lg">
-            Trạng thái đơn #{id.length > 12 ? `${id.slice(0, 8)}…` : id}
-          </CardTitle>
-          <CardDescription>
-            Xem sản phẩm, thanh toán và cập nhật tiến trình giao hàng của riêng đơn này.
-          </CardDescription>
-        </div>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Link
+          to="/seller/orders"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          Quay lại danh sách đơn
+        </Link>
         <Button
+          type="button"
           size="sm"
           variant="outline"
-          className="h-10 w-full gap-1.5 sm:h-9 sm:w-auto"
+          className="gap-2 self-start sm:self-auto"
           onClick={() => void ordersQuery.refetch()}
           disabled={ordersQuery.isFetching}
         >
           <RefreshCw
             className={cn('h-3.5 w-3.5', ordersQuery.isFetching && 'animate-spin')}
+            aria-hidden
           />
           Làm mới
         </Button>
-      </CardHeader>
-      <CardContent>
-        {!ordersQuery.isPending && !ordersQuery.isError && !order ? (
-          <div className="rounded-lg border border-dashed px-4 py-10 text-center">
+      </div>
+
+      {ordersQuery.isPending ? (
+        <div className="space-y-3">
+          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
+      ) : ordersQuery.isError ? (
+        <Card>
+          <CardContent className="p-4 text-sm text-destructive">
+            {getApiErrorMessage(ordersQuery.error, 'Không tải được chi tiết đơn hàng.')}
+          </CardContent>
+        </Card>
+      ) : !order ? (
+        <Card>
+          <CardContent className="px-4 py-10 text-center">
             <p className="font-medium">Không tìm thấy đơn #{id}</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Đơn có thể không thuộc cửa hàng này hoặc đã bị xóa.
             </p>
-          </div>
-        ) : (
-          <SellerOrdersHistoryPanel
-            orders={order ? [order] : []}
-            productImageById={productImageById}
-            isLoading={ordersQuery.isPending}
-            isError={ordersQuery.isError}
-            errorText={errorText}
-            updatingOrderId={
-              updateStatusMutation.isPending
-                ? updateStatusMutation.variables?.orderId ?? null
-                : null
-            }
-            onAdvanceStatus={(currentOrder, nextStatus) =>
-              void onAdvanceStatus(currentOrder, nextStatus)
-            }
-          />
-        )}
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <Card>
+            <CardContent className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <p className="text-xs text-muted-foreground">Mã đơn</p>
+                <p className="mt-1 break-all text-sm font-semibold">{order.id}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Người mua</p>
+                <p className="mt-1 truncate text-sm font-medium">
+                  {order.userEmail || 'Không rõ'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Ngày tạo</p>
+                <p className="mt-1 text-sm font-medium">{formatDateTime(order.createdAt)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Tổng tiền</p>
+                <p className="mt-1 text-lg font-semibold tabular-nums text-primary">
+                  {formatVnd(order.totalAmount)}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-4">
+                <PaymentBadge order={order} />
+                {fulfillment && paid ? (
+                  <Badge className={cn(FULFILLMENT_BADGE_CLASSES[fulfillment])}>
+                    {FULFILLMENT_LABELS[fulfillment]}
+                  </Badge>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <div className="border-b px-4 py-3">
+              <h2 className="text-base font-semibold">Sản phẩm trong đơn</h2>
+              <p className="text-sm text-muted-foreground">{order.items.length} dòng hàng</p>
+            </div>
+            <div className="divide-y">
+              {order.items.map((item, index) => {
+                const src = productImageById.get(String(item.productId)) ?? null
+                return (
+                  <div
+                    key={`${item.productId}-${index}`}
+                    className="flex items-center gap-3 px-4 py-3"
+                  >
+                    <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-lg border bg-muted/40">
+                      {src ? (
+                        <img src={src} alt="" className="h-full w-full object-contain" loading="lazy" />
+                      ) : (
+                        <ImageOff className="h-4 w-4 text-muted-foreground/60" aria-hidden />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {item.productName || `Sản phẩm #${item.productId}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatVnd(item.unitPrice)} × {item.quantity}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-sm font-medium tabular-nums">
+                      {formatVnd(item.unitPrice * item.quantity)}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="flex flex-col gap-3 border-t bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm">
+                <span className="text-muted-foreground">Tổng đơn: </span>
+                <span className="text-base font-semibold tabular-nums text-primary">
+                  {formatVnd(order.totalAmount)}
+                </span>
+              </p>
+              {canAdvance && nextStatus ? (
+                <Button
+                  type="button"
+                  className="gap-1.5"
+                  disabled={isUpdating}
+                  onClick={() => void onAdvanceStatus(order, nextStatus)}
+                >
+                  {isUpdating ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <PackageCheck className="h-3.5 w-3.5" aria-hidden />
+                  )}
+                  {isUpdating ? 'Đang cập nhật…' : FULFILLMENT_ACTION_LABELS[nextStatus]}
+                </Button>
+              ) : fulfillment === 'DELIVERED' ? (
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                  <PackageCheck className="h-3.5 w-3.5" aria-hidden />
+                  Hoàn tất giao hàng
+                </span>
+              ) : !paid && !isCancelledOrder(order) ? (
+                <span className="text-xs text-muted-foreground">
+                  Chờ thanh toán — chưa thể xử lý giao hàng
+                </span>
+              ) : null}
+            </div>
+          </Card>
+        </>
+      )}
+    </div>
   )
 }

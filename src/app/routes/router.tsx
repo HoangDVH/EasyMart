@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/app/layouts/app-layout'
 import { AuthLayout } from '@/app/layouts/auth-layout'
+import { DashboardLayout } from '@/app/layouts/dashboard-layout'
 import { ProtectedRoute, RoleGuard } from '@/app/routes/guards'
 import { RouteErrorBoundary } from '@/shared/ui/route-error-boundary'
 import {
@@ -21,7 +22,6 @@ import {
   ProfilePage,
   RegisterPage,
   ResetPasswordPage,
-  SellerLayout,
   SellerOrderDetailPage,
   SellerOrdersPage,
   SellerOverviewPage,
@@ -50,6 +50,38 @@ export const router = createBrowserRouter([
     ],
   },
   {
+    /** Seller/Admin: shell dashboard riêng — không dùng navbar/footer cửa hàng. */
+    element: <ProtectedRoute />,
+    errorElement: <RouteErrorBoundary />,
+    children: [
+      {
+        element: <RoleGuard allowedRoles={['ADMIN', 'SELLER']} />,
+        children: [
+          {
+            path: '/seller',
+            element: <DashboardLayout />,
+            children: [
+              { index: true, element: <SellerOverviewPage /> },
+              { path: 'products', element: <SellerProductsPage /> },
+              { path: 'orders', element: <SellerOrdersPage /> },
+              { path: 'orders/:id', element: <SellerOrderDetailPage /> },
+            ],
+          },
+        ],
+      },
+      {
+        element: <RoleGuard allowedRoles={['ADMIN']} />,
+        children: [
+          {
+            path: '/admin',
+            element: <DashboardLayout />,
+            children: [{ index: true, element: <AdminPage /> }],
+          },
+        ],
+      },
+    ],
+  },
+  {
     element: <AppLayout />,
     errorElement: <RouteErrorBoundary />,
     children: [
@@ -71,25 +103,6 @@ export const router = createBrowserRouter([
               { path: 'orders', element: <MyOrdersPage /> },
               { path: 'orders/:id', element: <OrderDetailPage /> },
               { path: 'payments', element: <MyPaymentsPage /> },
-            ],
-          },
-          {
-            element: <RoleGuard allowedRoles={['ADMIN']} />,
-            children: [{ path: '/admin', element: <AdminPage /> }],
-          },
-          {
-            element: <RoleGuard allowedRoles={['ADMIN', 'SELLER']} />,
-            children: [
-              {
-                path: '/seller',
-                element: <SellerLayout />,
-                children: [
-                  { index: true, element: <SellerOverviewPage /> },
-                  { path: 'products', element: <SellerProductsPage /> },
-                  { path: 'orders', element: <SellerOrdersPage /> },
-                  { path: 'orders/:id', element: <SellerOrderDetailPage /> },
-                ],
-              },
             ],
           },
         ],

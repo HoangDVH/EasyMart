@@ -154,7 +154,7 @@ export function ProductFormModal({
               ) : null}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="seller-product-brand">Brand ID</Label>
+              <Label htmlFor="seller-product-brand">Mã thương hiệu</Label>
               <Input
                 id="seller-product-brand"
                 {...register('brandId')}

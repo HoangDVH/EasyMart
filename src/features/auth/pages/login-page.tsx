@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { authApi } from '@/features/auth/api/auth.api'
 import { useLoginMutation } from '@/features/auth/hooks/use-auth'
 import {
   loginSchema,
@@ -48,19 +49,19 @@ export function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       await loginMutation.mutateAsync(data)
+      const profile = await authApi.getProfile()
       toast.success('Đăng nhập thành công!')
+      const redirect = resolvePostLoginPath(
+        location.search,
+        (location.state as { from?: { pathname?: string } } | null)?.from?.pathname,
+        profile.role,
+      )
+      navigate(redirect, { replace: true })
     } catch (error) {
       toast.error(
         getApiErrorMessage(error, 'Vui lòng kiểm tra lại email hoặc mật khẩu.'),
       )
-      return
     }
-
-    const redirect = resolvePostLoginPath(
-      location.search,
-      location.state?.from?.pathname,
-    )
-    navigate(redirect, { replace: true })
   }
 
   return (

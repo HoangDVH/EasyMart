@@ -118,36 +118,6 @@ export function AppLayout() {
     if (pathname === '/payment/result') {
       return [{ label: 'Trang chủ', to: '/' }, { label: 'Kết quả thanh toán' }]
     }
-    if (/^\/seller\/orders\/[^/]+$/.test(pathname)) {
-      return [
-        { label: 'Trang chủ', to: '/' },
-        { label: 'Kênh người bán', to: '/seller' },
-        { label: 'Lịch sử đơn hàng', to: '/seller/orders' },
-        { label: 'Chi tiết đơn' },
-      ]
-    }
-    if (pathname.startsWith('/seller/orders')) {
-      return [
-        { label: 'Trang chủ', to: '/' },
-        { label: 'Kênh người bán', to: '/seller' },
-        { label: 'Lịch sử đơn hàng' },
-      ]
-    }
-    if (pathname.startsWith('/seller/products')) {
-      return [
-        { label: 'Trang chủ', to: '/' },
-        { label: 'Kênh người bán', to: '/seller' },
-        { label: 'Quản lý sản phẩm' },
-      ]
-    }
-    if (pathname.startsWith('/seller')) {
-      return [
-        { label: 'Trang chủ', to: '/' },
-        { label: 'Kênh người bán', to: '/seller' },
-        { label: 'Tổng quan' },
-      ]
-    }
-    if (pathname === '/admin') return [{ label: 'Trang chủ', to: '/' }, { label: 'Admin' }]
     if (pathname === '/account') {
       return [{ label: 'Trang chủ', to: '/' }, { label: 'Tài khoản' }]
     }

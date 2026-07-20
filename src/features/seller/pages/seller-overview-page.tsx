@@ -22,7 +22,7 @@ import {
   LOW_STOCK_THRESHOLD,
 } from '@/features/seller/components/seller-types'
 import { cn } from '@/shared/lib/utils'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { Card, CardContent } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { SellerStatsCards } from '@/features/seller/components/seller-stats-cards'
 
@@ -137,7 +137,7 @@ export function SellerOverviewPage() {
   const hasRevenue = chartData.some((point) => point.revenue > 0)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <SellerStatsCards
         isLoading={productsQuery.isPending || ordersQuery.isPending}
         totalProducts={products.length}
@@ -147,12 +147,12 @@ export function SellerOverviewPage() {
       />
 
       <Card>
-        <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <CardTitle className="text-base">Biểu đồ doanh thu</CardTitle>
-            <CardDescription>
+            <h2 className="text-base font-semibold">Biểu đồ doanh thu</h2>
+            <p className="text-sm text-muted-foreground">
               {formatVnd(rangeRevenue)} · {rangeOrders} đơn đã thanh toán trong {rangeDays} ngày qua
-            </CardDescription>
+            </p>
           </div>
           <div className="flex shrink-0 gap-1 rounded-lg border bg-muted/40 p-1">
             {RANGE_OPTIONS.map((option) => (
@@ -171,14 +171,13 @@ export function SellerOverviewPage() {
               </button>
             ))}
           </div>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <CardContent className="pt-4">
           {ordersQuery.isPending ? (
             <Skeleton className="h-72 w-full" />
           ) : (
             <div className="relative h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                {/* Combo cột + đường như dashboard bán hàng (KiotViet/Sapo): cột = doanh thu, đường = số đơn. */}
                 <ComposedChart data={chartData} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
                   <XAxis

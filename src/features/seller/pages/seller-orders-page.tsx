@@ -1,16 +1,7 @@
-import { useMemo, useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { RefreshCw, Search, X } from 'lucide-react'
 import { isAxiosError } from 'axios'
 import { toast } from 'react-toastify'
-import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { getApiErrorMessage } from '@/shared/lib/api-error'
-import { useAuthStore } from '@/shared/stores/auth-store'
-import {
-  useSellerOrderHistoryQuery,
-  useSellerProductsQuery,
-  useUpdateSellerOrderStatusMutation,
-} from '@/features/seller/hooks/use-seller'
 import {
   FULFILLMENT_LABELS,
   getOrderFulfillmentStatus,
@@ -18,9 +9,19 @@ import {
   isOrderPaid,
 } from '@/features/orders/lib/fulfillment'
 import type { Order } from '@/features/orders/types/order.types'
-import { cn } from '@/shared/lib/utils'
-import { SellerOrdersHistoryPanel } from '@/features/seller/components/seller-orders-history-panel'
+import { SellerOrdersTable } from '@/features/seller/components/seller-orders-table'
 import { SellerStatsCards } from '@/features/seller/components/seller-stats-cards'
+import {
+  useSellerOrderHistoryQuery,
+  useUpdateSellerOrderStatusMutation,
+} from '@/features/seller/hooks/use-seller'
+import { getApiErrorMessage } from '@/shared/lib/api-error'
+import { cn } from '@/shared/lib/utils'
+import { useAuthStore } from '@/shared/stores/auth-store'
+import { Button } from '@/shared/ui/button'
+import { Card, CardContent } from '@/shared/ui/card'
+import { Input } from '@/shared/ui/input'
+import { Select } from '@/shared/ui/select'
 
 type OrderTabValue =
   | 'all'
@@ -31,8 +32,8 @@ type OrderTabValue =
   | 'delivered'
   | 'cancelled'
 
-const ORDER_TABS: { value: OrderTabValue; label: string }[] = [
-  { value: 'all', label: 'Tất cả' },
+const ORDER_FILTERS: { value: OrderTabValue; label: string }[] = [
+  { value: 'all', label: 'Tất cả trạng thái' },
   { value: 'unpaid', label: 'Chờ thanh toán' },
   { value: 'awaiting', label: 'Chờ xác nhận' },
   { value: 'processing', label: 'Đang chuẩn bị' },
@@ -41,12 +42,13 @@ const ORDER_TABS: { value: OrderTabValue; label: string }[] = [
   { value: 'cancelled', label: 'Đã hủy' },
 ]
 
+const PAGE_SIZE = 10
+
 function isCancelledOrder(order: Order): boolean {
   const code = order.status.toUpperCase()
   return code.includes('CANCEL') || code.includes('FAIL') || code.includes('REJECT')
 }
 
-/** Phân loại đơn vào 1 tab duy nhất theo mức ưu tiên: hủy > chưa thanh toán > tiến trình giao. */
 function getOrderTab(order: Order): Exclude<OrderTabValue, 'all'> {
   if (isCancelledOrder(order)) return 'cancelled'
   if (!isOrderPaid(order)) return 'unpaid'
@@ -68,21 +70,12 @@ function getOrderTab(order: Order): Exclude<OrderTabValue, 'all'> {
 export function SellerOrdersPage() {
   const accessToken = useAuthStore((state) => state.accessToken)
   const sellerOrdersQuery = useSellerOrderHistoryQuery(Boolean(accessToken))
-  const sellerProductsQuery = useSellerProductsQuery(Boolean(accessToken))
   const updateOrderStatusMutation = useUpdateSellerOrderStatusMutation()
-  const [activeTab, setActiveTab] = useState<OrderTabValue>('all')
+  const [statusFilter, setStatusFilter] = useState<OrderTabValue>('all')
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [page, setPage] = useState(0)
 
   const sellerOrders = sellerOrdersQuery.data ?? []
-
-  /** Ảnh đại diện sản phẩm để hiện trong card đơn hàng. */
-  const productImageById = useMemo(() => {
-    const map = new Map<string, string>()
-    for (const product of sellerProductsQuery.data ?? []) {
-      const src = product.images?.[0] ?? product.imageUrl
-      if (src) map.set(String(product.id), src)
-    }
-    return map
-  }, [sellerProductsQuery.data])
 
   const tabCounts = useMemo(() => {
     const counts: Record<OrderTabValue, number> = {
@@ -100,26 +93,35 @@ export function SellerOrdersPage() {
     return counts
   }, [sellerOrders])
 
-  const visibleOrders = useMemo(() => {
-    if (activeTab === 'all') return sellerOrders
-    return sellerOrders.filter((order) => getOrderTab(order) === activeTab)
-  }, [sellerOrders, activeTab])
+  const filteredOrders = useMemo(() => {
+    const keyword = searchKeyword.trim().toLowerCase()
+    return sellerOrders.filter((order) => {
+      if (statusFilter !== 'all' && getOrderTab(order) !== statusFilter) return false
+      if (!keyword) return true
+      return (
+        order.id.toLowerCase().includes(keyword) ||
+        (order.userEmail ?? '').toLowerCase().includes(keyword)
+      )
+    })
+  }, [sellerOrders, statusFilter, searchKeyword])
 
-  const totalSoldUnits = useMemo(
-    () =>
-      sellerOrders.reduce(
-        (sum, order) => sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0),
-        0,
-      ),
-    [sellerOrders],
-  )
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))
+
+  useEffect(() => {
+    setPage(0)
+  }, [searchKeyword, statusFilter])
+
+  useEffect(() => {
+    if (page > totalPages - 1) setPage(Math.max(0, totalPages - 1))
+  }, [page, totalPages])
+
+  const pageOrders = useMemo(() => {
+    const start = page * PAGE_SIZE
+    return filteredOrders.slice(start, start + PAGE_SIZE)
+  }, [filteredOrders, page])
 
   const paidRevenue = useMemo(
-    () =>
-      sellerOrders.reduce(
-        (sum, order) => (order.status === 'PAID' ? sum + order.totalAmount : sum),
-        0,
-      ),
+    () => sellerOrders.reduce((sum, order) => (isOrderPaid(order) ? sum + order.totalAmount : sum), 0),
     [sellerOrders],
   )
 
@@ -148,7 +150,7 @@ export function SellerOrdersPage() {
     : null
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <SellerStatsCards
         isLoading={sellerOrdersQuery.isPending}
         totalProducts={null}
@@ -158,78 +160,81 @@ export function SellerOrdersPage() {
       />
 
       <Card>
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <CardTitle>Đơn hàng</CardTitle>
-              <CardDescription>
-                Tổng {sellerOrders.length} đơn · đã bán {totalSoldUnits} sản phẩm.
-              </CardDescription>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5"
-              onClick={() => void sellerOrdersQuery.refetch()}
-              disabled={sellerOrdersQuery.isFetching}
-            >
-              <RefreshCw
-                className={cn('h-3.5 w-3.5', sellerOrdersQuery.isFetching && 'animate-spin')}
-              />
-              {sellerOrdersQuery.isFetching ? 'Đang tải...' : 'Làm mới'}
-            </Button>
+        <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Danh sách đơn hàng</h2>
+            <p className="text-sm text-muted-foreground">
+              {sellerOrdersQuery.isPending
+                ? 'Đang tải…'
+                : `${filteredOrders.length} / ${sellerOrders.length} đơn`}
+            </p>
           </div>
-
-          {/* Tab trạng thái đơn — kiểu Shopee/Lazada seller center */}
-          <div
-            role="tablist"
-            aria-label="Lọc theo trạng thái đơn"
-            className="flex gap-1 overflow-x-auto border-b [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2 self-start sm:self-auto"
+            onClick={() => void sellerOrdersQuery.refetch()}
+            disabled={sellerOrdersQuery.isFetching}
           >
-            {ORDER_TABS.map((tab) => {
-              const active = activeTab === tab.value
-              const count = tabCounts[tab.value]
+            <RefreshCw
+              className={cn('h-4 w-4', sellerOrdersQuery.isFetching && 'animate-spin')}
+              aria-hidden
+            />
+            Làm mới
+          </Button>
+        </div>
+
+        <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center">
+          <div className="relative flex-1 md:max-w-sm">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+            <Input
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              placeholder="Tìm mã đơn hoặc email…"
+              className="pl-9 pr-9"
+              aria-label="Tìm đơn hàng"
+            />
+            {searchKeyword ? (
+              <button
+                type="button"
+                className="absolute right-2.5 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label="Xóa từ khóa"
+                onClick={() => setSearchKeyword('')}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+          </div>
+          <Select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as OrderTabValue)}
+            className="md:w-56"
+            aria-label="Lọc theo trạng thái"
+          >
+            {ORDER_FILTERS.map((option) => {
+              const count = tabCounts[option.value]
               return (
-                <button
-                  key={tab.value}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  className={cn(
-                    'relative shrink-0 whitespace-nowrap px-3 pb-2.5 pt-1.5 text-sm transition-colors',
-                    active ? 'font-medium text-primary' : 'text-muted-foreground hover:text-foreground',
-                  )}
-                  onClick={() => setActiveTab(tab.value)}
-                >
-                  {tab.label}
-                  {count > 0 ? (
-                    <span
-                      className={cn(
-                        'ml-1.5 rounded-full px-1.5 py-0.5 text-[11px] tabular-nums',
-                        active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
-                      )}
-                    >
-                      {count}
-                    </span>
-                  ) : null}
-                  {active ? (
-                    <span
-                      className="absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-primary"
-                      aria-hidden
-                    />
-                  ) : null}
-                </button>
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                  {count > 0 ? ` (${count})` : ''}
+                </option>
               )
             })}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <SellerOrdersHistoryPanel
-            orders={visibleOrders}
-            productImageById={productImageById}
+          </Select>
+        </div>
+
+        <CardContent className="p-0">
+          <SellerOrdersTable
+            orders={pageOrders}
             isLoading={sellerOrdersQuery.isPending}
             isError={sellerOrdersQuery.isError}
             errorText={ordersErrorText}
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
             updatingOrderId={
               updateOrderStatusMutation.isPending
                 ? updateOrderStatusMutation.variables?.orderId ?? null
