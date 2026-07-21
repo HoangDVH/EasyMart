@@ -56,8 +56,9 @@ export function AppLayout() {
   const showSellerNav =
     profile?.role === 'ADMIN' || profile?.role === 'SELLER' || profile?.roles?.includes('SELLER')
 
-  /** Một kết nối STOMP dùng chung mọi role — chuông navbar nhận thông báo realtime. */
-  useOrdersRealtime(Boolean(effectiveToken))
+  /** Một kết nối STOMP dùng chung mọi role — chuông navbar nhận thông báo realtime.
+   * Chờ profile để biết role trước khi gắn audience thông báo. */
+  useOrdersRealtime(Boolean(effectiveToken && profile))
 
   /** VNPay return URL backend có thể cấu hình về `/` — chuyển sang trang thành công hoặc handler chuẩn. */
   useEffect(() => {
@@ -120,6 +121,13 @@ export function AppLayout() {
     }
     if (pathname === '/account') {
       return [{ label: 'Trang chủ', to: '/' }, { label: 'Tài khoản' }]
+    }
+    if (pathname === '/account/addresses') {
+      return [
+        { label: 'Trang chủ', to: '/' },
+        { label: 'Tài khoản', to: '/account' },
+        { label: 'Sổ địa chỉ' },
+      ]
     }
     if (pathname === '/account/orders') {
       return [

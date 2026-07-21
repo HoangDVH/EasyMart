@@ -7,10 +7,15 @@ import {
 } from '@/features/account/api/users.api'
 
 export const usersQueryKeyRoot = ['users'] as const
+const PROFILE_QUERY_KEY = ['profile'] as const
 
 export function useUpdateMyInfoMutation() {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (payload: UserUpdatePayload) => usersApi.updateMe(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY })
+    },
   })
 }
 

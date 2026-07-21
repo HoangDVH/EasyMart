@@ -138,14 +138,26 @@ function notifyOrderEvent(event: OrderRealtimeEvent, rawOrder: unknown) {
   const role = auth.user?.role
   const isBuyerOfOrder =
     Boolean(email) && Boolean(order.userEmail) && order.userEmail.trim().toLowerCase() === email
+  /** Đơn có sản phẩm của seller đang login (kể cả khi seller tự mua để test). */
+  const sellsThisOrder =
+    Boolean(email) &&
+    order.items.some(
+      (item) =>
+        Boolean(item.sellerEmail) && item.sellerEmail!.trim().toLowerCase() === email,
+    )
   const sellerCapable = hasSellerCapability(roles, role)
   const adminCapable = isAdmin(roles, role)
+  /** Seller/admin nhận tin khi bán SP trong đơn; admin luôn nhận nếu có quyền. */
+  const shouldNotifySeller =
+    (adminCapable && sellerCapable) ||
+    (sellerCapable && (sellsThisOrder || !isBuyerOfOrder))
 
   const store = useOrderNotificationsStore.getState()
   const eventType = (event.type ?? '').toUpperCase()
   const fulfillment = getOrderFulfillmentStatus(order)
   const statusLabel = fulfillment ? FULFILLMENT_LABELS[fulfillment] : order.status
   const isCreatedEvent = eventType.includes('CREATED')
+  const isFulfillmentEvent = eventType.includes('FULFILLMENT')
   const products = orderProductSnapshots(order)
 
   if (isCreatedEvent) {
@@ -162,7 +174,7 @@ function notifyOrderEvent(event: OrderRealtimeEvent, rawOrder: unknown) {
         products,
       })
     }
-    if (sellerCapable && !isBuyerOfOrder) {
+    if (shouldNotifySeller) {
       store.addUnique({
         orderId: order.id,
         type: 'new-order',
@@ -176,8 +188,11 @@ function notifyOrderEvent(event: OrderRealtimeEvent, rawOrder: unknown) {
     return
   }
 
-  /** Trạng thái khởi tạo (= vừa tạo đơn) — không báo lần 2 cho mọi role. */
-  if (fulfillment === 'AWAITING_CONFIRMATION') return
+  /**
+   * Chỉ bỏ qua FULFILLMENT khởi tạo (AWAITING) — tránh báo trùng với CREATED.
+   * Không nuốt ORDER_STATUS_CHANGED (vd. PAID sau COD/VNPay) dù fulfillment vẫn AWAITING.
+   */
+  if (isFulfillmentEvent && fulfillment === 'AWAITING_CONFIRMATION') return
 
   /**
    * Vừa có tin "đơn mới / đặt hàng thành công" rồi thì bỏ qua các STATUS đi kèm
@@ -196,12 +211,16 @@ function notifyOrderEvent(event: OrderRealtimeEvent, rawOrder: unknown) {
     })
   }
 
-  if (sellerCapable && !isBuyerOfOrder) {
+  if (shouldNotifySeller) {
+    const paidNow =
+      eventType.includes('STATUS') && order.status.toUpperCase().includes('PAID')
     store.addUnique({
       orderId: order.id,
       type: 'status-update',
       audience: adminCapable ? 'admin' : 'seller',
-      message: `Đơn #${order.id} cập nhật trạng thái: "${statusLabel}".`,
+      message: paidNow
+        ? `Đơn #${order.id} đã thanh toán — cần xử lý giao hàng.`
+        : `Đơn #${order.id} cập nhật trạng thái: "${statusLabel}".`,
       href: `/seller/orders/${order.id}`,
       products,
     })

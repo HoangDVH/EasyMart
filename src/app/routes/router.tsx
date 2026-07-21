@@ -6,6 +6,7 @@ import { ProtectedRoute, RoleGuard } from '@/app/routes/guards'
 import { RouteErrorBoundary } from '@/shared/ui/route-error-boundary'
 import {
   AccountLayout,
+  AddressesPage,
   AdminPage,
   CartPage,
   CheckoutPage,
@@ -100,6 +101,7 @@ export const router = createBrowserRouter([
             element: <AccountLayout />,
             children: [
               { index: true, element: <ProfilePage /> },
+              { path: 'addresses', element: <AddressesPage /> },
               { path: 'orders', element: <MyOrdersPage /> },
               { path: 'orders/:id', element: <OrderDetailPage /> },
               { path: 'payments', element: <MyPaymentsPage /> },

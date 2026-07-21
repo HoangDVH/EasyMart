@@ -4,6 +4,8 @@ export type UserRole = 'ADMIN' | 'SELLER' | 'USER'
 export type User = {
   id: string
   email: string
+  fullName: string | null
+  phone: string | null
   roles: string[]
   /** Ưu tiên ADMIN → SELLER → USER khi backend cho nhiều vai */
   role: UserRole

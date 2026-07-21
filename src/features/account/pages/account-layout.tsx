@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { CreditCard, Receipt, UserCog, UserRound } from 'lucide-react'
+import { CreditCard, MapPin, Receipt, UserCog, UserRound } from 'lucide-react'
 import { useProfileQuery } from '@/features/auth/hooks/use-auth'
 import { useAuthStore } from '@/shared/stores/auth-store'
 import { cn } from '@/shared/lib/utils'
@@ -20,6 +20,11 @@ const navItems: NavItem[] = [
     label: 'Tài khoản',
     icon: UserCog,
     end: true,
+  },
+  {
+    to: '/account/addresses',
+    label: 'Sổ địa chỉ',
+    icon: MapPin,
   },
   {
     to: '/account/orders',
@@ -80,9 +85,11 @@ export function AccountLayout() {
                 ) : (
                   <>
                     <p className="truncate text-sm font-semibold text-foreground">
-                      {profile?.email ?? 'Người dùng'}
+                      {profile?.fullName || profile?.email || 'Người dùng'}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="truncate text-xs text-muted-foreground">
+                      {profile?.fullName ? profile.email : null}
+                      {profile?.fullName ? ' · ' : null}
                       {profile?.role === 'ADMIN'
                         ? 'Quản trị viên'
                         : profile?.role === 'SELLER'

@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, CalendarDays, Loader2, MapPin, Package, Phone, RefreshCw, User } from 'lucide-react'
+import { CalendarDays, Loader2, MapPin, Package, Phone, RefreshCw, User } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useOrderQuery } from '@/features/orders/hooks/use-orders'
 import { useInitVnpayMutation } from '@/features/payments/hooks/use-payments'
@@ -17,7 +17,7 @@ import { OrderItemThumb } from '@/features/orders/components/order-item-thumb'
 import { OrderStatusTimeline } from '@/features/orders/components/order-status-timeline'
 import { getOrderFulfillmentStatus } from '@/features/orders/lib/fulfillment'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
-import { loadOrderShipping } from '@/shared/lib/shipping-storage'
+import { resolveOrderShipping } from '@/features/orders/lib/resolve-order-shipping'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -33,12 +33,10 @@ export function OrderDetailPage() {
   const { id } = useParams()
   const orderQuery = useOrderQuery(id ?? null)
   const initVnpay = useInitVnpayMutation()
-  const shipping = id ? loadOrderShipping(id) : null
 
   if (orderQuery.isPending) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-8 w-48" />
         <Card>
           <CardHeader>
             <Skeleton className="h-6 w-40" />
@@ -72,11 +70,15 @@ export function OrderDetailPage() {
   }
 
   const order = orderQuery.data
+  const shipping = resolveOrderShipping(order)
   const fulfillmentStatus = getOrderFulfillmentStatus(order)
   const meta = orderDisplayMeta(order, { paymentMethod: shipping?.paymentMethod })
   const totalQty = order.items.reduce((sum, it) => sum + it.quantity, 0)
   const showVnpayRetry =
     shipping?.paymentMethod === 'VNPAY' && isPendingPayment(order.status)
+  const displaySubtotal =
+    order.subtotal ?? order.items.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0)
+  const displayShippingFee = order.shippingFee
 
   const handleRetryVnpay = async () => {
     try {
@@ -93,14 +95,6 @@ export function OrderDetailPage() {
 
   return (
     <div className="space-y-4">
-      <Link
-        to="/account/orders"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Quay lại đơn mua
-      </Link>
-
       <Card>
         <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
@@ -127,31 +121,37 @@ export function OrderDetailPage() {
             fulfillmentStatus={fulfillmentStatus}
           />
 
-          {shipping ? (
+          {shipping && (shipping.customerName || shipping.phone || shipping.address) ? (
             <div className="rounded-lg border bg-muted/20 p-4">
               <h3 className="mb-3 text-sm font-semibold">Thông tin giao hàng</h3>
               <dl className="space-y-2 text-sm">
-                <div className="flex items-start gap-2">
-                  <User className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Người nhận</dt>
-                    <dd>{shipping.customerName}</dd>
+                {shipping.customerName ? (
+                  <div className="flex items-start gap-2">
+                    <User className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Người nhận</dt>
+                      <dd>{shipping.customerName}</dd>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Phone className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Số điện thoại</dt>
-                    <dd>{shipping.phone}</dd>
+                ) : null}
+                {shipping.phone ? (
+                  <div className="flex items-start gap-2">
+                    <Phone className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Số điện thoại</dt>
+                      <dd>{shipping.phone}</dd>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Địa chỉ</dt>
-                    <dd>{shipping.address}</dd>
+                ) : null}
+                {shipping.address ? (
+                  <div className="flex items-start gap-2">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Địa chỉ</dt>
+                      <dd>{shipping.address}</dd>
+                    </div>
                   </div>
-                </div>
+                ) : null}
                 {shipping.paymentMethod ? (
                   <div>
                     <dt className="text-xs text-muted-foreground">Thanh toán</dt>
@@ -191,29 +191,47 @@ export function OrderDetailPage() {
             </ul>
           </div>
 
-          <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-sm text-muted-foreground">Tổng thanh toán</span>
-            <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-end">
-              <span className="text-xl font-semibold text-primary">{formatVnd(order.totalAmount)}</span>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                {showVnpayRetry ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    disabled={initVnpay.isPending}
-                    onClick={() => void handleRetryVnpay()}
-                  >
-                    {initVnpay.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-4 w-4" />
-                    )}
-                    Thanh toán lại VNPay
-                  </Button>
-                ) : null}
-                <OrderCancelButton orderId={order.id} status={order.status} />
+          <div className="space-y-2 border-t pt-4 text-sm">
+            <div className="flex justify-between text-muted-foreground">
+              <span>Tạm tính</span>
+              <span className="tabular-nums">{formatVnd(displaySubtotal)}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>Phí vận chuyển</span>
+              <span className="tabular-nums">
+                {displayShippingFee == null
+                  ? '—'
+                  : displayShippingFee === 0
+                    ? 'Miễn phí'
+                    : formatVnd(displayShippingFee)}
+              </span>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span className="font-medium">Tổng thanh toán</span>
+              <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-end">
+                <span className="text-xl font-semibold text-primary">
+                  {formatVnd(order.totalAmount)}
+                </span>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  {showVnpayRetry ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      disabled={initVnpay.isPending}
+                      onClick={() => void handleRetryVnpay()}
+                    >
+                      {initVnpay.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                      Thanh toán lại VNPay
+                    </Button>
+                  ) : null}
+                  <OrderCancelButton orderId={order.id} status={order.status} />
+                </div>
               </div>
             </div>
           </div>

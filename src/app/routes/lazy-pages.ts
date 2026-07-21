@@ -56,6 +56,10 @@ export const ProfilePage = lazyPage(
   () => import('@/features/account/pages/profile-page'),
   'ProfilePage',
 )
+export const AddressesPage = lazyPage(
+  () => import('@/features/account/pages/addresses-page'),
+  'AddressesPage',
+)
 
 export const MyOrdersPage = lazyPage(
   () => import('@/features/orders/pages/my-orders-page'),

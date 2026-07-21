@@ -5,7 +5,9 @@ import type { User, UserRole } from '@/features/auth/types/auth.types'
 const USERS_BASE = '/api/v1/users'
 
 export type UserUpdatePayload = {
-  password: string
+  password?: string
+  fullName?: string
+  phone?: string
 }
 
 export type AdminCreateUserPayload = {
@@ -21,6 +23,8 @@ export type AdminRolePayload = {
 type RawUser = {
   id?: unknown
   email?: unknown
+  fullName?: unknown
+  phone?: unknown
   roles?: unknown
 }
 
@@ -51,6 +55,8 @@ function mapUser(raw: RawUser | null | undefined): User | null {
   return {
     id,
     email,
+    fullName: typeof raw.fullName === 'string' && raw.fullName.trim() ? raw.fullName : null,
+    phone: typeof raw.phone === 'string' && raw.phone.trim() ? raw.phone : null,
     roles,
     role: normalizeRole(roles),
   }

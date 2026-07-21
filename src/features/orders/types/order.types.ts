@@ -15,7 +15,14 @@ export type Order = {
   id: string
   userEmail: string
   items: OrderItem[]
+  /** Tổng tiền hàng (chưa gồm ship). Null nếu đơn cũ / API không trả. */
+  subtotal: number | null
+  /** Phí ship backend tính. Null nếu đơn cũ. */
+  shippingFee: number | null
   totalAmount: number
+  receiverName: string | null
+  receiverPhone: string | null
+  shippingAddress: string | null
   status: OrderStatus
   createdAt: string | null
   /**
@@ -27,4 +34,7 @@ export type Order = {
 
 export type CreateOrderPayload = {
   items: { productId: string; quantity: number }[]
+  receiverName: string
+  receiverPhone: string
+  shippingAddress: string
 }

@@ -30,9 +30,9 @@ export function RelatedProducts({ productId, categoryId }: RelatedProductsProps)
 
   if (listQuery.isPending) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-4">
         <h2 className="text-lg font-semibold">Sản phẩm liên quan</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-48 w-full rounded-xl" />
           ))}
@@ -44,9 +44,9 @@ export function RelatedProducts({ productId, categoryId }: RelatedProductsProps)
   if (related.length === 0) return null
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-4">
       <h2 className="text-lg font-semibold">Sản phẩm liên quan</h2>
-      <div className="stagger-children grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger-children grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {related.map((product) => (
           <RelatedProductCard key={product.id} product={product} />
         ))}
@@ -62,7 +62,7 @@ function RelatedProductCard({ product }: { product: Product }) {
   return (
     <Link to={`/products/${product.id}`}>
       <Card className="h-full overflow-hidden border-border/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/10">
-        <div className="aspect-square bg-gradient-to-br from-muted/70 via-background to-muted/40 p-2">
+        <div className="aspect-square bg-card p-2">
           {image ? (
             <img src={image} alt={product.name} className="h-full w-full object-contain" loading="lazy" />
           ) : (

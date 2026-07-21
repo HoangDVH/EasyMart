@@ -20,6 +20,8 @@ type AuthenticationResponse = {
 type UserResponse = {
   id: string
   email: string
+  fullName?: string | null
+  phone?: string | null
   roles?: string[]
 }
 
@@ -40,6 +42,8 @@ function mapUser(data: UserResponse): User {
   return {
     id: data.id,
     email: data.email,
+    fullName: typeof data.fullName === 'string' && data.fullName.trim() ? data.fullName : null,
+    phone: typeof data.phone === 'string' && data.phone.trim() ? data.phone : null,
     roles,
     role: normalizeRole(roles),
   }

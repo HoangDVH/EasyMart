@@ -80,8 +80,9 @@ export function DashboardLayout() {
   const profile = profileQuery.data
   const realtimeStatus = useOrdersRealtimeStore((state) => state.status)
 
-  /** Một kết nối STOMP cho seller/admin khi không còn nằm trong AppLayout. */
-  useOrdersRealtime(Boolean(accessToken))
+  /** Một kết nối STOMP cho seller/admin khi không còn nằm trong AppLayout.
+   * Chờ profile vào store để phân audience seller/buyer đúng. */
+  useOrdersRealtime(Boolean(accessToken && profile))
 
   const isAdminArea = location.pathname.startsWith('/admin')
   const navItems = isAdminArea ? ADMIN_NAV : SELLER_NAV

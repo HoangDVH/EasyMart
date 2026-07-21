@@ -254,12 +254,12 @@ function ProductCatalogCard({ product }: { product: Product }) {
       <div className="relative px-3 pt-3">
         <Link
           to={`/products/${product.id}`}
-          className="relative isolate block h-48 w-full shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-muted/70 via-background to-muted/40 md:h-52"
+          className="relative isolate block h-48 w-full shrink-0 overflow-hidden rounded-lg bg-card md:h-52"
           onMouseEnter={prefetchDetail}
           onFocus={prefetchDetail}
         >
           {needsDetailImage && detailForImage.isPending ? (
-            <div className="absolute inset-0 animate-pulse bg-muted/80" />
+            <div className="absolute inset-0 animate-pulse bg-card" />
           ) : (
             <ProductImage
               product={merged}

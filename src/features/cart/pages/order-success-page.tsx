@@ -6,7 +6,7 @@ import { useOrderQuery } from '@/features/orders/hooks/use-orders'
 import { OrderIdDisplay } from '@/features/orders/components/order-id-display'
 import { formatVnd } from '@/features/orders/components/order-formatters'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
-import { loadOrderShipping } from '@/shared/lib/shipping-storage'
+import { resolveOrderShipping } from '@/features/orders/lib/resolve-order-shipping'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
@@ -21,7 +21,7 @@ export function OrderSuccessPage() {
     [orderIdParam],
   )
   const orderQuery = useOrderQuery(orderId ?? null)
-  const shipping = orderId ? loadOrderShipping(orderId) : null
+  const shipping = resolveOrderShipping(orderQuery.data, orderId ?? undefined)
   const paymentMethod = shipping?.paymentMethod ?? 'VNPAY'
 
   useEffect(() => {
@@ -120,6 +120,25 @@ export function OrderSuccessPage() {
             {order ? (
               <>
                 <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Tạm tính</span>
+                  <span className="tabular-nums">
+                    {formatVnd(
+                      order.subtotal ??
+                        order.items.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0),
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Phí vận chuyển</span>
+                  <span className="tabular-nums">
+                    {order.shippingFee == null
+                      ? '—'
+                      : order.shippingFee === 0
+                        ? 'Miễn phí'
+                        : formatVnd(order.shippingFee)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Tổng thanh toán</span>
                   <span className="font-semibold text-primary">{formatVnd(order.totalAmount)}</span>
                 </div>
@@ -150,7 +169,7 @@ export function OrderSuccessPage() {
             </p>
           )}
 
-          {shipping ? (
+          {shipping && (shipping.customerName || shipping.phone || shipping.address) ? (
             <div className="flex items-start gap-2 rounded-lg border p-3 text-xs text-muted-foreground">
               <Package className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
               <div>

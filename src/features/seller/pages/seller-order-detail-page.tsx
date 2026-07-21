@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, ImageOff, Loader2, PackageCheck, RefreshCw } from 'lucide-react'
+import { ArrowLeft, ImageOff, Loader2, MapPin, PackageCheck, Phone, RefreshCw, User } from 'lucide-react'
 import { isAxiosError } from 'axios'
 import { toast } from 'react-toastify'
 import {
@@ -182,6 +182,40 @@ export function SellerOrderDetailPage() {
                   </Badge>
                 ) : null}
               </div>
+              {(order.receiverName || order.receiverPhone || order.shippingAddress) && (
+                <div className="space-y-2 rounded-lg border bg-muted/20 p-3 text-sm sm:col-span-2 lg:col-span-4">
+                  <p className="text-xs font-medium text-muted-foreground">Giao hàng</p>
+                  {order.receiverName ? (
+                    <p className="flex items-center gap-2">
+                      <User className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                      {order.receiverName}
+                    </p>
+                  ) : null}
+                  {order.receiverPhone ? (
+                    <p className="flex items-center gap-2">
+                      <Phone className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                      {order.receiverPhone}
+                    </p>
+                  ) : null}
+                  {order.shippingAddress ? (
+                    <p className="flex items-start gap-2">
+                      <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                      <span>{order.shippingAddress}</span>
+                    </p>
+                  ) : null}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-xs text-muted-foreground">
+                    {order.subtotal != null ? (
+                      <span>Tạm tính: {formatVnd(order.subtotal)}</span>
+                    ) : null}
+                    {order.shippingFee != null ? (
+                      <span>
+                        Ship:{' '}
+                        {order.shippingFee === 0 ? 'Miễn phí' : formatVnd(order.shippingFee)}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
