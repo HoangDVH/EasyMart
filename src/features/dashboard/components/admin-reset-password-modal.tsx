@@ -51,7 +51,13 @@ export function AdminResetPasswordModal({
       <div className="w-full max-w-md rounded-xl border bg-background shadow-xl">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h3 className="text-base font-semibold">Đặt lại mật khẩu</h3>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-10 w-10 p-0"
+            onClick={onClose}
+            aria-label="Đóng"
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>

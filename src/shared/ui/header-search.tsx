@@ -220,10 +220,10 @@ export function HeaderSearch({ className }: { className?: string }) {
                 setValue('')
                 inputRef.current?.focus()
               }}
-              className="absolute right-14 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground sm:right-16"
+              className="absolute right-12 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground sm:right-14"
               aria-label="Xóa từ khoá"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-4 w-4" />
             </button>
           ) : null}
           <button
@@ -268,22 +268,21 @@ export function HeaderSearch({ className }: { className?: string }) {
                   role="option"
                   aria-selected={activeIdx === i}
                 >
-                  <span className="flex items-center gap-2 text-foreground">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    {q}
+                  <span className="flex min-w-0 items-center gap-2 text-foreground">
+                    <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span className="truncate">{q}</span>
                   </span>
-                  <span
-                    role="button"
-                    tabIndex={-1}
+                  <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation()
                       removeRecent(q)
                     }}
-                    className="rounded p-1 text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:bg-background hover:text-foreground"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground sm:h-8 sm:w-8"
                     aria-label={`Xóa lịch sử "${q}"`}
                   >
-                    <X className="h-3 w-3" />
-                  </span>
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </button>
               ))}
             </div>
@@ -359,11 +358,13 @@ export function HeaderSearch({ className }: { className?: string }) {
               <button
                 type="button"
                 onClick={() => goSearch(value)}
-                className="mt-1 flex w-full items-center justify-between rounded-md border-t px-2 py-2 text-left text-sm hover:bg-muted/60"
+                className="mt-1 flex w-full items-center justify-between rounded-md border-t px-2 py-2.5 text-left text-sm hover:bg-muted/60"
               >
-                <span className="flex items-center gap-2 text-primary">
-                  <Search className="h-3.5 w-3.5" />
-                  Xem tất cả kết quả cho "{value.trim()}"
+                <span className="flex min-w-0 items-center gap-2 text-primary">
+                  <Search className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">
+                    Xem tất cả kết quả cho &ldquo;{value.trim()}&rdquo;
+                  </span>
                 </span>
               </button>
             </div>

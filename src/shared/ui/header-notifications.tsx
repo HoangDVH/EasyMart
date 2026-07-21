@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { Bell, BellOff, CheckCheck, ImageOff, ShoppingBag, Truck } from 'lucide-react'
 import {
@@ -151,7 +152,10 @@ type HeaderNotificationsProps = {
 /** Chuông thông báo trên navbar — lọc theo role của user đang đăng nhập. */
 export function HeaderNotifications({ user, variant = 'onPrimary', label }: HeaderNotificationsProps) {
   const [open, setOpen] = useState(false)
+  const [panelPos, setPanelPos] = useState<{ top: number; left: number; width: number } | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const buttonRef = useRef<HTMLButtonElement | null>(null)
+  const panelRef = useRef<HTMLDivElement | null>(null)
   const notifications = useOrderNotificationsStore((state) => state.notifications)
   const markAllRead = useOrderNotificationsStore((state) => state.markAllRead)
   const markRead = useOrderNotificationsStore((state) => state.markRead)
@@ -163,10 +167,48 @@ export function HeaderNotifications({ user, variant = 'onPrimary', label }: Head
   )
   const unreadCount = visible.reduce((count, item) => (item.read ? count : count + 1), 0)
 
+  useLayoutEffect(() => {
+    if (!open || !buttonRef.current) {
+      setPanelPos(null)
+      return
+    }
+    const place = () => {
+      const btn = buttonRef.current
+      if (!btn) return
+      const rect = btn.getBoundingClientRect()
+      // Trigger bị ẩn (đổi breakpoint mobile/desktop) → đóng panel
+      if (rect.width < 1 || rect.height < 1) {
+        setOpen(false)
+        setPanelPos(null)
+        return
+      }
+      const width = Math.min(400, window.innerWidth - 16)
+      let left = rect.right - width
+      if (left < 8) left = 8
+      if (left + width > window.innerWidth - 8) left = window.innerWidth - width - 8
+      const next = { top: rect.bottom + 8, left, width }
+      setPanelPos((prev) =>
+        prev && prev.top === next.top && prev.left === next.left && prev.width === next.width
+          ? prev
+          : next,
+      )
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [open])
+
   useEffect(() => {
     if (!open) return
     const handleClick = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false)
+      const target = event.target as Node
+      if (containerRef.current?.contains(target)) return
+      if (panelRef.current?.contains(target)) return
+      setOpen(false)
     }
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false)
@@ -182,6 +224,7 @@ export function HeaderNotifications({ user, variant = 'onPrimary', label }: Head
   return (
     <div ref={containerRef} className="relative">
       <button
+        ref={buttonRef}
         type="button"
         aria-label={unreadCount > 0 ? `Thông báo (${unreadCount} chưa đọc)` : 'Thông báo'}
         aria-haspopup="menu"
@@ -208,58 +251,69 @@ export function HeaderNotifications({ user, variant = 'onPrimary', label }: Head
         {label ? <span className="ml-1.5">{label}</span> : null}
       </button>
 
-      {open ? (
-        <div
-          role="menu"
-          className="absolute right-0 z-50 mt-2 w-[min(25rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border bg-background text-foreground shadow-xl"
-        >
-          <div className="flex items-center justify-between gap-2 border-b px-3 py-2.5">
-            <div>
-              <p className="text-sm font-semibold">Thông báo</p>
-              <p className="text-[11px] text-muted-foreground">
-                {user?.role === 'ADMIN'
-                  ? 'Đơn hàng & kênh bán (Admin)'
-                  : user?.role === 'SELLER'
-                    ? 'Đơn bán & đơn mua của bạn'
-                    : 'Cập nhật đơn mua của bạn'}
-              </p>
-            </div>
-            {unreadCount > 0 ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 gap-1 px-2 text-xs"
-                onClick={markAllRead}
-              >
-                <CheckCheck className="h-3.5 w-3.5" />
-                Đã đọc
-              </Button>
-            ) : null}
-          </div>
-
-          <div className="max-h-80 overflow-y-auto p-1.5">
-            {visible.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 px-3 py-8 text-center">
-                <div className="grid h-10 w-10 place-items-center rounded-full bg-muted">
-                  <BellOff className="h-5 w-5 text-muted-foreground/60" aria-hidden />
+      {open && panelPos
+        ? createPortal(
+            <div
+              ref={panelRef}
+              role="menu"
+              style={{
+                position: 'fixed',
+                top: panelPos.top,
+                left: panelPos.left,
+                width: panelPos.width,
+                zIndex: 60,
+              }}
+              className="overflow-hidden rounded-xl border bg-background text-foreground shadow-xl"
+            >
+              <div className="flex items-center justify-between gap-2 border-b px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">Thông báo</p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {user?.role === 'ADMIN'
+                      ? 'Đơn hàng & kênh bán (Admin)'
+                      : user?.role === 'SELLER'
+                        ? 'Đơn bán & đơn mua của bạn'
+                        : 'Cập nhật đơn mua của bạn'}
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">Chưa có thông báo mới.</p>
+                {unreadCount > 0 ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-9 shrink-0 gap-1 px-2 text-xs"
+                    onClick={markAllRead}
+                  >
+                    <CheckCheck className="h-3.5 w-3.5" />
+                    Đã đọc
+                  </Button>
+                ) : null}
               </div>
-            ) : (
-              visible.map((notification) => (
-                <NotificationRow
-                  key={notification.id}
-                  notification={notification}
-                  onRead={(id) => {
-                    markRead(id)
-                    setOpen(false)
-                  }}
-                />
-              ))
-            )}
-          </div>
-        </div>
-      ) : null}
+
+              <div className="max-h-80 overflow-y-auto p-1.5">
+                {visible.length === 0 ? (
+                  <div className="flex flex-col items-center gap-2 px-3 py-8 text-center">
+                    <div className="grid h-10 w-10 place-items-center rounded-full bg-muted">
+                      <BellOff className="h-5 w-5 text-muted-foreground/60" aria-hidden />
+                    </div>
+                    <p className="text-sm text-muted-foreground">Chưa có thông báo mới.</p>
+                  </div>
+                ) : (
+                  visible.map((notification) => (
+                    <NotificationRow
+                      key={notification.id}
+                      notification={notification}
+                      onRead={(id) => {
+                        markRead(id)
+                        setOpen(false)
+                      }}
+                    />
+                  ))
+                )}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   )
 }

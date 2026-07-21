@@ -218,7 +218,7 @@ export function SellerProductsTable({
               <div className="flex items-start gap-3">
                 <input
                   type="checkbox"
-                  className="mt-2 h-5 w-5 shrink-0 accent-primary"
+                  className="mt-2 h-6 w-6 shrink-0 accent-primary"
                   checked={checked}
                   aria-label={`Chọn ${product.name}`}
                   onChange={() => onToggleSelect(String(product.id))}
@@ -249,7 +249,7 @@ export function SellerProductsTable({
               <th className="w-10 px-4 py-3">
                 <input
                   type="checkbox"
-                  className="h-5 w-5 accent-primary"
+                  className="h-6 w-6 accent-primary"
                   checked={allPageSelected}
                   ref={(el) => {
                     if (el) el.indeterminate = !allPageSelected && somePageSelected
@@ -264,7 +264,7 @@ export function SellerProductsTable({
               <th className="px-4 py-3 font-medium">Danh mục</th>
               <th className="px-4 py-3 font-medium">Đánh giá</th>
               <th className="px-4 py-3 font-medium">Ngày tạo</th>
-              <th className="sticky right-0 z-10 border-l bg-[color-mix(in_oklab,var(--color-muted)_40%,var(--color-background))] px-4 py-3 text-right font-medium">
+              <th className="sticky right-0 z-10 border-l bg-[color-mix(in_oklab,var(--color-muted)_40%,var(--color-background))] px-4 py-3 text-right font-medium shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.12)]">
                 Thao tác
               </th>
             </tr>
@@ -281,7 +281,7 @@ export function SellerProductsTable({
                   <td className="px-4 py-2.5">
                     <input
                       type="checkbox"
-                      className="h-5 w-5 accent-primary"
+                      className="h-6 w-6 accent-primary"
                       checked={checked}
                       aria-label={`Chọn ${product.name}`}
                       onChange={() => onToggleSelect(String(product.id))}
@@ -325,7 +325,7 @@ export function SellerProductsTable({
                   </td>
                   <td
                     className={cn(
-                      'sticky right-0 z-10 border-l bg-background px-4 py-2.5 transition-colors',
+                      'sticky right-0 z-10 border-l bg-background px-4 py-2.5 shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.12)] transition-colors',
                       'group-hover:bg-[color-mix(in_oklab,var(--color-muted)_30%,var(--color-background))]',
                       checked &&
                         'bg-[color-mix(in_oklab,var(--color-primary)_5%,var(--color-background))]',

@@ -96,7 +96,7 @@ function CopyIdButton({ orderId }: { orderId: string }) {
   return (
     <button
       type="button"
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      className="inline-flex min-h-9 items-center gap-1.5 rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
       title={`Sao chép ${orderId}`}
       aria-label={`Sao chép mã đơn ${orderId}`}
       onClick={(e) => void onCopy(e)}
@@ -130,7 +130,7 @@ function AdvanceButton({
       <Button
         type="button"
         size="sm"
-        className="gap-1.5"
+        className="h-auto min-h-9 max-w-[11rem] gap-1.5 whitespace-normal px-2.5 py-1.5 text-left leading-snug"
         disabled={updating}
         onClick={() => onAdvance(order, nextStatus)}
       >
@@ -247,7 +247,9 @@ export function SellerOrdersTable({
               <th className="px-4 py-3 font-medium">Thanh toán</th>
               <th className="px-4 py-3 font-medium">Giao hàng</th>
               <th className="px-4 py-3 font-medium text-right">Tổng</th>
-              <th className="px-4 py-3 text-right font-medium">Thao tác</th>
+              <th className="sticky right-0 z-10 bg-[color-mix(in_oklab,var(--color-muted)_40%,var(--color-background))] px-4 py-3 text-right font-medium shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.12)]">
+                Thao tác
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -282,8 +284,13 @@ export function SellerOrdersTable({
                   <td className="px-4 py-3 text-right font-medium tabular-nums">
                     {formatVnd(order.totalAmount)}
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap items-center justify-end gap-1.5">
+                  <td
+                    className={cn(
+                      'sticky right-0 z-10 bg-card px-3 py-3 shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.12)]',
+                      updating && 'bg-muted',
+                    )}
+                  >
+                    <div className="flex flex-col items-stretch gap-1.5 sm:items-end">
                       <AdvanceButton
                         order={order}
                         updating={updating}

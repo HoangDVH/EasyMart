@@ -19,7 +19,8 @@ import { Button } from '@/shared/ui/button'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'react-toastify'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { AuthGoogleSection } from '@/features/auth/components/google-sign-in-button'
 
 export function RegisterPage() {
   const navigate = useNavigate()
@@ -96,11 +97,17 @@ export function RegisterPage() {
           </div>
           <Button
             type="submit"
-            className="w-full"
+            className="w-full gap-2"
             disabled={registerMutation.isPending || isSubmitting}
           >
+            {registerMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {registerMutation.isPending ? 'Đang xử lý...' : 'Đăng ký'}
           </Button>
+          <AuthGoogleSection
+            context="signup"
+            successMessage="Đăng ký / đăng nhập Google thành công!"
+            disabled={registerMutation.isPending || isSubmitting}
+          />
           <p className="text-sm text-muted-foreground">
             Đã có tài khoản?{' '}
             <Link className="text-primary underline" to={`/auth/login${location.search}`}>

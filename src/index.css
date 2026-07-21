@@ -231,16 +231,16 @@ html {
 }
 
 .sticky-below-header {
-  top: 8.25rem;
+  top: calc(var(--app-header-height, 10.75rem) + 0.5rem);
 }
 @media (min-width: 640px) {
   .sticky-below-header {
-    top: 8.5rem;
+    top: calc(var(--app-header-height, 8.5rem) + 0.5rem);
   }
 }
 @media (min-width: 1024px) {
   .sticky-below-header {
-    top: 7.25rem;
+    top: calc(var(--app-header-height, 7.25rem) + 0.5rem);
   }
 }
 

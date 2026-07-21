@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
-import { KeyRound, MapPin, UserRound } from 'lucide-react'
+import { CheckCircle2, KeyRound, MapPin } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useProfileQuery } from '@/features/auth/hooks/use-auth'
+import { isGoogleAvatarUrl } from '@/features/auth/lib/user-display'
 import { useUpdateMyInfoMutation } from '@/features/account/hooks/use-users'
 import {
   changePasswordSchema,
@@ -25,6 +26,13 @@ import {
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Skeleton } from '@/shared/ui/skeleton'
+import { UserAvatar } from '@/shared/ui/user-avatar'
+
+function roleLabel(role: string | undefined) {
+  if (role === 'ADMIN') return 'Quản trị viên'
+  if (role === 'SELLER') return 'Người bán'
+  return 'Khách hàng'
+}
 
 export function ProfilePage() {
   const accessToken = useAuthStore((state) => state.accessToken)
@@ -32,6 +40,9 @@ export function ProfilePage() {
   const updateMutation = useUpdateMyInfoMutation()
   const profile = profileQuery.data
   const [savingProfile, setSavingProfile] = useState(false)
+
+  const linkedGoogle = isGoogleAvatarUrl(profile?.avatarUrl)
+  const displayName = profile?.fullName?.trim() || profile?.email || 'Người dùng EasyMart'
 
   const profileForm = useForm<ProfileInfoFormValues>({
     resolver: zodResolver(profileInfoSchema),
@@ -75,7 +86,7 @@ export function ProfilePage() {
   const onChangePassword = async (data: ChangePasswordFormValues) => {
     try {
       await updateMutation.mutateAsync({ password: data.password })
-      toast.success('Đã cập nhật mật khẩu mới.')
+      toast.success(linkedGoogle ? 'Đã đặt mật khẩu cho tài khoản.' : 'Đã cập nhật mật khẩu mới.')
       passwordForm.reset()
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Không cập nhật được mật khẩu.'))
@@ -83,23 +94,59 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <Card className="overflow-hidden">
+        <CardContent className="px-5 py-5 sm:px-6 sm:py-6">
+          {profileQuery.isPending ? (
+            <div className="flex items-start gap-4">
+              <Skeleton className="h-16 w-16 shrink-0 rounded-full" />
+              <div className="space-y-2 pt-1">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-4 w-56" />
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex min-w-0 items-start gap-4">
+                <UserAvatar
+                  fullName={profile?.fullName}
+                  email={profile?.email}
+                  avatarUrl={profile?.avatarUrl}
+                  size="lg"
+                  showGoogleBadge={linkedGoogle}
+                />
+                <div className="min-w-0 space-y-1.5 pt-0.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="truncate text-lg font-semibold text-foreground sm:text-xl">
+                      {displayName}
+                    </h1>
+                    {linkedGoogle ? (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
+                        <CheckCircle2 className="h-3 w-3" aria-hidden />
+                        Đã xác minh Google
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="truncate text-sm text-muted-foreground">{profile?.email}</p>
+                  <p className="text-xs text-muted-foreground">{roleLabel(profile?.role)}</p>
+                </div>
+              </div>
+              <Link
+                to="/account/addresses"
+                className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+              >
+                <MapPin className="h-4 w-4" aria-hidden />
+                Sổ địa chỉ
+              </Link>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
-        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <UserRound className="h-5 w-5 text-primary" />
-              Hồ sơ tài khoản
-            </CardTitle>
-            <CardDescription>Thông tin dùng để giao hàng và liên hệ.</CardDescription>
-          </div>
-          <Link
-            to="/account/addresses"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-          >
-            <MapPin className="h-4 w-4" aria-hidden />
-            Sổ địa chỉ
-          </Link>
+        <CardHeader>
+          <CardTitle className="text-base">Thông tin cá nhân</CardTitle>
+          <CardDescription>Dùng khi đặt hàng và giao nhận.</CardDescription>
         </CardHeader>
         <CardContent>
           {profileQuery.isPending ? (
@@ -109,11 +156,14 @@ export function ProfilePage() {
             </div>
           ) : (
             <form className="space-y-4" onSubmit={profileForm.handleSubmit(onSaveProfile)}>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                   Email
                 </Label>
-                <p className="text-sm font-medium">{profile?.email ?? '—'}</p>
+                <p className="rounded-md border bg-muted/30 px-3 py-2.5 text-sm font-medium">
+                  {profile?.email ?? '—'}
+                </p>
+                <p className="text-xs text-muted-foreground">Email không thể đổi tại đây.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="profile-full-name">Họ và tên</Label>
@@ -156,18 +206,22 @@ export function ProfilePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base">
             <KeyRound className="h-5 w-5 text-primary" />
-            Đổi mật khẩu
+            {linkedGoogle ? 'Mật khẩu (tuỳ chọn)' : 'Đổi mật khẩu'}
           </CardTitle>
           <CardDescription>
-            Mật khẩu mới tối thiểu 8 ký tự. Sau khi đổi, hãy đăng nhập lại nếu cần.
+            {linkedGoogle
+              ? 'Bạn đang đăng nhập bằng Google. Có thể đặt thêm mật khẩu để đăng nhập bằng email khi cần.'
+              : 'Mật khẩu mới tối thiểu 8 ký tự. Sau khi đổi, hãy đăng nhập lại nếu cần.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={passwordForm.handleSubmit(onChangePassword)}>
             <div className="space-y-2">
-              <Label htmlFor="new-password">Mật khẩu mới</Label>
+              <Label htmlFor="new-password">
+                {linkedGoogle ? 'Đặt mật khẩu' : 'Mật khẩu mới'}
+              </Label>
               <Input
                 id="new-password"
                 type="password"
@@ -187,7 +241,7 @@ export function ProfilePage() {
                 id="confirm-password"
                 type="password"
                 autoComplete="new-password"
-                placeholder="Nhập lại mật khẩu mới"
+                placeholder="Nhập lại mật khẩu"
                 {...passwordForm.register('confirm')}
               />
               {passwordForm.formState.errors.confirm ? (
@@ -203,7 +257,9 @@ export function ProfilePage() {
               >
                 {updateMutation.isPending && !savingProfile
                   ? 'Đang lưu...'
-                  : 'Cập nhật mật khẩu'}
+                  : linkedGoogle
+                    ? 'Lưu mật khẩu'
+                    : 'Cập nhật mật khẩu'}
               </Button>
             </div>
           </form>

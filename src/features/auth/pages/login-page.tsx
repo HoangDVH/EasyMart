@@ -22,6 +22,7 @@ import { getApiErrorMessage } from '@/shared/lib/api-error'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'react-toastify'
 import { CheckCircle2, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { AuthGoogleSection } from '@/features/auth/components/google-sign-in-button'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -141,6 +142,11 @@ export function LoginPage() {
               {loginMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {loginMutation.isPending ? 'Đang xử lý...' : 'Đăng nhập'}
             </Button>
+            <AuthGoogleSection
+              context="signin"
+              successMessage="Đăng nhập Google thành công!"
+              disabled={loginMutation.isPending || isSubmitting}
+            />
             <p className="text-sm text-muted-foreground">
               Chưa có tài khoản?{' '}
               <Link className="text-primary underline" to={`/auth/register${location.search}`}>

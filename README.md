@@ -1,10 +1,12 @@
 # Ecommerce Shop Frontend
 
-Ứng dụng frontend cho hệ thống thương mại điện tử, xây bằng React + TypeScript + Vite, tích hợp đầy đủ luồng:
+Ứng dụng frontend cho hệ thống thương mại điện tử **EasyMart**, xây bằng React + TypeScript + Vite.
 
-- người dùng mua hàng
-- seller quản lý sản phẩm
-- admin quản trị user và phân quyền
+Luồng chính:
+
+- người dùng mua hàng (catalog, giỏ, checkout, VNPay, sổ địa chỉ)
+- seller quản lý sản phẩm & đơn bán (dashboard riêng)
+- admin quản trị user và phân quyền (dashboard riêng)
 
 ---
 
@@ -19,6 +21,8 @@
 - `zustand`
 - `react-toastify`
 - `tailwindcss`
+- Google Identity Services (GIS) — đăng nhập Google
+- STOMP / WebSocket — thông báo đơn realtime
 
 ---
 
@@ -26,29 +30,29 @@
 
 ### Người dùng (USER)
 
-- Đăng ký / Đăng nhập / Đăng xuất
-- Khôi phục phiên đăng nhập tự động
-- Xem danh sách sản phẩm, chi tiết sản phẩm
-- Tìm kiếm và lọc sản phẩm
-- Thêm giỏ hàng, checkout, tạo đơn hàng
-- Xem lịch sử đơn mua
+- Đăng ký / Đăng nhập / Đăng xuất (email + mật khẩu)
+- **Đăng nhập / đăng ký bằng Google** (`POST /api/v1/auth/google`)
+- Khôi phục phiên tự động (refresh cookie + `accessToken` trong `sessionStorage`)
+- Hồ sơ: `fullName`, `phone`, **avatar Google** (`avatarUrl`)
+- Sổ địa chỉ CRUD (`/account/addresses`)
+- Catalog, tìm kiếm, lọc, chi tiết sản phẩm (ưu đãi / nhà cung cấp minh họa)
+- Giỏ hàng, checkout (chọn địa chỉ, phí ship, COD / VNPay)
+- Đơn mua + chi tiết + timeline trạng thái
+- Thông báo đơn realtime trên navbar
 
 ### Người bán (SELLER)
 
-- Truy cập khu vực `Quản lí sản phẩm`
-- Tạo / sửa / xóa sản phẩm
-- Upload ảnh sản phẩm
-- Xem sản phẩm do chính seller tạo
-- Xem lịch sử đơn liên quan sản phẩm
+- Dashboard riêng (`/seller`) — không dùng navbar/footer storefront
+- Overview: KPI + biểu đồ doanh thu
+- CRUD sản phẩm, upload ảnh, lọc/tìm/bulk delete
+- Đơn bán: tab trạng thái, cập nhật fulfillment, chi tiết đơn + shipping
+- Thông báo realtime đơn mới / cập nhật
 
 ### Quản trị (ADMIN)
 
-- Xem danh sách user toàn hệ thống
-- Tạo user mới
-- Xóa user
-- Reset mật khẩu user
-- Gán role `USER / SELLER / ADMIN`
-- Gán role theo chế độ độc quyền (chỉ 1 role chính)
+- Dashboard riêng (`/admin`)
+- Danh sách user, tạo user, xóa, reset mật khẩu
+- Gán role `USER / SELLER / ADMIN` (độc quyền 1 role chính)
 
 ---
 
@@ -56,44 +60,51 @@
 
 ```text
 src/
-  app/                  # layout, router, guards
+  app/                  # layout (storefront + dashboard), router, guards
   features/
-    auth/               # login/register/profile
-    products/           # catalog, detail, product API
-    cart/               # giỏ hàng, checkout
-    orders/             # đơn hàng
-    seller/             # dashboard seller + CRUD sản phẩm
-    dashboard/          # admin page
-    account/            # profile user + users admin API
+    auth/               # login/register, Google GIS, hooks
+    products/           # catalog, detail, promo UI
+    cart/               # giỏ, checkout, shipping address picker
+    orders/             # đơn mua, realtime
+    seller/             # dashboard seller
+    dashboard/          # admin page + modals
+    account/            # profile, addresses, users API
+    payments/           # VNPay helpers
   shared/
-    api/                # axios client + interceptor refresh
-    stores/             # Zustand stores
-    ui/                 # UI components dùng chung
-    config/             # env mapping
+    api/                # axios + refresh interceptor
+    stores/             # Zustand (auth, cart, notifications)
+    ui/                 # UI dùng chung (avatar, toast, …)
+    config/             # env
+    lib/                # shipping fee, auth redirect, …
 ```
 
 ---
 
 ## 4) Auth model (quan trọng)
 
-Mô hình xác thực hiện tại:
+- `accessToken`: Zustand + **`sessionStorage`** (`easymart-access-token`)
+- `refreshToken`: `HttpOnly cookie` (backend), FE gọi `/api/v1/auth/refresh` với `withCredentials`
+- Google: FE lấy `credential` (GIS) → gửi `{ idToken }` → BE trả JWT giống login
 
-- `accessToken` lưu trong memory (Zustand)
-- `refreshToken` lưu qua `HttpOnly cookie` ở backend
-- FE refresh qua endpoint `/api/v1/auth/refresh`
+### Khi token hết hạn
 
-### Hành vi mong đợi khi token hết hạn
+1. Request `401` → interceptor refresh
+2. Refresh OK → retry request
+3. Refresh fail → `clearAuth` + redirect `/auth/login?next=…`
 
-- Request trả `401` -> interceptor gọi refresh
-- Refresh thành công -> retry request cũ
-- Refresh thất bại -> clear auth + redirect `/auth/login`
+### Redirect sau login
 
-### Lưu ý multi-account
+Ưu tiên `?next=` → `location.state.from` → theo role: `ADMIN` → `/admin`, `SELLER` → `/seller`, còn lại → `/`
 
-Do refresh cookie share theo browser profile/domain API:
+### Multi-account
 
-- Không ổn định nếu đăng nhập 2 account khác nhau trên 2 tab trong cùng 1 profile
-- Cách test đúng: dùng browser profile khác hoặc incognito
+Refresh cookie theo browser profile/domain API — không ổn định nếu 2 account trên 2 tab cùng profile. Test bằng profile khác hoặc Incognito.
+
+### Google Sign-In — cấu hình
+
+1. Backend: `GOOGLE_AUTH_ENABLED=true`, `GOOGLE_CLIENT_ID=<Web Client ID>`
+2. FE `.env`: `VITE_GOOGLE_CLIENT_ID` **trùng** client ID backend
+3. Google Cloud Console: thêm origin FE (vd. `http://localhost:5173`, domain Vercel) vào **Authorized JavaScript origins**
 
 ---
 
@@ -114,16 +125,15 @@ npm install
 
 ### Bước 2: tạo env
 
-Copy file mẫu:
-
 ```bash
 cp .env.example .env
 ```
 
-Hoặc tạo `.env` với tối thiểu:
+Tối thiểu:
 
 ```env
 VITE_API_BASE_URL=https://javabackend-olfp.onrender.com
+VITE_GOOGLE_CLIENT_ID=
 ```
 
 ### Bước 3: chạy dev
@@ -132,7 +142,7 @@ VITE_API_BASE_URL=https://javabackend-olfp.onrender.com
 npm run dev
 ```
 
-App mặc định chạy tại `http://localhost:5173`.
+App mặc định: `http://localhost:5173`.
 
 ---
 
@@ -140,68 +150,60 @@ App mặc định chạy tại `http://localhost:5173`.
 
 File mẫu: `.env.example`
 
-- `VITE_API_BASE_URL`: base URL backend
-- `VITE_PUBLIC_ASSET_BASE_URL` (optional): host static assets nếu khác API
-- `VITE_PRODUCTS_API_BASE` (optional): override endpoint products
-- `VITE_CATEGORIES_API_BASE` (optional): override endpoint categories
-- `VITE_PRODUCT_IMAGES_STATIC_DIR` (optional): đường dẫn static images
-- `VITE_PRODUCT_IMAGE_DOWNLOAD_API` (optional): API download ảnh
+| Biến | Mô tả |
+|------|--------|
+| `VITE_API_BASE_URL` | Base URL backend |
+| `VITE_GOOGLE_CLIENT_ID` | Google OAuth Web Client ID (trùng BE) |
+| `VITE_WS_URL` | (optional) STOMP endpoint; trống → suy ra từ API |
+| `VITE_PUBLIC_ASSET_BASE_URL` | (optional) host static/CDN |
+| `VITE_PRODUCTS_API_BASE` | (optional) override products |
+| `VITE_CATEGORIES_API_BASE` | (optional) override categories |
+| `VITE_PRODUCT_IMAGES_STATIC_DIR` | (optional) path ảnh static |
+| `VITE_PRODUCT_IMAGE_DOWNLOAD_API` | (optional) API download ảnh |
 
 ---
 
 ## 8) Scripts
 
-- `npm run dev`: chạy development
-- `npm run build`: build production (`tsc -b && vite build`)
-- `npm run preview`: preview bản build local
-- `npm run lint`: chạy eslint
+- `npm run dev` — development
+- `npm run build` — production (`tsc -b && vite build`)
+- `npm run preview` — preview bản build
+- `npm run lint` — eslint
 
 ---
 
 ## 9) Deploy Vercel
 
-### Cách 1: qua dashboard Vercel
+1. Import repo → Framework `Vite`
+2. Build: `npm run build` · Output: `dist`
+3. Env giống `.env` (nhớ `VITE_GOOGLE_CLIENT_ID` + Authorized origins trên Google)
 
-1. Import repository lên Vercel
-2. Framework preset: `Vite`
-3. Build command: `npm run build`
-4. Output directory: `dist`
-5. Add environment variables giống `.env`
-
-### Cách 2: Vercel CLI
-
-```bash
-npm i -g vercel
-vercel
-vercel --prod
-```
-
-### SPA rewrite
-
-Project đã có `vercel.json`:
-
-- rewrite toàn bộ route về `index.html`
-- tránh lỗi `404` khi reload route con (`/seller`, `/admin`, `/account/orders`, ...)
+`vercel.json` rewrite SPA về `index.html` (tránh 404 khi reload `/seller`, `/admin`, …).
 
 ---
 
 ## 10) Troubleshooting nhanh
 
+### Nút Google hiện “Chưa cấu hình VITE_GOOGLE_CLIENT_ID”
+
+- Thêm biến vào `.env` rồi **restart** `npm run dev`.
+
+### Google login lỗi audience / origin
+
+- Client ID FE ≠ BE, hoặc origin chưa khai báo trên Google Cloud.
+
 ### `Invalid message key`
 
-- Đây là message từ backend (i18n key không map), không phải text FE tự sinh.
+- Message i18n từ backend, không phải text FE.
 
-### Không thấy nút `Quản lí sản phẩm` trên mobile
+### Phí ship / địa chỉ checkout
 
-- Đã fix hiển thị menu mobile cho `SELLER/ADMIN`.
+- Ship ₫30.000; miễn phí đơn từ ₫500.000 (logic FE + BE shipping fields).
+- Cần đăng nhập và có địa chỉ trong sổ địa chỉ (hoặc thêm mới tại checkout).
 
-### Đổi role chậm
+### Sticky filter bị header che
 
-- FE đã tối ưu chỉ gọi API role khi thực sự cần thay đổi trạng thái.
-
-### Lỗi HTML nesting (`div` inside `p`)
-
-- Đã fix `CardDescription` render bằng `div` để tránh hydration warning.
+- FE đồng bộ `--app-header-height` từ chiều cao header thật.
 
 ---
 
@@ -210,4 +212,5 @@ Project đã có `vercel.json`:
 - [ ] `npm run build` pass
 - [ ] Không commit `.env`
 - [ ] Đã cập nhật `.env.example` nếu thêm biến mới
-- [ ] Đã test login + refresh + protected routes
+- [ ] Test login email + Google + refresh + protected routes
+- [ ] Test checkout địa chỉ / phí ship trên mobile nếu đụng UI

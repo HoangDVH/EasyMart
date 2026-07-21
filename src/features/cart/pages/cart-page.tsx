@@ -114,7 +114,7 @@ export function CartPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="shrink-0"
+                    className="h-10 w-10 shrink-0 p-0"
                     onClick={() => removeItem(item.productId)}
                     aria-label="Xóa khỏi giỏ"
                   >

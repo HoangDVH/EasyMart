@@ -6,6 +6,8 @@ export type User = {
   email: string
   fullName: string | null
   phone: string | null
+  /** Ảnh hồ sơ — Google Sign-In lưu URL từ Google */
+  avatarUrl: string | null
   roles: string[]
   /** Ưu tiên ADMIN → SELLER → USER khi backend cho nhiều vai */
   role: UserRole
@@ -23,4 +25,8 @@ export type LoginPayload = {
 export type RegisterPayload = {
   email: string
   password: string
+}
+
+export type GoogleAuthPayload = {
+  idToken: string
 }

@@ -198,7 +198,7 @@ export function ProductDetailPage() {
 
           <div className="flex flex-col">
             <CardHeader className="space-y-4 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
-              <CardTitle className="text-xl leading-snug lg:text-2xl">{product.name}</CardTitle>
+              <CardTitle className="break-words text-xl leading-snug lg:text-2xl">{product.name}</CardTitle>
 
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
                 {product.rating != null ? (

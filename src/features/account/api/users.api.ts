@@ -25,6 +25,7 @@ type RawUser = {
   email?: unknown
   fullName?: unknown
   phone?: unknown
+  avatarUrl?: unknown
   roles?: unknown
 }
 
@@ -57,6 +58,8 @@ function mapUser(raw: RawUser | null | undefined): User | null {
     email,
     fullName: typeof raw.fullName === 'string' && raw.fullName.trim() ? raw.fullName : null,
     phone: typeof raw.phone === 'string' && raw.phone.trim() ? raw.phone : null,
+    avatarUrl:
+      typeof raw.avatarUrl === 'string' && raw.avatarUrl.trim() ? raw.avatarUrl.trim() : null,
     roles,
     role: normalizeRole(roles),
   }

@@ -184,8 +184,8 @@ export function SellerOrdersPage() {
           </Button>
         </div>
 
-        <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center">
-          <div className="relative flex-1 md:max-w-sm">
+        <div className="flex flex-col gap-3 border-b p-4 lg:flex-row lg:flex-wrap lg:items-center">
+          <div className="relative min-w-0 flex-1 lg:max-w-sm">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
               aria-hidden
@@ -194,24 +194,24 @@ export function SellerOrdersPage() {
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               placeholder="Tìm mã đơn hoặc email…"
-              className="pl-9 pr-9"
+              className="pl-9 pr-10"
               aria-label="Tìm đơn hàng"
             />
             {searchKeyword ? (
               <button
                 type="button"
-                className="absolute right-2.5 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="absolute right-1.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
                 aria-label="Xóa từ khóa"
                 onClick={() => setSearchKeyword('')}
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-4 w-4" />
               </button>
             ) : null}
           </div>
           <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as OrderTabValue)}
-            className="md:w-56"
+            className="w-full min-w-0 lg:w-56"
             aria-label="Lọc theo trạng thái"
           >
             {ORDER_FILTERS.map((option) => {

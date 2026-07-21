@@ -161,7 +161,7 @@ export function SellerOverviewPage() {
                 type="button"
                 onClick={() => setRangeDays(option.days)}
                 className={cn(
-                  'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                  'min-h-10 rounded-md px-3 py-2 text-xs font-medium transition-colors sm:min-h-0 sm:py-1.5',
                   rangeDays === option.days
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground',

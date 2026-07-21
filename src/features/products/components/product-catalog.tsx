@@ -269,13 +269,20 @@ function ProductCatalogCard({ product }: { product: Product }) {
           )}
         </Link>
         {product.featured ? (
-          <Badge className="pointer-events-none absolute left-5 top-5 z-[1] border-secondary/30 bg-secondary text-secondary-foreground shadow-sm">
-            <Star className="mr-1 h-3.5 w-3.5 fill-current text-secondary-foreground" />
+          <Badge className="pointer-events-none absolute left-2 top-2 z-[1] max-w-[calc(100%-1rem)] truncate border-secondary/30 bg-secondary px-1.5 text-[10px] text-secondary-foreground shadow-sm sm:left-5 sm:top-5 sm:max-w-none sm:px-2.5 sm:text-xs">
+            <Star className="mr-0.5 h-3 w-3 shrink-0 fill-current text-secondary-foreground sm:mr-1 sm:h-3.5 sm:w-3.5" />
             Nổi bật
           </Badge>
         ) : null}
         {isOutOfStock ? (
-          <Badge className="pointer-events-none absolute right-5 top-5 z-[1] bg-destructive text-destructive-foreground">
+          <Badge
+            className={cn(
+              'pointer-events-none absolute z-[1] bg-destructive px-1.5 text-[10px] text-destructive-foreground sm:px-2.5 sm:text-xs',
+              product.featured
+                ? 'bottom-2 left-2 right-auto top-auto sm:bottom-auto sm:left-auto sm:right-5 sm:top-5'
+                : 'right-2 top-2 sm:right-5 sm:top-5',
+            )}
+          >
             Hết hàng
           </Badge>
         ) : null}

@@ -28,8 +28,8 @@ export function QuantityStepper({
   'aria-label': ariaLabel = 'Số lượng',
 }: QuantityStepperProps) {
   const btnSize = size === 'sm' ? 'sm' : 'default'
-  const heightClass = size === 'sm' ? 'h-9' : 'h-10'
-  const gridCols = size === 'sm' ? 'grid-cols-[2.25rem_2.5rem_2.25rem]' : 'grid-cols-[2.5rem_2.75rem_2.5rem]'
+  const heightClass = size === 'sm' ? 'h-10' : 'h-10'
+  const gridCols = size === 'sm' ? 'grid-cols-[2.75rem_2.75rem_2.75rem]' : 'grid-cols-[2.5rem_2.75rem_2.5rem]'
 
   return (
     <div

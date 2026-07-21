@@ -162,12 +162,18 @@ function FilterDropdownPanel({
       if (!anchor) return
       const rect = anchor.getBoundingClientRect()
       const panelWidth = 280
+      const estimatedHeight = 288
       let left = align === 'left' ? rect.left : rect.right - panelWidth
       left = Math.max(8, Math.min(left, window.innerWidth - panelWidth - 8))
+      const spaceBelow = window.innerHeight - rect.bottom
+      const openUp = spaceBelow < estimatedHeight && rect.top > spaceBelow
+      const top = openUp
+        ? Math.max(8, rect.top - estimatedHeight - 6)
+        : rect.bottom + 6
 
       setStyle({
         position: 'fixed',
-        top: rect.bottom + 6,
+        top,
         left,
         width: panelWidth,
         zIndex: 9999,
@@ -287,7 +293,7 @@ function MobileFilterSheet({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            className="grid h-10 w-10 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
             aria-label="Đóng bộ lọc"
           >
             <X className="h-5 w-5" />
@@ -822,10 +828,10 @@ export function CatalogFilterBar({
               key={chip.id}
               type="button"
               onClick={chip.onRemove}
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-primary/25 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+              className="inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-full border border-primary/25 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
             >
-              {chip.label}
-              <X className="h-3.5 w-3.5" aria-hidden />
+              <span className="min-w-0 truncate">{chip.label}</span>
+              <X className="h-3.5 w-3.5 shrink-0" aria-hidden />
             </button>
           ))}
         </div>

@@ -21,8 +21,8 @@ type SellerProductsToolbarProps = {
 
 export function SellerProductsToolbar({ filters, onChange, counts }: SellerProductsToolbarProps) {
   return (
-    <div className="flex flex-col gap-3 md:flex-row md:items-center">
-      <div className="relative flex-1 md:max-w-sm">
+    <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
+      <div className="relative min-w-0 flex-1 lg:max-w-sm">
         <Search
           className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
           aria-hidden
@@ -30,18 +30,18 @@ export function SellerProductsToolbar({ filters, onChange, counts }: SellerProdu
         <Input
           value={filters.keyword}
           placeholder="Tìm theo tên, mô tả, danh mục…"
-          className="pl-9 pr-9"
+          className="pl-9 pr-10"
           aria-label="Tìm sản phẩm"
           onChange={(e) => onChange({ ...filters, keyword: e.target.value, page: 1 })}
         />
         {filters.keyword ? (
           <button
             type="button"
-            className="absolute right-2.5 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            className="absolute right-1.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
             aria-label="Xóa từ khóa"
             onClick={() => onChange({ ...filters, keyword: '', page: 1 })}
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-4 w-4" />
           </button>
         ) : null}
       </div>
@@ -49,7 +49,7 @@ export function SellerProductsToolbar({ filters, onChange, counts }: SellerProdu
       <Select
         value={filters.stockStatus}
         aria-label="Lọc theo tồn kho"
-        className="md:w-48"
+        className="w-full min-w-0 lg:w-48"
         onChange={(e) =>
           onChange({
             ...filters,
@@ -73,7 +73,7 @@ export function SellerProductsToolbar({ filters, onChange, counts }: SellerProdu
       <Select
         value={filters.sort}
         aria-label="Sắp xếp"
-        className="md:w-44"
+        className="w-full min-w-0 lg:w-44"
         onChange={(e) =>
           onChange({ ...filters, sort: e.target.value as SellerProductsFilters['sort'], page: 1 })
         }
@@ -89,7 +89,7 @@ export function SellerProductsToolbar({ filters, onChange, counts }: SellerProdu
       <Select
         value={String(filters.pageSize)}
         aria-label="Số dòng mỗi trang"
-        className="md:w-32"
+        className="w-full min-w-0 lg:w-32"
         onChange={(e) => onChange({ ...filters, pageSize: Number(e.target.value), page: 1 })}
       >
         <option value="5">5 / trang</option>

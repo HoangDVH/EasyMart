@@ -1,6 +1,6 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { ShoppingCart, Loader2, CircleHelp } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useProfileQuery, useRestoreSessionQuery } from '@/features/auth/hooks/use-auth'
 import {
   buildOrderSuccessPath,
@@ -59,6 +59,28 @@ export function AppLayout() {
   /** Một kết nối STOMP dùng chung mọi role — chuông navbar nhận thông báo realtime.
    * Chờ profile để biết role trước khi gắn audience thông báo. */
   useOrdersRealtime(Boolean(effectiveToken && profile))
+
+  const headerRef = useRef<HTMLElement>(null)
+
+  /** Đồng bộ chiều cao header sticky → CSS var cho `.sticky-below-header`. */
+  useEffect(() => {
+    const header = headerRef.current
+    if (!header) return
+    const sync = () => {
+      document.documentElement.style.setProperty(
+        '--app-header-height',
+        `${header.offsetHeight}px`,
+      )
+    }
+    sync()
+    const observer = new ResizeObserver(sync)
+    observer.observe(header)
+    window.addEventListener('resize', sync)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', sync)
+    }
+  }, [effectiveToken, profile?.role, showSellerNav, location.pathname])
 
   /** VNPay return URL backend có thể cấu hình về `/` — chuyển sang trang thành công hoặc handler chuẩn. */
   useEffect(() => {
@@ -207,7 +229,10 @@ export function AppLayout() {
   return (
     <div className="min-h-screen bg-background">
       <ScrollToTop />
-      <header className="sticky top-0 z-40 bg-gradient-to-b from-primary to-primary/95 text-primary-foreground shadow-md shadow-primary/15">
+      <header
+        ref={headerRef}
+        className="sticky top-0 z-40 bg-gradient-to-b from-primary to-primary/95 text-primary-foreground shadow-md shadow-primary/15"
+      >
         {/* Top bar kiểu Shopee: link phụ trái, tiện ích + tài khoản phải */}
         <div className="hidden border-b border-primary-foreground/10 sm:block">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-1.5 text-xs text-primary-foreground/85">
@@ -285,7 +310,7 @@ export function AppLayout() {
               </span>
               EasyMart
             </Link>
-            <div className="flex shrink-0 items-center gap-0.5">
+            <div className="flex shrink-0 items-center gap-1">
               {effectiveToken && profile?.email ? (
                 <HeaderNotifications user={profile} variant="onPrimary" />
               ) : null}

@@ -1,6 +1,7 @@
 import { AUTH_ENDPOINTS } from '@/shared/constants/auth'
 import { httpClient } from '@/shared/api/http-client'
 import type {
+  GoogleAuthPayload,
   LoginPayload,
   RegisterPayload,
   User,
@@ -22,6 +23,7 @@ type UserResponse = {
   email: string
   fullName?: string | null
   phone?: string | null
+  avatarUrl?: string | null
   roles?: string[]
 }
 
@@ -44,6 +46,7 @@ function mapUser(data: UserResponse): User {
     email: data.email,
     fullName: typeof data.fullName === 'string' && data.fullName.trim() ? data.fullName : null,
     phone: typeof data.phone === 'string' && data.phone.trim() ? data.phone : null,
+    avatarUrl: typeof data.avatarUrl === 'string' && data.avatarUrl.trim() ? data.avatarUrl.trim() : null,
     roles,
     role: normalizeRole(roles),
   }
@@ -53,6 +56,16 @@ export const authApi = {
   async login(payload: LoginPayload) {
     const { data } = await httpClient.post<ApiResponse<AuthenticationResponse>>(
       AUTH_ENDPOINTS.login,
+      payload,
+    )
+    return {
+      accessToken: data.result.accessToken,
+    }
+  },
+  /** Google Sign-In / đăng ký: BE verify idToken, tìm hoặc tạo user, trả JWT như login. */
+  async loginWithGoogle(payload: GoogleAuthPayload) {
+    const { data } = await httpClient.post<ApiResponse<AuthenticationResponse>>(
+      AUTH_ENDPOINTS.google,
       payload,
     )
     return {

@@ -56,7 +56,14 @@ export function AdminCreateUserModal({
           <h3 id="admin-create-user-title" className="text-base font-semibold">
             Thêm người dùng
           </h3>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={isSubmitting}>
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-10 w-10 p-0"
+            onClick={onClose}
+            disabled={isSubmitting}
+            aria-label="Đóng"
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>

@@ -1,6 +1,7 @@
 export const AUTH_ENDPOINTS = {
   login: '/api/v1/auth/login',
   register: '/api/v1/auth/register',
+  google: '/api/v1/auth/google',
   refresh: '/api/v1/auth/refresh',
   logout: '/api/v1/auth/logout',
   forgotPassword: '/api/v1/auth/forgot-password',

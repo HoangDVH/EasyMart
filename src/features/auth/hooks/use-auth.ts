@@ -5,6 +5,7 @@ import { authApi } from '@/features/auth/api/auth.api'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
 import { silentRefreshAccessToken } from '@/shared/api/http-client'
 import type {
+  GoogleAuthPayload,
   LoginPayload,
   RegisterPayload,
   UserRole,
@@ -56,6 +57,19 @@ export function useLoginMutation() {
 
   return useMutation({
     mutationFn: (payload: LoginPayload) => authApi.login(payload),
+    onSuccess: (result) => {
+      setAccessToken(result.accessToken)
+      void queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY })
+    },
+  })
+}
+
+export function useGoogleLoginMutation() {
+  const setAccessToken = useAuthStore((state) => state.setAccessToken)
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: GoogleAuthPayload) => authApi.loginWithGoogle(payload),
     onSuccess: (result) => {
       setAccessToken(result.accessToken)
       void queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY })
