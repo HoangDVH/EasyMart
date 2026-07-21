@@ -1,9 +1,8 @@
 import { Suspense, useMemo, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
   LayoutDashboard,
   Menu,
   Package,
@@ -42,7 +41,9 @@ const ADMIN_NAV: NavItem[] = [
 const SIDEBAR_COLLAPSED_KEY = 'dashboard-sidebar-collapsed'
 
 function pageTitle(pathname: string): string {
+  if (pathname.startsWith('/admin/account')) return 'Tài khoản'
   if (pathname.startsWith('/admin')) return 'Người dùng'
+  if (pathname.startsWith('/seller/account')) return 'Tài khoản'
   if (pathname.startsWith('/seller/products')) return 'Sản phẩm'
   if (/^\/seller\/orders\/[^/]+$/.test(pathname)) return 'Chi tiết đơn'
   if (pathname.startsWith('/seller/orders')) return 'Đơn hàng'
@@ -198,19 +199,22 @@ export function DashboardLayout() {
         ) : null}
       </nav>
 
-      <div className={cn('border-t p-2', compact && 'flex justify-center')}>
-        <Link
-          to="/"
-          className={cn(
-            'flex items-center rounded-lg text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
-            compact ? 'justify-center p-2.5' : 'gap-2 px-3 py-2.5',
-          )}
-          title="Về cửa hàng"
-          onClick={() => setMobileOpen(false)}
-        >
-          <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
-          {compact ? <span className="sr-only">Về cửa hàng</span> : <span>Về cửa hàng</span>}
-        </Link>
+      <div
+        className={cn(
+          'mt-auto shrink-0 border-t p-2',
+          compact && 'flex justify-center',
+        )}
+      >
+        {profile?.email ? (
+          <UserMenu
+            email={profile.email}
+            variant="default"
+            menuPlacement="up"
+            compact={compact}
+            className={compact ? undefined : 'w-full'}
+            onNavigate={() => setMobileOpen(false)}
+          />
+        ) : null}
       </div>
     </>
   )
@@ -268,9 +272,6 @@ export function DashboardLayout() {
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             {profile ? (
               <HeaderNotifications user={profile} variant="default" />
-            ) : null}
-            {profile?.email ? (
-              <UserMenu email={profile.email} variant="default" />
             ) : null}
           </div>
         </header>

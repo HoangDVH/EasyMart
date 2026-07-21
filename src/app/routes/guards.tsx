@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import type { UserRole } from '@/features/auth/types/auth.types'
 import { useProfileQuery, useRestoreSessionQuery } from '@/features/auth/hooks/use-auth'
+import { buildLoginPath, locationToReturnTo } from '@/shared/lib/auth-redirect'
 import { useAuthStore } from '@/shared/stores/auth-store'
 import { FullPageSpinner } from '@/shared/ui/full-page-spinner'
 
@@ -16,7 +17,13 @@ export function ProtectedRoute() {
   }
 
   if (!effectiveToken) {
-    return <Navigate to="/auth/login" replace state={{ from: location }} />
+    return (
+      <Navigate
+        to={buildLoginPath(locationToReturnTo(location))}
+        replace
+        state={{ from: location }}
+      />
+    )
   }
 
   return <Outlet />

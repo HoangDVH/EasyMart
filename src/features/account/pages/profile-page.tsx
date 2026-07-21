@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
 import { CheckCircle2, KeyRound, MapPin } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useProfileQuery } from '@/features/auth/hooks/use-auth'
 import { isGoogleAvatarUrl } from '@/features/auth/lib/user-display'
 import { useUpdateMyInfoMutation } from '@/features/account/hooks/use-users'
@@ -35,6 +35,7 @@ function roleLabel(role: string | undefined) {
 }
 
 export function ProfilePage() {
+  const location = useLocation()
   const accessToken = useAuthStore((state) => state.accessToken)
   const profileQuery = useProfileQuery(Boolean(accessToken))
   const updateMutation = useUpdateMyInfoMutation()
@@ -43,6 +44,11 @@ export function ProfilePage() {
 
   const linkedGoogle = isGoogleAvatarUrl(profile?.avatarUrl)
   const displayName = profile?.fullName?.trim() || profile?.email || 'Người dùng EasyMart'
+  const addressesPath = location.pathname.startsWith('/admin')
+    ? '/admin/account/addresses'
+    : location.pathname.startsWith('/seller')
+      ? '/seller/account/addresses'
+      : '/account/addresses'
 
   const profileForm = useForm<ProfileInfoFormValues>({
     resolver: zodResolver(profileInfoSchema),
@@ -132,7 +138,7 @@ export function ProfilePage() {
                 </div>
               </div>
               <Link
-                to="/account/addresses"
+                to={addressesPath}
                 className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-primary hover:underline"
               >
                 <MapPin className="h-4 w-4" aria-hidden />

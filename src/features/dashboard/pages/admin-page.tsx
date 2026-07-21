@@ -47,6 +47,13 @@ const ROLE_OPTIONS: RoleOption[] = [
 
 const PAGE_SIZE = 10
 
+/** Tài khoản admin hệ thống — không cho đổi quyền / xóa khi test. */
+const PROTECTED_ADMIN_EMAIL = 'admin@gmail.com'
+
+function isProtectedAdminEmail(email: string) {
+  return email.trim().toLowerCase() === PROTECTED_ADMIN_EMAIL
+}
+
 function normalizeRoleToken(value: string): UserRole | null {
   const normalized = value.replace(/^ROLE_/i, '').toUpperCase()
   if (normalized === 'ADMIN' || normalized === 'SELLER' || normalized === 'USER') {
@@ -140,6 +147,11 @@ export function AdminPage() {
 
   async function handleResetPasswordSubmit(password: string) {
     if (!resetPasswordTarget) return
+    if (isProtectedAdminEmail(resetPasswordTarget.email)) {
+      toast.error('Không thể đặt lại mật khẩu tài khoản admin hệ thống.')
+      setResetPasswordTarget(null)
+      return
+    }
     try {
       await updateUserMutation.mutateAsync({
         id: resetPasswordTarget.id,
@@ -154,6 +166,11 @@ export function AdminPage() {
 
   async function handleDeleteConfirm() {
     if (!deleteTarget) return
+    if (isProtectedAdminEmail(deleteTarget.email)) {
+      toast.error('Không thể xóa tài khoản admin hệ thống.')
+      setDeleteTarget(null)
+      return
+    }
     try {
       await deleteUserMutation.mutateAsync(deleteTarget.id)
       toast.success('Đã xóa người dùng.')
@@ -164,9 +181,13 @@ export function AdminPage() {
   }
 
   async function handleAssignRoleExclusive(id: string, role: UserRole) {
+    const targetUser = users.find((u) => u.id === id)
+    if (targetUser && isProtectedAdminEmail(targetUser.email)) {
+      toast.error('Không thể đổi quyền tài khoản admin hệ thống.')
+      return
+    }
     setRoleUpdatingUserId(id)
     try {
-      const targetUser = users.find((u) => u.id === id)
       const enabledRoles = new Set<UserRole>()
       for (const raw of targetUser?.roles ?? []) {
         const token = normalizeRoleToken(raw)
@@ -328,13 +349,19 @@ export function AdminPage() {
               <div className="divide-y md:hidden">
                 {pageUsers.map((user) => {
                   const busy = roleUpdatingUserId === user.id
+                  const isProtected = isProtectedAdminEmail(user.email)
                   return (
                     <div key={user.id} className="space-y-3 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate font-medium">{user.email}</p>
-                          <div className="mt-1.5">
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                             <RoleBadge role={user.role} />
+                            {isProtected ? (
+                              <Badge className="border-transparent bg-amber-100 font-medium text-amber-800">
+                                Bảo vệ
+                              </Badge>
+                            ) : null}
                           </div>
                         </div>
                         {busy ? (
@@ -344,8 +371,9 @@ export function AdminPage() {
                       <Select
                         value={user.role}
                         onChange={(e) => void handleAssignRoleExclusive(user.id, e.target.value as UserRole)}
-                        disabled={Boolean(roleUpdatingUserId)}
+                        disabled={isProtected || Boolean(roleUpdatingUserId)}
                         aria-label={`Quyền của ${user.email}`}
+                        title={isProtected ? 'Không thể đổi quyền tài khoản admin hệ thống' : undefined}
                       >
                         {ROLE_OPTIONS.map((r) => (
                           <option key={r.value} value={r.value}>
@@ -360,7 +388,16 @@ export function AdminPage() {
                           variant="outline"
                           className="flex-1 gap-1.5"
                           onClick={() => setResetPasswordTarget({ id: user.id, email: user.email })}
-                          disabled={updateUserMutation.isPending || Boolean(roleUpdatingUserId)}
+                          disabled={
+                            isProtected ||
+                            updateUserMutation.isPending ||
+                            Boolean(roleUpdatingUserId)
+                          }
+                          title={
+                            isProtected
+                              ? 'Không thể đặt lại mật khẩu tài khoản admin hệ thống'
+                              : undefined
+                          }
                         >
                           <KeyRound className="h-3.5 w-3.5" aria-hidden />
                           Đặt lại MK
@@ -371,7 +408,16 @@ export function AdminPage() {
                           variant="outline"
                           className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
                           onClick={() => setDeleteTarget({ id: user.id, email: user.email })}
-                          disabled={deleteUserMutation.isPending || Boolean(roleUpdatingUserId)}
+                          disabled={
+                            isProtected ||
+                            deleteUserMutation.isPending ||
+                            Boolean(roleUpdatingUserId)
+                          }
+                          title={
+                            isProtected
+                              ? 'Không thể xóa tài khoản admin hệ thống'
+                              : `Xóa ${user.email}`
+                          }
                         >
                           <Trash2 className="h-3.5 w-3.5" aria-hidden />
                           Xóa
@@ -396,14 +442,20 @@ export function AdminPage() {
                   <tbody>
                     {pageUsers.map((user) => {
                       const busy = roleUpdatingUserId === user.id
+                      const isProtected = isProtectedAdminEmail(user.email)
                       return (
                         <tr
                           key={user.id}
                           className={cn('border-b last:border-b-0', busy && 'bg-muted/20')}
                         >
                           <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <span className="font-medium">{user.email}</span>
+                              {isProtected ? (
+                                <Badge className="border-transparent bg-amber-100 font-medium text-amber-800">
+                                  Bảo vệ
+                                </Badge>
+                              ) : null}
                               {busy ? (
                                 <Loader2
                                   className="h-3.5 w-3.5 animate-spin text-muted-foreground"
@@ -422,8 +474,13 @@ export function AdminPage() {
                                 void handleAssignRoleExclusive(user.id, e.target.value as UserRole)
                               }
                               className="w-40"
-                              disabled={Boolean(roleUpdatingUserId)}
+                              disabled={isProtected || Boolean(roleUpdatingUserId)}
                               aria-label={`Đổi quyền ${user.email}`}
+                              title={
+                                isProtected
+                                  ? 'Không thể đổi quyền tài khoản admin hệ thống'
+                                  : undefined
+                              }
                             >
                               {ROLE_OPTIONS.map((r) => (
                                 <option key={r.value} value={r.value}>
@@ -439,11 +496,19 @@ export function AdminPage() {
                                 size="sm"
                                 variant="outline"
                                 className="gap-1.5"
-                                title="Đặt lại mật khẩu"
+                                title={
+                                  isProtected
+                                    ? 'Không thể đặt lại mật khẩu tài khoản admin hệ thống'
+                                    : 'Đặt lại mật khẩu'
+                                }
                                 onClick={() =>
                                   setResetPasswordTarget({ id: user.id, email: user.email })
                                 }
-                                disabled={updateUserMutation.isPending || Boolean(roleUpdatingUserId)}
+                                disabled={
+                                  isProtected ||
+                                  updateUserMutation.isPending ||
+                                  Boolean(roleUpdatingUserId)
+                                }
                               >
                                 <KeyRound className="h-3.5 w-3.5" aria-hidden />
                                 Đặt lại MK
@@ -453,10 +518,18 @@ export function AdminPage() {
                                 size="sm"
                                 variant="outline"
                                 className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                title="Xóa người dùng"
+                                title={
+                                  isProtected
+                                    ? 'Không thể xóa tài khoản admin hệ thống'
+                                    : 'Xóa người dùng'
+                                }
                                 aria-label={`Xóa ${user.email}`}
                                 onClick={() => setDeleteTarget({ id: user.id, email: user.email })}
-                                disabled={deleteUserMutation.isPending || Boolean(roleUpdatingUserId)}
+                                disabled={
+                                  isProtected ||
+                                  deleteUserMutation.isPending ||
+                                  Boolean(roleUpdatingUserId)
+                                }
                               >
                                 <Trash2 className="h-3.5 w-3.5" aria-hidden />
                               </Button>

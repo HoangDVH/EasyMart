@@ -49,7 +49,8 @@ export function GoogleSignInButton({
       toast.success(successMessage)
       const redirect = resolvePostLoginPath(
         location.search,
-        (location.state as { from?: { pathname?: string } } | null)?.from?.pathname,
+        (location.state as { from?: { pathname: string; search?: string; hash?: string } } | null)
+          ?.from,
         profile.role,
       )
       navigate(redirect, { replace: true })

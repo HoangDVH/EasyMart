@@ -23,6 +23,9 @@ import { UserMenu } from '@/shared/ui/user-menu'
 import { AnimatedOutlet } from '@/shared/ui/page-transition'
 import { ScrollToTop } from '@/shared/ui/scroll-to-top'
 import { useOrdersRealtime } from '@/features/orders/hooks/use-orders-realtime'
+import {
+  buildAuthEntryPath,
+} from '@/shared/lib/auth-redirect'
 
 /** lucide-react đã bỏ icon thương hiệu nên vẽ SVG Facebook/Instagram tại chỗ. */
 function FacebookIcon({ className }: { className?: string }) {
@@ -200,6 +203,9 @@ export function AppLayout() {
     </NavLink>
   )
 
+  const loginPath = buildAuthEntryPath('login', location)
+  const registerPath = buildAuthEntryPath('register', location)
+
   const authArea = isRestoringSession ? (
     <span className="inline-flex h-11 w-11 items-center justify-center sm:h-6 sm:w-6" aria-label="Đang tải">
       <Loader2 className="h-4 w-4 animate-spin text-primary-foreground/80" />
@@ -209,7 +215,7 @@ export function AppLayout() {
   ) : (
     <span className="flex items-center gap-1.5 text-sm sm:gap-2">
       <NavLink
-        to="/auth/register"
+        to={registerPath}
         className="hidden rounded-md px-2 py-2 hover:text-primary-foreground sm:inline"
       >
         Đăng ký
@@ -218,7 +224,7 @@ export function AppLayout() {
         |
       </span>
       <NavLink
-        to="/auth/login"
+        to={loginPath}
         className="rounded-md px-2 py-2 font-medium hover:text-primary-foreground"
       >
         Đăng nhập
@@ -435,7 +441,7 @@ export function AppLayout() {
                 </Link>
               </li>
               <li>
-                <Link to="/auth/login" className="hover:text-primary-foreground hover:underline">
+                <Link to={loginPath} className="hover:text-primary-foreground hover:underline">
                   Đăng nhập / Đăng ký
                 </Link>
               </li>

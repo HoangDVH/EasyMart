@@ -6,9 +6,21 @@
 
 | Vai trò | Email | Mật khẩu |
 |---------|-------|----------|
-| Seller | `seller1@gmail.com` | `seller@123456` |
+| Seller | `seller1@gmail.com` | `Seller@123456` |
+| Admin | `admin@gmail.com` | `Admin@123` |
 
-Đăng nhập → vào dashboard `/seller`.
+- Seller → dashboard `/seller`
+- Admin → dashboard `/admin`
+
+### Thẻ test thanh toán VNPay (NCB)
+
+| Trường | Giá trị |
+|--------|---------|
+| Ngân hàng | NCB |
+| Số thẻ | `9704198526191432198` |
+| Tên chủ thẻ | `NGUYEN VAN A` |
+| Ngày phát hành | `07/15` |
+| Mật khẩu OTP | `123456` |
 
 ---
 

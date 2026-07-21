@@ -66,6 +66,8 @@ export const router = createBrowserRouter([
               { path: 'products', element: <SellerProductsPage /> },
               { path: 'orders', element: <SellerOrdersPage /> },
               { path: 'orders/:id', element: <SellerOrderDetailPage /> },
+              { path: 'account', element: <ProfilePage /> },
+              { path: 'account/addresses', element: <AddressesPage /> },
             ],
           },
         ],
@@ -76,7 +78,11 @@ export const router = createBrowserRouter([
           {
             path: '/admin',
             element: <DashboardLayout />,
-            children: [{ index: true, element: <AdminPage /> }],
+            children: [
+              { index: true, element: <AdminPage /> },
+              { path: 'account', element: <ProfilePage /> },
+              { path: 'account/addresses', element: <AddressesPage /> },
+            ],
           },
         ],
       },
