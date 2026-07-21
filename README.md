@@ -2,6 +2,16 @@
 
 Ứng dụng frontend cho hệ thống thương mại điện tử **EasyMart**, xây bằng React + TypeScript + Vite.
 
+## Tài khoản test
+
+| Vai trò | Email | Mật khẩu |
+|---------|-------|----------|
+| Seller | `seller1@gmail.com` | `seller@123456` |
+
+Đăng nhập → vào dashboard `/seller`.
+
+---
+
 Luồng chính:
 
 - người dùng mua hàng (catalog, giỏ, checkout, VNPay, sổ địa chỉ)
