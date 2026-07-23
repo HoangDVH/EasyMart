@@ -59,6 +59,7 @@ function shouldUseReturnPath(path: string, role?: UserRole | null) {
   if (isDashboardPath(path)) return true
   if (pathname.startsWith('/checkout') || pathname === '/cart') return true
   if (pathname.startsWith('/account') || pathname.startsWith('/payment')) return true
+  if (pathname.startsWith('/products/')) return true
   return false
 }
 

@@ -15,7 +15,7 @@ export function ProductSupplierCard({ supplier, className }: ProductSupplierCard
   return (
     <section
       className={cn(
-        'overflow-hidden rounded-xl border bg-card shadow-sm',
+        'overflow-hidden rounded-sm border border-[#00000014] bg-card shadow-none',
         className,
       )}
       aria-labelledby="product-supplier-title"
@@ -81,7 +81,7 @@ export function ProductSupplierCard({ supplier, className }: ProductSupplierCard
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-px border-t bg-border/60 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-px border-t border-[#0000000d] bg-[#0000000a] sm:grid-cols-4">
         <Stat label="Đánh giá" value={supplier.rating.toFixed(1)} />
         <Stat label="Phản hồi" value={supplier.responseRate} />
         <Stat label="Người theo dõi" value={supplier.followerCount} />

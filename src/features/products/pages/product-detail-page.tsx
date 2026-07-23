@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
-import { ShoppingCart, Star, Zap } from 'lucide-react'
+import { ShoppingCart, Zap } from 'lucide-react'
 import { ProductPromoPanel } from '@/features/products/components/product-promo-panel'
+import { ProductReviewsSection } from '@/features/products/components/product-reviews-section'
 import { ProductServiceGuarantees } from '@/features/products/components/product-service-guarantees'
 import { ProductSupplierCard } from '@/features/products/components/product-supplier-card'
 import { RelatedProducts } from '@/features/products/components/related-products'
+import { StarRating } from '@/features/products/components/star-rating'
 import { useProductQuery } from '@/features/products/hooks/use-catalog'
 import {
   getProductPromoMock,
@@ -135,9 +137,9 @@ export function ProductDetailPage() {
       : null
 
   return (
-    <div className="space-y-8 pb-4">
+    <div className="space-y-3 pb-4">
       <Breadcrumb
-        className="mb-8"
+        className="mb-1"
         items={[
           { label: 'Trang chủ', to: '/' },
           ...(product.categoryName && product.categoryId
@@ -149,9 +151,9 @@ export function ProductDetailPage() {
         ]}
       />
 
-      <Card className="w-full overflow-hidden">
+      <Card className="w-full overflow-hidden rounded-sm border-[#00000014] shadow-none">
         <div className="grid lg:grid-cols-2 lg:items-stretch">
-          <div className="flex min-h-0 flex-col border-b border-border/70 lg:border-b-0 lg:border-r">
+          <div className="flex min-h-0 flex-col border-b border-[#0000000d] lg:border-b-0 lg:border-r">
             <div className="relative flex min-h-[280px] flex-1 items-center justify-center bg-card p-6 sm:min-h-[320px] lg:min-h-[420px]">
               {galleryImages.length > 0 ? (
                 <img
@@ -175,16 +177,16 @@ export function ProductDetailPage() {
               ) : null}
             </div>
             {galleryImages.length > 1 ? (
-              <div className="flex gap-3 overflow-x-auto border-t border-border/70 p-4">
+              <div className="flex gap-3 overflow-x-auto border-t border-[#0000000d] p-4">
                 {galleryImages.map((url, index) => (
                   <button
                     key={`${url}-${index}`}
                     type="button"
                     className={cn(
-                      'h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-card p-1.5 transition',
+                      'h-16 w-16 shrink-0 overflow-hidden rounded-sm border bg-card p-1.5 transition',
                       index === activeImageIndex
                         ? 'border-primary ring-2 ring-primary/30'
-                        : 'border-border hover:border-primary/50',
+                        : 'border-[#00000014] hover:border-primary/50',
                     )}
                     onClick={() => setActiveImageIndex(index)}
                     aria-label={`Xem ảnh ${index + 1}`}
@@ -202,10 +204,17 @@ export function ProductDetailPage() {
 
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
                 {product.rating != null ? (
-                  <span className="inline-flex items-center gap-1 font-medium text-amber-700">
-                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" aria-hidden />
+                  <span className="inline-flex items-center gap-1.5 font-medium text-amber-700">
+                    <StarRating value={product.rating} readOnly size="sm" />
                     {product.rating.toFixed(1)}
+                    {product.reviewCount != null ? (
+                      <span className="font-normal text-muted-foreground">
+                        ({product.reviewCount} đánh giá)
+                      </span>
+                    ) : null}
                   </span>
+                ) : product.reviewCount != null ? (
+                  <span className="text-muted-foreground">({product.reviewCount} đánh giá)</span>
                 ) : null}
                 {product.rating != null && soldLabel ? (
                   <span className="text-muted-foreground/40" aria-hidden>
@@ -305,11 +314,11 @@ export function ProductDetailPage() {
       <ProductServiceGuarantees />
 
       {product.description ? (
-        <Card>
-          <CardHeader className="px-5 pb-3 pt-5 sm:px-6 sm:pt-6">
-            <CardTitle className="text-base">Mô tả sản phẩm</CardTitle>
+        <Card className="rounded-sm border-[#00000014] shadow-none">
+          <CardHeader className="px-5 pb-3 pt-4 sm:px-6 sm:pt-5">
+            <CardTitle className="text-base font-medium">Mô tả sản phẩm</CardTitle>
           </CardHeader>
-          <CardContent className="px-5 pb-5 sm:px-6 sm:pb-6">
+          <CardContent className="px-5 pb-4 sm:px-6 sm:pb-5">
             <p className="whitespace-pre-line text-sm leading-7 text-muted-foreground">
               {product.description}
             </p>
@@ -317,7 +326,15 @@ export function ProductDetailPage() {
         </Card>
       ) : null}
 
-      <RelatedProducts productId={product.id} categoryId={product.categoryId} />
+      <ProductReviewsSection
+        productId={product.id}
+        rating={product.rating}
+        reviewCount={product.reviewCount}
+      />
+
+      <div className="pt-5">
+        <RelatedProducts productId={product.id} categoryId={product.categoryId} />
+      </div>
     </div>
   )
 }

@@ -17,6 +17,14 @@ export function saveCheckoutProfile(values: CheckoutFormValues) {
   }
 }
 
+export function clearCheckoutProfile() {
+  try {
+    localStorage.removeItem(PROFILE_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
 export function loadCheckoutProfile(): CheckoutFormValues | null {
   try {
     const raw = localStorage.getItem(PROFILE_KEY)

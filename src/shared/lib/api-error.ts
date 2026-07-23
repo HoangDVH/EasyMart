@@ -10,6 +10,13 @@ type ApiErrorResponse = {
   result?: ErrorPayload
 }
 
+export function getApiErrorStatus(error: unknown): number | null {
+  if (axios.isAxiosError(error)) {
+    return error.response?.status ?? null
+  }
+  return null
+}
+
 export function getApiErrorMessage(
   error: unknown,
   fallback = 'Có lỗi xảy ra. Vui lòng thử lại.',

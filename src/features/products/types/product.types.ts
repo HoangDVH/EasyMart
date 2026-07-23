@@ -5,6 +5,8 @@ export type Product = {
   price?: number | null
   discountPrice?: number | null
   rating?: number | null
+  /** Số lượng đánh giá (BE: reviewCount) */
+  reviewCount?: number | null
   soldCount?: number | null
   /** Backend trả `stock` (int32). Field `stockQuantity` giữ lại làm alias để code cũ không vỡ. */
   stock?: number | null

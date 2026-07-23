@@ -32,7 +32,7 @@ export function ProductServiceGuarantees({ className }: ProductServiceGuarantees
   return (
     <section
       className={cn(
-        'grid gap-4 rounded-xl border bg-card p-4 shadow-sm sm:grid-cols-2 sm:p-5 lg:grid-cols-4 lg:gap-0 lg:divide-x lg:p-0',
+        'grid gap-4 rounded-sm border border-[#00000014] bg-card p-4 shadow-none sm:grid-cols-2 sm:p-5 lg:grid-cols-4 lg:gap-0 lg:divide-x lg:divide-[#0000000d] lg:p-0',
         className,
       )}
       aria-label="Chính sách mua hàng"

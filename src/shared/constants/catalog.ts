@@ -6,6 +6,9 @@ export const PRODUCT_ENDPOINTS = {
   byId: (id: string) => `${PRODUCTS_BASE}/${id}`,
   /** POST multipart, Bearer — response `result.urls` (theo docs backend) */
   uploadImages: `${PRODUCTS_BASE}/images`,
+  reviews: (productId: string) => `${PRODUCTS_BASE}/${productId}/reviews`,
+  reviewById: (productId: string, reviewId: string) =>
+    `${PRODUCTS_BASE}/${productId}/reviews/${reviewId}`,
 } as const
 
 /**

@@ -44,9 +44,9 @@ export function RelatedProducts({ productId, categoryId }: RelatedProductsProps)
   if (related.length === 0) return null
 
   return (
-    <section className="space-y-4">
-      <h2 className="text-lg font-semibold">Sản phẩm liên quan</h2>
-      <div className="stagger-children grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <section className="space-y-3">
+      <h2 className="text-base font-medium text-[#000000de]">Sản phẩm liên quan</h2>
+      <div className="stagger-children grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {related.map((product) => (
           <RelatedProductCard key={product.id} product={product} />
         ))}
@@ -61,7 +61,7 @@ function RelatedProductCard({ product }: { product: Product }) {
 
   return (
     <Link to={`/products/${product.id}`}>
-      <Card className="h-full overflow-hidden border-border/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/10">
+      <Card className="h-full overflow-hidden rounded-sm border-[#00000014] shadow-none transition-colors hover:border-primary/30">
         <div className="aspect-square bg-card p-2">
           {image ? (
             <img src={image} alt={product.name} className="h-full w-full object-contain" loading="lazy" />

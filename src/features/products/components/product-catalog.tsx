@@ -320,6 +320,15 @@ function ProductCatalogCard({ product }: { product: Product }) {
                     <span className="inline-flex w-fit items-center text-xs font-medium text-amber-700">
                       <Star className="mr-1 h-3.5 w-3.5 fill-amber-400 text-amber-500" />
                       {rating}
+                      {product.reviewCount != null ? (
+                        <span className="ml-1 font-normal text-muted-foreground">
+                          ({product.reviewCount} đánh giá)
+                        </span>
+                      ) : null}
+                    </span>
+                  ) : product.reviewCount != null ? (
+                    <span className="text-xs text-muted-foreground">
+                      ({product.reviewCount} đánh giá)
                     </span>
                   ) : null}
                   {rating && soldCount ? <span className="text-xs text-muted-foreground">•</span> : null}

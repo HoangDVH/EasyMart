@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { Client } from '@stomp/stompjs'
 import { useQueryClient } from '@tanstack/react-query'
 import { parseOrder } from '@/features/orders/api/orders.api'
 import { productsApi } from '@/features/products/api/products.api'
@@ -16,18 +15,15 @@ import {
   useOrdersRealtimeStore,
   type RealtimeStatus,
 } from '@/features/orders/stores/orders-realtime-store'
+import { handleReviewRealtimeEvent } from '@/features/products/lib/review-realtime'
+import { reviewsQueryKeyRoot } from '@/features/products/hooks/use-reviews'
 import { sellerOrdersHistoryQueryKey } from '@/features/seller/hooks/use-seller'
-import { env } from '@/shared/config/env'
+import { sharedStompSession } from '@/shared/lib/stomp-session'
 import { useAuthStore } from '@/shared/stores/auth-store'
 import type { Order } from '@/features/orders/types/order.types'
+import type { ProductReviewRealtimeEvent } from '@/features/products/types/review.types'
 
 export type { RealtimeStatus }
-
-/** Theo spec backend: wss://…/ws (override bằng VITE_WS_URL). */
-function resolveBrokerUrl(): string {
-  if (env.WS_URL) return env.WS_URL
-  return `${env.API_BASE_URL.replace(/^http/, 'ws').replace(/\/$/, '')}/ws`
-}
 
 type OrderRealtimeEvent = {
   type?: string
@@ -229,8 +225,8 @@ function notifyOrderEvent(event: OrderRealtimeEvent, rawOrder: unknown) {
 }
 
 /**
- * Kết nối STOMP `/user/queue/orders` — gọi 1 lần ở AppLayout khi đã đăng nhập.
- * Buyer / Seller / Admin đều nhận event trên queue của mình; nội dung chuông phân theo role.
+ * Kết nối STOMP dùng chung — `/user/queue/orders` + `/user/queue/reviews`.
+ * Gọi 1 lần ở AppLayout / DashboardLayout khi đã đăng nhập.
  */
 export function useOrdersRealtime(enabled: boolean): RealtimeStatus {
   const queryClient = useQueryClient()
@@ -246,53 +242,47 @@ export function useOrdersRealtime(enabled: boolean): RealtimeStatus {
       return
     }
 
-    setStatus('connecting')
-    setSharedStatus('connecting')
-    const client = new Client({
-      brokerURL: resolveBrokerUrl(),
-      connectHeaders: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      reconnectDelay: 5000,
-      heartbeatIncoming: 10000,
-      heartbeatOutgoing: 10000,
-      onConnect: () => {
-        setStatus('connected')
-        setSharedStatus('connected')
-
-        client.subscribe('/user/queue/orders', (message) => {
-          try {
-            const event = JSON.parse(message.body) as OrderRealtimeEvent
-            if (event.order != null) {
-              updateOrderInState(queryClient, event.order)
-              notifyOrderEvent(event, event.order)
-            } else {
-              resyncOrders(queryClient)
-            }
-          } catch {
-            resyncOrders(queryClient)
-          }
-        })
-
+    sharedStompSession.retain(accessToken)
+    const offStatus = sharedStompSession.onStatus((next) => {
+      setStatus(next)
+      setSharedStatus(next)
+      if (next === 'connected') {
         if (hasConnectedRef.current) {
           resyncOrders(queryClient)
+          void queryClient.invalidateQueries({ queryKey: reviewsQueryKeyRoot })
         }
         hasConnectedRef.current = true
-      },
-      onWebSocketClose: () => {
-        setStatus('disconnected')
-        setSharedStatus('disconnected')
-      },
-      onStompError: () => {
-        setStatus('disconnected')
-        setSharedStatus('disconnected')
-      },
+      }
     })
 
-    client.activate()
+    const offOrders = sharedStompSession.subscribe('/user/queue/orders', (body) => {
+      try {
+        const event = JSON.parse(body) as OrderRealtimeEvent
+        if (event.order != null) {
+          updateOrderInState(queryClient, event.order)
+          notifyOrderEvent(event, event.order)
+        } else {
+          resyncOrders(queryClient)
+        }
+      } catch {
+        resyncOrders(queryClient)
+      }
+    })
+
+    const offReviews = sharedStompSession.subscribe('/user/queue/reviews', (body) => {
+      try {
+        const event = JSON.parse(body) as ProductReviewRealtimeEvent
+        handleReviewRealtimeEvent(queryClient, event, { toast: true })
+      } catch {
+        void queryClient.invalidateQueries({ queryKey: reviewsQueryKeyRoot })
+      }
+    })
 
     return () => {
-      void client.deactivate()
+      offOrders()
+      offReviews()
+      offStatus()
+      sharedStompSession.release()
       setStatus('disconnected')
       setSharedStatus('disconnected')
     }

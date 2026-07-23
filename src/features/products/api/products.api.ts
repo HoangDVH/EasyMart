@@ -323,6 +323,12 @@ function coerceProduct(raw: Record<string, unknown>): Product | null {
       if (n == null) return null
       return Math.max(0, Math.min(5, n))
     })(),
+    reviewCount: (() => {
+      const candidate = row.reviewCount ?? row.reviewsCount ?? row.totalReviews ?? row.ratingCount
+      const n = toNumberOrNull(candidate)
+      if (n == null) return null
+      return n < 0 ? null : Math.round(n)
+    })(),
     soldCount: (() => {
       const candidate = row.soldCount ?? row.sold ?? row.totalSold ?? row.salesCount ?? row.orderCount
       const n = toNumberOrNull(candidate)

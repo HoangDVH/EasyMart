@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useLayoutEffect } from 'react'
 import { toast } from 'react-toastify'
 import { authApi } from '@/features/auth/api/auth.api'
+import { addressesQueryKeyRoot } from '@/features/account/hooks/use-addresses'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
+import { clearCheckoutProfile } from '@/shared/lib/shipping-storage'
 import { silentRefreshAccessToken } from '@/shared/api/http-client'
 import type {
   GoogleAuthPayload,
@@ -14,6 +16,13 @@ import { useAuthStore } from '@/shared/stores/auth-store'
 
 const PROFILE_QUERY_KEY = ['profile']
 const SESSION_QUERY_KEY = ['restore-session']
+
+function resetUserScopedCache(queryClient: ReturnType<typeof useQueryClient>) {
+  clearCheckoutProfile()
+  void queryClient.removeQueries({ queryKey: addressesQueryKeyRoot })
+  void queryClient.removeQueries({ queryKey: PROFILE_QUERY_KEY })
+  void queryClient.removeQueries({ queryKey: ['orders'] })
+}
 
 export function useRestoreSessionQuery(enabled = true) {
   return useQuery({
@@ -58,6 +67,7 @@ export function useLoginMutation() {
   return useMutation({
     mutationFn: (payload: LoginPayload) => authApi.login(payload),
     onSuccess: (result) => {
+      resetUserScopedCache(queryClient)
       setAccessToken(result.accessToken)
       void queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY })
     },
@@ -71,6 +81,7 @@ export function useGoogleLoginMutation() {
   return useMutation({
     mutationFn: (payload: GoogleAuthPayload) => authApi.loginWithGoogle(payload),
     onSuccess: (result) => {
+      resetUserScopedCache(queryClient)
       setAccessToken(result.accessToken)
       void queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY })
     },
@@ -90,6 +101,7 @@ export function useLogoutMutation() {
   return useMutation({
     mutationFn: () => authApi.logout(),
     onSettled: async (_data, error) => {
+      clearCheckoutProfile()
       clearAuth()
       await queryClient.clear()
       if (error) {

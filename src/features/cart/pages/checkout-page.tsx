@@ -60,8 +60,6 @@ import {
 } from '@/shared/ui/card'
 import { Label } from '@/shared/ui/label'
 
-const savedProfile = loadCheckoutProfile()
-
 function VnpayRedirectScreen() {
   return (
     <>
@@ -78,6 +76,7 @@ function VnpayRedirectScreen() {
 export function CheckoutPage() {
   const navigate = useNavigate()
   const accessToken = useAuthStore((state) => state.accessToken)
+  const userId = useAuthStore((state) => state.user?.id)
   const profileQuery = useProfileQuery(Boolean(accessToken))
   const addressesQuery = useAddressesQuery(Boolean(accessToken))
   const createAddressMutation = useCreateAddressMutation()
@@ -114,13 +113,25 @@ export function CheckoutPage() {
     reset,
   } = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: savedProfile ?? {
+    defaultValues: {
       customerName: '',
       phone: '',
       address: '',
       paymentMethod: 'COD',
     },
   })
+
+  /** Đổi tài khoản → xóa form địa chỉ cũ, prefill lại theo user mới. */
+  useEffect(() => {
+    setPrefillDone(false)
+    setSelectedAddressId('new')
+    reset({
+      customerName: '',
+      phone: '',
+      address: '',
+      paymentMethod: 'COD',
+    })
+  }, [userId, accessToken, reset])
 
   const customerName = watch('customerName')
   const phone = watch('phone')
@@ -158,12 +169,13 @@ export function CheckoutPage() {
         customerName: defaultAddress.receiverName,
         phone: defaultAddress.phone,
         address: defaultAddress.address,
-        paymentMethod: savedProfile?.paymentMethod ?? 'COD',
+        paymentMethod: loadCheckoutProfile()?.paymentMethod ?? 'COD',
       })
       setPrefillDone(true)
       return
     }
 
+    const savedProfile = loadCheckoutProfile()
     if (savedProfile) {
       reset(savedProfile)
       setSelectedAddressId('new')
