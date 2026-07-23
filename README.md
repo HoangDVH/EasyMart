@@ -6,7 +6,7 @@
 
 | Vai trò | Email | Mật khẩu |
 |---------|-------|----------|
-| Seller | `seller1@gmail.com` | `Seller@123456` |
+| Seller | `seller1@gmail.com` | `Seller@123` |
 | Admin | `admin@gmail.com` | `Admin@123` |
 
 - Seller → dashboard `/seller`
