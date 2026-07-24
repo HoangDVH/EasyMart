@@ -95,3 +95,7 @@ export const SellerOrderDetailPage = lazyPage(
   () => import('@/features/seller/pages/seller-order-detail-page'),
   'SellerOrderDetailPage',
 )
+export const SellerPaymentsPage = lazyPage(
+  () => import('@/features/seller/pages/seller-payments-page'),
+  'SellerPaymentsPage',
+)

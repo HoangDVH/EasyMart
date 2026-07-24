@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Loader2, MessageSquarePlus, Pencil, Star, Trash2 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useMyOrdersQuery } from '@/features/orders/hooks/use-orders'
-import { isOrderPaid } from '@/features/orders/lib/fulfillment'
+import { isOrderPaid, getOrderFulfillmentStatus } from '@/features/orders/lib/fulfillment'
 import { StarRating } from '@/features/products/components/star-rating'
 import {
   useCreateReviewMutation,
@@ -258,10 +258,18 @@ export function ProductReviewsSection({
     [reviews, myEmail],
   )
 
-  const hasPurchasedPaid = useMemo(() => {
+  const hasPurchasedDelivered = useMemo(() => {
     const orders = myOrdersQuery.data ?? []
     return orders.some((order) => {
-      const paid = isOrderPaid(order) || String(order.status ?? '').toUpperCase().includes('PAID')
+      const fulfillment = getOrderFulfillmentStatus(order)
+      const code = String(order.status ?? '').toUpperCase()
+      const delivered =
+        fulfillment === 'DELIVERED' ||
+        code.includes('DELIVER') ||
+        code.includes('COMPLETE')
+      if (!delivered) return false
+      // COD/online: cần đã thanh toán hoặc đã giao (DELIVERED)
+      const paid = isOrderPaid(order) || code.includes('PAID') || fulfillment === 'DELIVERED'
       if (!paid) return false
       return order.items.some((item) => String(item.productId) === String(productId))
     })
@@ -293,9 +301,9 @@ export function ProductReviewsSection({
     : null)
   const checkingPurchase = Boolean(accessToken) && myOrdersQuery.isPending
   const canShowCreate =
-    Boolean(accessToken) && !myReview && hasPurchasedPaid && !checkingPurchase
+    Boolean(accessToken) && !myReview && hasPurchasedDelivered && !checkingPurchase
   const showMustPurchaseHint =
-    Boolean(accessToken) && !myReview && !checkingPurchase && !hasPurchasedPaid
+    Boolean(accessToken) && !myReview && !checkingPurchase && !hasPurchasedDelivered
 
   const filterChips: { key: StarFilter; label: string }[] = [
     { key: 'all', label: 'Tất cả' },
@@ -319,7 +327,7 @@ export function ProductReviewsSection({
         return
       }
       if (status === 403) {
-        toast.error('Chỉ đánh giá sau khi mua')
+        toast.error('Chỉ đánh giá sau khi nhận hàng')
         return
       }
       if (status === 409) {
@@ -419,7 +427,7 @@ export function ProductReviewsSection({
             >
               Đăng nhập
             </Link>{' '}
-            để đánh giá sản phẩm (chỉ sau khi mua và thanh toán).
+            để đánh giá sản phẩm (chỉ sau khi nhận hàng).
           </p>
         ) : null}
 
@@ -432,7 +440,7 @@ export function ProductReviewsSection({
 
         {showMustPurchaseHint ? (
           <p className="rounded-sm border border-[#ffe8e2] bg-[#fff8f3] px-4 py-3 text-sm text-[#ee4d2d]">
-            Chỉ đánh giá sau khi mua
+            Chỉ đánh giá sau khi nhận hàng
           </p>
         ) : null}
 

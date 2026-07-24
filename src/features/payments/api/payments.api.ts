@@ -98,4 +98,10 @@ export const paymentsApi = {
     if (!Array.isArray(data?.result)) return []
     return data.result.map(coercePayment).filter((p): p is Payment => p !== null)
   },
+
+  async listSellerPayments(): Promise<Payment[]> {
+    const { data } = await httpClient.get<ApiEnvelope<unknown>>(`${PAYMENTS_BASE}/seller/history`)
+    if (!Array.isArray(data?.result)) return []
+    return data.result.map(coercePayment).filter((p): p is Payment => p !== null)
+  },
 }

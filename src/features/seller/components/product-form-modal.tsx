@@ -110,33 +110,18 @@ export function ProductFormModal({
               {errors.stock ? <p className="text-xs text-destructive">{errors.stock.message}</p> : null}
             </div>
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="seller-product-discount">Giá khuyến mãi</Label>
-              <Input
-                id="seller-product-discount"
-                type="number"
-                min={1}
-                {...register('discountPrice')}
-                placeholder="Để trống nếu không giảm giá"
-              />
-              {errors.discountPrice ? (
-                <p className="text-xs text-destructive">{errors.discountPrice.message}</p>
-              ) : null}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="seller-product-rating">Đánh giá (0–5)</Label>
-              <Input
-                id="seller-product-rating"
-                type="number"
-                min={0}
-                max={5}
-                step="0.1"
-                {...register('rating')}
-                placeholder="Ví dụ: 4.5"
-              />
-              {errors.rating ? <p className="text-xs text-destructive">{errors.rating.message}</p> : null}
-            </div>
+          <div className="grid gap-2">
+            <Label htmlFor="seller-product-discount">Giá khuyến mãi</Label>
+            <Input
+              id="seller-product-discount"
+              type="number"
+              min={1}
+              {...register('discountPrice')}
+              placeholder="Để trống nếu không giảm giá"
+            />
+            {errors.discountPrice ? (
+              <p className="text-xs text-destructive">{errors.discountPrice.message}</p>
+            ) : null}
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="grid gap-2">

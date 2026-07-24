@@ -1,5 +1,7 @@
-import { Link } from 'react-router-dom'
-import { CalendarDays, Package, ShoppingBag } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { CalendarDays, Package, RotateCcw, ShoppingBag } from 'lucide-react'
+import { toast } from 'react-toastify'
 import { useMyOrdersQuery } from '@/features/orders/hooks/use-orders'
 import {
   formatOrderDate,
@@ -9,21 +11,87 @@ import {
 import { OrderCancelButton } from '@/features/orders/components/order-cancel-button'
 import { OrderIdDisplay } from '@/features/orders/components/order-id-display'
 import { OrderItemThumb } from '@/features/orders/components/order-item-thumb'
+import {
+  getOrderFulfillmentStatus,
+  isOrderPaid,
+} from '@/features/orders/lib/fulfillment'
+import { paymentMethodLabel } from '@/features/payments/lib/payment-labels'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
 import { loadOrderShipping } from '@/shared/lib/shipping-storage'
+import { cn } from '@/shared/lib/utils'
 import { useAuthStore } from '@/shared/stores/auth-store'
+import { useCartStore } from '@/shared/stores/cart-store'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { EmptyState } from '@/shared/ui/empty-state'
 import { Skeleton } from '@/shared/ui/skeleton'
-import { cn } from '@/shared/lib/utils'
 import type { Order } from '@/features/orders/types/order.types'
 
+type OrderTab = 'all' | 'pending_payment' | 'shipping' | 'delivered' | 'cancelled'
+
+const ORDER_TABS: { id: OrderTab; label: string }[] = [
+  { id: 'all', label: 'Tất cả' },
+  { id: 'pending_payment', label: 'Chờ thanh toán' },
+  { id: 'shipping', label: 'Vận chuyển' },
+  { id: 'delivered', label: 'Hoàn thành' },
+  { id: 'cancelled', label: 'Đã hủy' },
+]
+
+function resolvePaymentMethod(order: Order): string | null {
+  if (order.paymentMethod?.trim()) return order.paymentMethod.trim()
+  return loadOrderShipping(order.id)?.paymentMethod ?? null
+}
+
+function isCancelledOrder(order: Order): boolean {
+  const code = order.status.toUpperCase()
+  return code.includes('CANCEL') || code.includes('FAIL') || code.includes('REJECT')
+}
+
+function orderMatchesTab(order: Order, tab: OrderTab): boolean {
+  if (tab === 'all') return true
+  if (tab === 'cancelled') return isCancelledOrder(order)
+  if (isCancelledOrder(order)) return false
+
+  const paid = isOrderPaid(order) || order.status.toUpperCase().includes('PAID')
+  const fulfillment = getOrderFulfillmentStatus(order)
+
+  if (tab === 'pending_payment') return !paid
+  if (tab === 'delivered') {
+    return fulfillment === 'DELIVERED' || order.status.toUpperCase().includes('DELIVER')
+  }
+  if (tab === 'shipping') {
+    return paid && fulfillment !== 'DELIVERED'
+  }
+  return true
+}
+
 function OrderCard({ order }: { order: Order }) {
-  const shipping = loadOrderShipping(order.id)
-  const meta = orderDisplayMeta(order, { paymentMethod: shipping?.paymentMethod })
+  const navigate = useNavigate()
+  const upsertLine = useCartStore((state) => state.upsertLine)
+  const paymentMethod = resolvePaymentMethod(order)
+  const meta = orderDisplayMeta(order, { paymentMethod })
   const totalQty = order.items.reduce((sum, it) => sum + it.quantity, 0)
+
+  const onBuyAgain = () => {
+    if (order.items.length === 0) {
+      toast.info('Đơn không có sản phẩm để mua lại.')
+      return
+    }
+    for (const item of order.items) {
+      upsertLine({
+        productId: item.productId,
+        name: item.productName || `Sản phẩm #${item.productId}`,
+        unitPrice: item.unitPrice,
+        originalPrice: null,
+        imageUrl: null,
+        stockQuantity: null,
+        quantity: item.quantity,
+      })
+    }
+    toast.success('Đã thêm sản phẩm vào giỏ hàng.')
+    navigate('/cart')
+  }
 
   return (
     <Card className="hover-lift overflow-hidden">
@@ -41,6 +109,9 @@ function OrderCard({ order }: { order: Order }) {
               <Package className="h-3.5 w-3.5" />
               {totalQty} sản phẩm
             </span>
+            {paymentMethod ? (
+              <span className="text-muted-foreground">{paymentMethodLabel(paymentMethod)}</span>
+            ) : null}
           </CardDescription>
         </div>
         <Badge className={cn('w-fit border', meta.tone)}>{meta.label}</Badge>
@@ -84,6 +155,10 @@ function OrderCard({ order }: { order: Order }) {
               Xem chi tiết đơn
             </Button>
           </Link>
+          <Button variant="secondary" size="sm" className="w-full gap-1.5 sm:flex-1" onClick={onBuyAgain}>
+            <RotateCcw className="h-3.5 w-3.5" />
+            Mua lại
+          </Button>
           <OrderCancelButton orderId={order.id} status={order.status} fullWidth className="sm:flex-1" />
         </div>
       </CardContent>
@@ -113,6 +188,30 @@ function OrderSkeleton() {
 export function MyOrdersPage() {
   const accessToken = useAuthStore((state) => state.accessToken)
   const ordersQuery = useMyOrdersQuery(Boolean(accessToken))
+  const [tab, setTab] = useState<OrderTab>('all')
+
+  const orders = ordersQuery.data ?? []
+  const tabCounts = useMemo(() => {
+    const counts: Record<OrderTab, number> = {
+      all: orders.length,
+      pending_payment: 0,
+      shipping: 0,
+      delivered: 0,
+      cancelled: 0,
+    }
+    for (const order of orders) {
+      for (const key of ORDER_TABS) {
+        if (key.id === 'all') continue
+        if (orderMatchesTab(order, key.id)) counts[key.id] += 1
+      }
+    }
+    return counts
+  }, [orders])
+
+  const filteredOrders = useMemo(
+    () => orders.filter((order) => orderMatchesTab(order, tab)),
+    [orders, tab],
+  )
 
   if (ordersQuery.isPending) {
     return (
@@ -146,8 +245,6 @@ export function MyOrdersPage() {
       </Card>
     )
   }
-
-  const orders = ordersQuery.data ?? []
 
   if (orders.length === 0) {
     return (
@@ -186,13 +283,46 @@ export function MyOrdersPage() {
             {ordersQuery.isFetching ? 'Đang tải...' : 'Làm mới'}
           </Button>
         </CardHeader>
+        <CardContent className="pt-0">
+          <div className="flex gap-1 overflow-x-auto pb-1">
+            {ORDER_TABS.map((item) => {
+              const active = tab === item.id
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setTab(item.id)}
+                  className={cn(
+                    'shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                    active
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {item.label}
+                  <span className="ml-1 opacity-80">({tabCounts[item.id]})</span>
+                </button>
+              )
+            })}
+          </div>
+        </CardContent>
       </Card>
 
-      <div className="stagger-children space-y-4">
-        {orders.map((order) => (
-          <OrderCard key={order.id} order={order} />
-        ))}
-      </div>
+      {filteredOrders.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={Package}
+            title="Không có đơn trong mục này"
+            description="Thử chọn tab khác hoặc làm mới danh sách."
+          />
+        </Card>
+      ) : (
+        <div className="stagger-children space-y-4">
+          {filteredOrders.map((order) => (
+            <OrderCard key={order.id} order={order} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

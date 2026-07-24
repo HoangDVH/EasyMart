@@ -20,13 +20,6 @@ export const sellerProductFormSchema = z
       .string()
       .trim()
       .refine((v) => Number.isFinite(Number(v)) && Number(v) >= 0, 'Tồn kho phải là số không âm.'),
-    rating: z
-      .string()
-      .trim()
-      .refine(
-        (v) => v.length === 0 || (Number.isFinite(Number(v)) && Number(v) >= 0 && Number(v) <= 5),
-        'Đánh giá từ 0 đến 5.',
-      ),
     categoryId: z.string().trim().min(1, 'Chọn danh mục (API bắt buộc categoryId).'),
     brandId: z.string(),
     isFeatured: z.boolean(),

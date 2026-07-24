@@ -40,10 +40,20 @@ export function isFulfillmentStatus(value: string | null | undefined): value is 
   return typeof value === 'string' && (FULFILLMENT_FLOW as readonly string[]).includes(value)
 }
 
-/** Trạng thái giao hàng của đơn — theo spec nằm ở items[0].fulfillmentStatus. */
+/** Trạng thái giao hàng của đơn — lấy sớm nhất (min index) trên mọi item có fulfillmentStatus hợp lệ. */
 export function getOrderFulfillmentStatus(order: Order): FulfillmentStatus | null {
-  const raw = order.items[0]?.fulfillmentStatus ?? null
-  return isFulfillmentStatus(raw) ? raw : null
+  let earliest: FulfillmentStatus | null = null
+  let earliestIdx = Number.POSITIVE_INFINITY
+  for (const item of order.items) {
+    const raw = item.fulfillmentStatus
+    if (!isFulfillmentStatus(raw)) continue
+    const idx = FULFILLMENT_FLOW.indexOf(raw)
+    if (idx < earliestIdx) {
+      earliestIdx = idx
+      earliest = raw
+    }
+  }
+  return earliest
 }
 
 export function getNextFulfillmentStatus(current: FulfillmentStatus): FulfillmentStatus | null {

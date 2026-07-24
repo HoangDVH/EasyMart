@@ -16,6 +16,7 @@ import {
 import { Label } from '@/shared/ui/label'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
+import { FullPageSpinner } from '@/shared/ui/full-page-spinner'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'react-toastify'
@@ -27,6 +28,7 @@ export function RegisterPage() {
   const location = useLocation()
   const registerMutation = useRegisterMutation()
   const [showPassword, setShowPassword] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
   const {
     register,
     handleSubmit,
@@ -36,11 +38,15 @@ export function RegisterPage() {
     defaultValues: { email: '', password: '' },
   })
 
+  const isBusy = registerMutation.isPending || isSubmitting || isRedirecting
+
   const onSubmit = async (data: RegisterFormValues) => {
     try {
       await registerMutation.mutateAsync(data)
+      setIsRedirecting(true)
       toast.success('Đăng ký thành công. Đang chuyển tới đăng nhập…')
     } catch (error) {
+      setIsRedirecting(false)
       toast.error(
         getApiErrorMessage(error, 'Vui lòng kiểm tra dữ liệu đầu vào.'),
       )
@@ -53,69 +59,74 @@ export function RegisterPage() {
   }
 
   return (
-    <Card className="glass-panel">
-      <CardHeader>
-        <CardTitle>Đăng ký</CardTitle>
-        <CardDescription>Tạo tài khoản mới để bắt đầu.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" {...register('email')} />
-            {errors.email ? (
-              <p className="text-xs text-destructive">{errors.email.message}</p>
-            ) : null}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Mật khẩu</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                {...register('password')}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 inline-flex items-center px-3 text-muted-foreground hover:text-foreground"
-                onClick={() => setShowPassword((prev) => !prev)}
-                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
+    <>
+      {isBusy ? <FullPageSpinner message="Đang đăng ký..." /> : null}
+      <Card className="glass-panel">
+        <CardHeader>
+          <CardTitle>Đăng ký</CardTitle>
+          <CardDescription>Tạo tài khoản mới để bắt đầu.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" {...register('email')} />
+              {errors.email ? (
+                <p className="text-xs text-destructive">{errors.email.message}</p>
+              ) : null}
             </div>
-            {errors.password ? (
-              <p className="text-xs text-destructive">
-                {errors.password.message}
-              </p>
-            ) : null}
-          </div>
-          <Button
-            type="submit"
-            className="w-full gap-2"
-            disabled={registerMutation.isPending || isSubmitting}
-          >
-            {registerMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {registerMutation.isPending ? 'Đang xử lý...' : 'Đăng ký'}
-          </Button>
-          <AuthGoogleSection
-            context="signup"
-            successMessage="Đăng ký / đăng nhập Google thành công!"
-            disabled={registerMutation.isPending || isSubmitting}
-          />
-          <p className="text-sm text-muted-foreground">
-            Đã có tài khoản?{' '}
-            <Link className="text-primary underline" to={`/auth/login${location.search}`}>
-              Đăng nhập
-            </Link>
-          </p>
-        </form>
-      </CardContent>
-    </Card>
+            <div className="space-y-2">
+              <Label htmlFor="password">Mật khẩu</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  {...register('password')}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 inline-flex items-center px-3 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              {errors.password ? (
+                <p className="text-xs text-destructive">
+                  {errors.password.message}
+                </p>
+              ) : null}
+            </div>
+            <Button
+              type="submit"
+              className="w-full gap-2"
+              disabled={isBusy}
+            >
+              {registerMutation.isPending || isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : null}
+              {registerMutation.isPending || isSubmitting ? 'Đang xử lý...' : 'Đăng ký'}
+            </Button>
+            <AuthGoogleSection
+              context="signup"
+              successMessage="Đăng ký / đăng nhập Google thành công!"
+              disabled={isBusy}
+            />
+            <p className="text-sm text-muted-foreground">
+              Đã có tài khoản?{' '}
+              <Link className="text-primary underline" to={`/auth/login${location.search}`}>
+                Đăng nhập
+              </Link>
+            </p>
+          </form>
+        </CardContent>
+      </Card>
+    </>
   )
 }

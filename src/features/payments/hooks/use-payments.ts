@@ -27,3 +27,12 @@ export function useMyPaymentsQuery(enabled = true) {
     staleTime: 30 * 1000,
   })
 }
+
+export function useSellerPaymentsQuery(enabled = true) {
+  return useQuery({
+    queryKey: [...paymentsQueryKeyRoot, 'seller'],
+    queryFn: () => paymentsApi.listSellerPayments(),
+    enabled,
+    staleTime: 30 * 1000,
+  })
+}

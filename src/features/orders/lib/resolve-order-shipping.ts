@@ -9,7 +9,15 @@ export type ResolvedShipping = {
   paymentMethod: PaymentMethod | null
 }
 
-/** Ưu tiên địa chỉ từ API đơn; fallback localStorage (đơn cũ / payment method). */
+function coercePaymentMethod(value: string | null | undefined): PaymentMethod | null {
+  if (!value?.trim()) return null
+  const code = value.trim().toUpperCase()
+  if (code === 'COD' || code === 'CASH') return 'COD'
+  if (code === 'VNPAY' || code === 'VN_PAY') return 'VNPAY'
+  return null
+}
+
+/** Ưu tiên địa chỉ + PTTT từ API đơn; fallback localStorage (đơn cũ). */
 export function resolveOrderShipping(
   order: Order | null | undefined,
   orderIdFallback?: string,
@@ -21,14 +29,16 @@ export function resolveOrderShipping(
     const hasApi =
       Boolean(order.receiverName?.trim()) ||
       Boolean(order.receiverPhone?.trim()) ||
-      Boolean(order.shippingAddress?.trim())
+      Boolean(order.shippingAddress?.trim()) ||
+      Boolean(order.paymentMethod?.trim())
 
-    if (hasApi) {
+    if (hasApi || local) {
       return {
         customerName: order.receiverName?.trim() || local?.customerName || '',
         phone: order.receiverPhone?.trim() || local?.phone || '',
         address: order.shippingAddress?.trim() || local?.address || '',
-        paymentMethod: local?.paymentMethod ?? null,
+        paymentMethod:
+          coercePaymentMethod(order.paymentMethod) ?? local?.paymentMethod ?? null,
       }
     }
   }

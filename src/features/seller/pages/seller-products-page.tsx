@@ -31,18 +31,17 @@ import { Button } from '@/shared/ui/button'
 import { Card, CardContent } from '@/shared/ui/card'
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
 
-function buildPayload(form: SellerProductFormParsed): SellerProductPayload {
+/** Rating không cho seller sửa — create = 0, update giữ rating hiện có (API vẫn bắt buộc field). */
+function buildPayload(form: SellerProductFormParsed, existingRating = 0): SellerProductPayload {
   const price = Math.round(Number(form.price))
   const discountRaw = form.discountPrice.trim()
   const discountPrice = discountRaw.length > 0 ? Math.round(Number(discountRaw)) : price
-  const ratingRaw = form.rating.trim()
-  const rating = ratingRaw.length > 0 ? Number(ratingRaw) : 0
   return {
     name: form.name.trim(),
     description: form.description.trim(),
     price,
     discountPrice,
-    rating,
+    rating: existingRating,
     stock: Math.round(Number(form.stock)),
     categoryId: Math.round(Number(form.categoryId.trim())),
     brandId: Math.round(Number(form.brandId.trim() || '1')),
@@ -194,7 +193,7 @@ export function SellerProductsPage() {
 
   async function onSubmitForm(values: SellerProductFormParsed) {
     setFormError(null)
-    const payload = buildPayload(values)
+    const payload = buildPayload(values, editingProduct?.rating ?? 0)
     try {
       if (editingProduct) {
         await updateMutation.mutateAsync({ productId: editingProduct.id, payload })

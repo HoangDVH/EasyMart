@@ -12,6 +12,7 @@ import { env } from '@/shared/config/env'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
 import { resolvePostLoginPath } from '@/shared/lib/auth-redirect'
 import { cn } from '@/shared/lib/utils'
+import { FullPageSpinner } from '@/shared/ui/full-page-spinner'
 
 type GoogleSignInButtonProps = {
   /** Ngữ cảnh GIS: đăng nhập hoặc đăng ký */
@@ -33,7 +34,9 @@ export function GoogleSignInButton({
   const buttonHostRef = useRef<HTMLDivElement>(null)
   const [scriptReady, setScriptReady] = useState(false)
   const [scriptError, setScriptError] = useState<string | null>(null)
+  const [isRedirecting, setIsRedirecting] = useState(false)
   const clientId = env.GOOGLE_CLIENT_ID
+  const isBusy = googleMutation.isPending || isRedirecting
 
   const onCredentialRef = useRef<(response: GoogleCredentialResponse) => void>(() => {})
 
@@ -45,6 +48,7 @@ export function GoogleSignInButton({
     }
     try {
       await googleMutation.mutateAsync({ idToken })
+      setIsRedirecting(true)
       const profile = await authApi.getProfile()
       toast.success(successMessage)
       const redirect = resolvePostLoginPath(
@@ -55,6 +59,7 @@ export function GoogleSignInButton({
       )
       navigate(redirect, { replace: true })
     } catch (error) {
+      setIsRedirecting(false)
       toast.error(getApiErrorMessage(error, 'Đăng nhập Google thất bại. Thử lại sau.'))
     }
   }
@@ -157,22 +162,29 @@ export function GoogleSignInButton({
   }
 
   return (
-    <div className={cn('relative w-full', className)}>
-      <div
-        ref={buttonHostRef}
-        className={cn(
-          'flex min-h-10 w-full justify-center overflow-hidden',
-          (disabled || googleMutation.isPending) && 'pointer-events-none opacity-60',
-        )}
-        aria-busy={googleMutation.isPending}
-      />
-      {!scriptReady || googleMutation.isPending ? (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md bg-card/80">
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden />
-          <span className="sr-only">Đang xử lý Google…</span>
-        </div>
+    <>
+      {isBusy ? (
+        <FullPageSpinner
+          message={context === 'signup' ? 'Đang đăng ký bằng Google...' : 'Đang đăng nhập bằng Google...'}
+        />
       ) : null}
-    </div>
+      <div className={cn('relative w-full', className)}>
+        <div
+          ref={buttonHostRef}
+          className={cn(
+            'flex min-h-10 w-full justify-center overflow-hidden',
+            (disabled || isBusy) && 'pointer-events-none opacity-60',
+          )}
+          aria-busy={isBusy}
+        />
+        {!scriptReady || isBusy ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md bg-card/80">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden />
+            <span className="sr-only">Đang xử lý Google…</span>
+          </div>
+        ) : null}
+      </div>
+    </>
   )
 }
 

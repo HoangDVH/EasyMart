@@ -6,7 +6,6 @@ export type SellerProductFormValues = {
   price: string
   discountPrice: string
   stock: string
-  rating: string
   categoryId: string
   brandId: string
   isFeatured: boolean
@@ -34,7 +33,6 @@ export const defaultSellerProductFormValues: SellerProductFormValues = {
   price: '',
   discountPrice: '',
   stock: '',
-  rating: '',
   categoryId: '',
   brandId: '1',
   isFeatured: false,
@@ -59,7 +57,6 @@ export function productToFormValues(product: Product): SellerProductFormValues {
     discountPrice: product.discountPrice != null ? String(product.discountPrice) : '',
     stock:
       product.stock != null ? String(product.stock) : product.stockQuantity != null ? String(product.stockQuantity) : '',
-    rating: product.rating != null ? String(product.rating) : '',
     categoryId: product.categoryId ?? '',
     brandId: product.brandId ?? '1',
     isFeatured: product.featured ?? false,

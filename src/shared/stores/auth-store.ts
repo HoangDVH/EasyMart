@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import type { User } from '@/features/auth/types/auth.types'
-import { useOrderNotificationsStore } from '@/features/orders/stores/order-notifications-store'
-import { bindCartToOwner } from '@/shared/stores/cart-store'
+import { bindNotificationsToOwner } from '@/features/orders/stores/order-notifications-store'
 import { clearCheckoutProfile } from '@/shared/lib/shipping-storage'
+import { bindCartToOwner } from '@/shared/stores/cart-store'
 
 const ACCESS_TOKEN_KEY = 'easymart-access-token'
 
@@ -41,13 +41,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   setUser: (user) => {
     bindCartToOwner(user?.id)
+    bindNotificationsToOwner(user?.id)
     set({ user })
   },
   clearAuth: () => {
     writeStoredAccessToken(null)
     clearCheckoutProfile()
     bindCartToOwner(null)
-    useOrderNotificationsStore.getState().clear()
+    bindNotificationsToOwner(null)
     set({ accessToken: null, user: null })
   },
 }))

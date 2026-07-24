@@ -26,6 +26,7 @@ import {
   SellerOrderDetailPage,
   SellerOrdersPage,
   SellerOverviewPage,
+  SellerPaymentsPage,
   SellerProductsPage,
 } from '@/app/routes/lazy-pages'
 
@@ -66,6 +67,7 @@ export const router = createBrowserRouter([
               { path: 'products', element: <SellerProductsPage /> },
               { path: 'orders', element: <SellerOrdersPage /> },
               { path: 'orders/:id', element: <SellerOrderDetailPage /> },
+              { path: 'payments', element: <SellerPaymentsPage /> },
               { path: 'account', element: <ProfilePage /> },
               { path: 'account/addresses', element: <AddressesPage /> },
             ],

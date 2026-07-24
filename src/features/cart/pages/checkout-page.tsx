@@ -86,14 +86,19 @@ export function CheckoutPage() {
   const {
     items: cartItems,
     buyNowItems,
-    clearCart,
+    selectedIds,
     clearBuyNow,
     updateQuantity,
     updateBuyNowQuantity,
     removeItem,
+    removeItems,
   } = useCartStore()
   const isBuyNow = buyNowItems != null && buyNowItems.length > 0
-  const items = isBuyNow ? buyNowItems : cartItems
+  const items = useMemo(() => {
+    if (isBuyNow) return buyNowItems
+    const selected = cartItems.filter((item) => selectedIds.includes(item.productId))
+    return selected.length > 0 ? selected : cartItems
+  }, [isBuyNow, buyNowItems, cartItems, selectedIds])
   const subtotal = calcCartSubtotal(items)
   const shippingFee = calculateShippingFee(subtotal)
   const payableTotal = subtotal + shippingFee
@@ -258,7 +263,7 @@ export function CheckoutPage() {
 
   const finishCheckout = () => {
     if (isBuyNow) clearBuyNow()
-    else clearCart()
+    else removeItems(items.map((item) => item.productId))
   }
 
   if (isVnpayBusy) {

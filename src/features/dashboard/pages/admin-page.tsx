@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import type { UserRole } from '@/features/auth/types/auth.types'
+import { useProfileQuery } from '@/features/auth/hooks/use-auth'
 import {
   useAssignRoleMutation,
   useCreateUserMutation,
@@ -24,6 +25,7 @@ import { AdminResetPasswordModal } from '@/features/dashboard/components/admin-r
 import type { AdminCreateUserFormValues } from '@/features/dashboard/schemas/admin.schemas'
 import { getApiErrorMessage } from '@/shared/lib/api-error'
 import { cn } from '@/shared/lib/utils'
+import { useAuthStore } from '@/shared/stores/auth-store'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent } from '@/shared/ui/card'
@@ -82,6 +84,10 @@ function RoleBadge({ role }: { role: UserRole }) {
 }
 
 export function AdminPage() {
+  const accessToken = useAuthStore((state) => state.accessToken)
+  const storeUserId = useAuthStore((state) => state.user?.id)
+  const profileQuery = useProfileQuery(Boolean(accessToken))
+  const currentUserId = storeUserId ?? profileQuery.data?.id
   const usersQuery = useUsersQuery(true)
   const createUserMutation = useCreateUserMutation()
   const updateUserMutation = useUpdateUserMutation()
@@ -97,6 +103,20 @@ export function AdminPage() {
     null,
   )
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; email: string } | null>(null)
+
+  function isSelfUser(id: string) {
+    return Boolean(currentUserId && id === currentUserId)
+  }
+
+  function isLockedUser(user: { id: string; email: string }) {
+    return isProtectedAdminEmail(user.email) || isSelfUser(user.id)
+  }
+
+  function lockReason(user: { id: string; email: string }) {
+    if (isSelfUser(user.id)) return 'Không thể thao tác trên tài khoản của chính bạn'
+    if (isProtectedAdminEmail(user.email)) return 'Không thể thao tác tài khoản admin hệ thống'
+    return undefined
+  }
 
   const users = usersQuery.data ?? []
   const summary = useMemo(() => {
@@ -147,6 +167,11 @@ export function AdminPage() {
 
   async function handleResetPasswordSubmit(password: string) {
     if (!resetPasswordTarget) return
+    if (isSelfUser(resetPasswordTarget.id)) {
+      toast.error('Không thể đặt lại mật khẩu tài khoản của chính bạn.')
+      setResetPasswordTarget(null)
+      return
+    }
     if (isProtectedAdminEmail(resetPasswordTarget.email)) {
       toast.error('Không thể đặt lại mật khẩu tài khoản admin hệ thống.')
       setResetPasswordTarget(null)
@@ -166,6 +191,11 @@ export function AdminPage() {
 
   async function handleDeleteConfirm() {
     if (!deleteTarget) return
+    if (isSelfUser(deleteTarget.id)) {
+      toast.error('Không thể xóa tài khoản của chính bạn.')
+      setDeleteTarget(null)
+      return
+    }
     if (isProtectedAdminEmail(deleteTarget.email)) {
       toast.error('Không thể xóa tài khoản admin hệ thống.')
       setDeleteTarget(null)
@@ -182,6 +212,10 @@ export function AdminPage() {
 
   async function handleAssignRoleExclusive(id: string, role: UserRole) {
     const targetUser = users.find((u) => u.id === id)
+    if (isSelfUser(id)) {
+      toast.error('Không thể đổi quyền tài khoản của chính bạn.')
+      return
+    }
     if (targetUser && isProtectedAdminEmail(targetUser.email)) {
       toast.error('Không thể đổi quyền tài khoản admin hệ thống.')
       return
@@ -195,22 +229,20 @@ export function AdminPage() {
       }
       if (enabledRoles.size === 0 && targetUser?.role) enabledRoles.add(targetUser.role)
 
-      const roleMutations: Promise<unknown>[] = []
       for (const option of ROLE_OPTIONS) {
         const shouldEnable = option.value === role
         const currentlyEnabled = enabledRoles.has(option.value)
         if (shouldEnable === currentlyEnabled) continue
-        roleMutations.push(
-          assignRoleMutation.mutateAsync({
-            id,
-            payload: { role: option.value, enabled: shouldEnable },
-          }),
-        )
+        await assignRoleMutation.mutateAsync({
+          id,
+          payload: { role: option.value, enabled: shouldEnable },
+        })
       }
-      if (roleMutations.length > 0) await Promise.all(roleMutations)
+      await usersQuery.refetch()
       toast.success(`Đã gán quyền ${roleLabel(role)}.`)
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Không gán được quyền.'))
+      await usersQuery.refetch()
     } finally {
       setRoleUpdatingUserId(null)
     }
@@ -350,6 +382,8 @@ export function AdminPage() {
                 {pageUsers.map((user) => {
                   const busy = roleUpdatingUserId === user.id
                   const isProtected = isProtectedAdminEmail(user.email)
+                  const isLocked = isLockedUser(user)
+                  const reason = lockReason(user)
                   return (
                     <div key={user.id} className="space-y-3 p-4">
                       <div className="flex items-start justify-between gap-3">
@@ -362,6 +396,11 @@ export function AdminPage() {
                                 Bảo vệ
                               </Badge>
                             ) : null}
+                            {isSelfUser(user.id) ? (
+                              <Badge className="border-transparent bg-slate-100 font-medium text-slate-700">
+                                Bạn
+                              </Badge>
+                            ) : null}
                           </div>
                         </div>
                         {busy ? (
@@ -371,9 +410,9 @@ export function AdminPage() {
                       <Select
                         value={user.role}
                         onChange={(e) => void handleAssignRoleExclusive(user.id, e.target.value as UserRole)}
-                        disabled={isProtected || Boolean(roleUpdatingUserId)}
+                        disabled={isLocked || Boolean(roleUpdatingUserId)}
                         aria-label={`Quyền của ${user.email}`}
-                        title={isProtected ? 'Không thể đổi quyền tài khoản admin hệ thống' : undefined}
+                        title={reason}
                       >
                         {ROLE_OPTIONS.map((r) => (
                           <option key={r.value} value={r.value}>
@@ -387,17 +426,19 @@ export function AdminPage() {
                           size="sm"
                           variant="outline"
                           className="flex-1 gap-1.5"
-                          onClick={() => setResetPasswordTarget({ id: user.id, email: user.email })}
+                          onClick={() => {
+                            if (isSelfUser(user.id)) {
+                              toast.error('Không thể đặt lại mật khẩu tài khoản của chính bạn.')
+                              return
+                            }
+                            setResetPasswordTarget({ id: user.id, email: user.email })
+                          }}
                           disabled={
-                            isProtected ||
+                            isLocked ||
                             updateUserMutation.isPending ||
                             Boolean(roleUpdatingUserId)
                           }
-                          title={
-                            isProtected
-                              ? 'Không thể đặt lại mật khẩu tài khoản admin hệ thống'
-                              : undefined
-                          }
+                          title={reason}
                         >
                           <KeyRound className="h-3.5 w-3.5" aria-hidden />
                           Đặt lại MK
@@ -407,17 +448,19 @@ export function AdminPage() {
                           size="sm"
                           variant="outline"
                           className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => setDeleteTarget({ id: user.id, email: user.email })}
+                          onClick={() => {
+                            if (isSelfUser(user.id)) {
+                              toast.error('Không thể xóa tài khoản của chính bạn.')
+                              return
+                            }
+                            setDeleteTarget({ id: user.id, email: user.email })
+                          }}
                           disabled={
-                            isProtected ||
+                            isLocked ||
                             deleteUserMutation.isPending ||
                             Boolean(roleUpdatingUserId)
                           }
-                          title={
-                            isProtected
-                              ? 'Không thể xóa tài khoản admin hệ thống'
-                              : `Xóa ${user.email}`
-                          }
+                          title={reason ?? `Xóa ${user.email}`}
                         >
                           <Trash2 className="h-3.5 w-3.5" aria-hidden />
                           Xóa
@@ -443,6 +486,8 @@ export function AdminPage() {
                     {pageUsers.map((user) => {
                       const busy = roleUpdatingUserId === user.id
                       const isProtected = isProtectedAdminEmail(user.email)
+                      const isLocked = isLockedUser(user)
+                      const reason = lockReason(user)
                       return (
                         <tr
                           key={user.id}
@@ -454,6 +499,11 @@ export function AdminPage() {
                               {isProtected ? (
                                 <Badge className="border-transparent bg-amber-100 font-medium text-amber-800">
                                   Bảo vệ
+                                </Badge>
+                              ) : null}
+                              {isSelfUser(user.id) ? (
+                                <Badge className="border-transparent bg-slate-100 font-medium text-slate-700">
+                                  Bạn
                                 </Badge>
                               ) : null}
                               {busy ? (
@@ -474,13 +524,9 @@ export function AdminPage() {
                                 void handleAssignRoleExclusive(user.id, e.target.value as UserRole)
                               }
                               className="w-40"
-                              disabled={isProtected || Boolean(roleUpdatingUserId)}
+                              disabled={isLocked || Boolean(roleUpdatingUserId)}
                               aria-label={`Đổi quyền ${user.email}`}
-                              title={
-                                isProtected
-                                  ? 'Không thể đổi quyền tài khoản admin hệ thống'
-                                  : undefined
-                              }
+                              title={reason}
                             >
                               {ROLE_OPTIONS.map((r) => (
                                 <option key={r.value} value={r.value}>
@@ -496,16 +542,16 @@ export function AdminPage() {
                                 size="sm"
                                 variant="outline"
                                 className="gap-1.5"
-                                title={
-                                  isProtected
-                                    ? 'Không thể đặt lại mật khẩu tài khoản admin hệ thống'
-                                    : 'Đặt lại mật khẩu'
-                                }
-                                onClick={() =>
+                                title={reason ?? 'Đặt lại mật khẩu'}
+                                onClick={() => {
+                                  if (isSelfUser(user.id)) {
+                                    toast.error('Không thể đặt lại mật khẩu tài khoản của chính bạn.')
+                                    return
+                                  }
                                   setResetPasswordTarget({ id: user.id, email: user.email })
-                                }
+                                }}
                                 disabled={
-                                  isProtected ||
+                                  isLocked ||
                                   updateUserMutation.isPending ||
                                   Boolean(roleUpdatingUserId)
                                 }
@@ -518,15 +564,17 @@ export function AdminPage() {
                                 size="sm"
                                 variant="outline"
                                 className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                title={
-                                  isProtected
-                                    ? 'Không thể xóa tài khoản admin hệ thống'
-                                    : 'Xóa người dùng'
-                                }
+                                title={reason ?? 'Xóa người dùng'}
                                 aria-label={`Xóa ${user.email}`}
-                                onClick={() => setDeleteTarget({ id: user.id, email: user.email })}
+                                onClick={() => {
+                                  if (isSelfUser(user.id)) {
+                                    toast.error('Không thể xóa tài khoản của chính bạn.')
+                                    return
+                                  }
+                                  setDeleteTarget({ id: user.id, email: user.email })
+                                }}
                                 disabled={
-                                  isProtected ||
+                                  isLocked ||
                                   deleteUserMutation.isPending ||
                                   Boolean(roleUpdatingUserId)
                                 }

@@ -19,11 +19,20 @@ type CartState = {
   items: CartItem[]
   /** Mua ngay: checkout chỉ sản phẩm này, không ảnh hưởng giỏ hàng */
   buyNowItems: CartItem[] | null
+  /** Id sản phẩm được chọn để thanh toán (Shopee-style). */
+  selectedIds: string[]
   addItem: (product: Product, quantity?: number) => void
+  /** Thêm/cộng dòng từ đơn cũ (Mua lại) — không cần Product đầy đủ. */
+  upsertLine: (item: CartItem) => void
   prepareBuyNow: (product: Product, quantity?: number) => void
   updateQuantity: (productId: string, quantity: number) => void
   updateBuyNowQuantity: (productId: string, quantity: number) => void
   removeItem: (productId: string) => void
+  removeItems: (productIds: string[]) => void
+  toggleSelected: (productId: string) => void
+  setSelectedIds: (productIds: string[]) => void
+  selectAll: () => void
+  deselectAll: () => void
   clearBuyNow: () => void
   clearCart: () => void
   /** Cập nhật giá/tồn kho từ API; trả về id sản phẩm đã bị xóa khỏi giỏ */
@@ -124,9 +133,10 @@ const ownerScopedStorage: StateStorage = {
 
 export const useCartStore = create<CartState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       items: [],
       buyNowItems: null,
+      selectedIds: [],
       addItem: (product, quantity = 1) =>
         set((state) => {
           const fields = productToCartFields(product)
@@ -139,7 +149,12 @@ export const useCartStore = create<CartState>()(
               ...fields,
               quantity: clampQty(next[idx].quantity + quantity, stock),
             }
-            return { items: next }
+            return {
+              items: next,
+              selectedIds: state.selectedIds.includes(product.id)
+                ? state.selectedIds
+                : [...state.selectedIds, product.id],
+            }
           }
           return {
             items: [
@@ -150,6 +165,36 @@ export const useCartStore = create<CartState>()(
                 quantity: clampQty(quantity, stock),
               },
             ],
+            selectedIds: [...state.selectedIds, product.id],
+          }
+        }),
+      upsertLine: (item) =>
+        set((state) => {
+          const idx = state.items.findIndex((x) => x.productId === item.productId)
+          if (idx >= 0) {
+            const next = [...state.items]
+            const stock = item.stockQuantity ?? next[idx].stockQuantity
+            next[idx] = {
+              ...next[idx],
+              ...item,
+              quantity: clampQty(next[idx].quantity + item.quantity, stock),
+            }
+            return {
+              items: next,
+              selectedIds: state.selectedIds.includes(item.productId)
+                ? state.selectedIds
+                : [...state.selectedIds, item.productId],
+            }
+          }
+          return {
+            items: [
+              ...state.items,
+              {
+                ...item,
+                quantity: clampQty(item.quantity, item.stockQuantity),
+              },
+            ],
+            selectedIds: [...state.selectedIds, item.productId],
           }
         }),
       prepareBuyNow: (product, quantity = 1) =>
@@ -184,9 +229,26 @@ export const useCartStore = create<CartState>()(
       removeItem: (productId) =>
         set((state) => ({
           items: state.items.filter((x) => x.productId !== productId),
+          selectedIds: state.selectedIds.filter((id) => id !== productId),
         })),
+      removeItems: (productIds) => {
+        const removeSet = new Set(productIds)
+        set((state) => ({
+          items: state.items.filter((x) => !removeSet.has(x.productId)),
+          selectedIds: state.selectedIds.filter((id) => !removeSet.has(id)),
+        }))
+      },
+      toggleSelected: (productId) =>
+        set((state) => ({
+          selectedIds: state.selectedIds.includes(productId)
+            ? state.selectedIds.filter((id) => id !== productId)
+            : [...state.selectedIds, productId],
+        })),
+      setSelectedIds: (productIds) => set({ selectedIds: [...new Set(productIds)] }),
+      selectAll: () => set({ selectedIds: get().items.map((item) => item.productId) }),
+      deselectAll: () => set({ selectedIds: [] }),
       clearBuyNow: () => set({ buyNowItems: null }),
-      clearCart: () => set({ items: [] }),
+      clearCart: () => set({ items: [], selectedIds: [] }),
       syncFromProducts: (productsById) => {
         const removed: string[] = []
 
@@ -209,10 +271,15 @@ export const useCartStore = create<CartState>()(
           return next
         }
 
-        set((state) => ({
-          items: syncList(state.items),
-          buyNowItems: state.buyNowItems ? syncList(state.buyNowItems) : null,
-        }))
+        set((state) => {
+          const items = syncList(state.items)
+          const idSet = new Set(items.map((item) => item.productId))
+          return {
+            items,
+            buyNowItems: state.buyNowItems ? syncList(state.buyNowItems) : null,
+            selectedIds: state.selectedIds.filter((id) => idSet.has(id)),
+          }
+        })
 
         return removed
       },
@@ -221,6 +288,10 @@ export const useCartStore = create<CartState>()(
       name: CART_STORAGE_KEY,
       storage: createJSONStorage(() => ownerScopedStorage),
       version: 2,
+      partialize: (state) => ({
+        items: state.items,
+        buyNowItems: state.buyNowItems,
+      }),
       migrate: (persisted, fromVersion) => {
         const state = persisted as { items?: LegacyCartItem[]; buyNowItems?: CartItem[] | null }
         const items = state?.items?.map(normalizeCartItem) ?? []
@@ -273,24 +344,55 @@ function writeCartSnapshotForOwner(
   writeOwnerRoot(root)
 }
 
+function mergeCartItems(base: CartItem[], incoming: CartItem[]): CartItem[] {
+  const map = new Map(base.map((item) => [item.productId, { ...item }]))
+  for (const item of incoming) {
+    const existing = map.get(item.productId)
+    if (existing) {
+      const stock = item.stockQuantity ?? existing.stockQuantity
+      map.set(item.productId, {
+        ...existing,
+        ...item,
+        quantity: clampQty(existing.quantity + item.quantity, stock),
+      })
+    } else {
+      map.set(item.productId, {
+        ...item,
+        quantity: clampQty(item.quantity, item.stockQuantity),
+      })
+    }
+  }
+  return [...map.values()]
+}
+
 /** Gắn giỏ hàng theo user (hoặc guest). Giữ riêng từng tài khoản trên cùng trình duyệt. */
 export function bindCartToOwner(ownerId: string | null | undefined) {
   const nextOwner = ownerId?.trim() || GUEST_OWNER
   if (nextOwner === activeCartOwner) return
 
+  const prevOwner = activeCartOwner
   const current = useCartStore.getState()
-  writeCartSnapshotForOwner(activeCartOwner, {
+  writeCartSnapshotForOwner(prevOwner, {
     items: current.items,
     buyNowItems: current.buyNowItems,
   })
 
   activeCartOwner = nextOwner
-  const nextCart = readCartSnapshotForOwner(nextOwner)
-  // Quan trọng: tài khoản mới chưa có snapshot → phải set rỗng.
-  // persist.rehydrate() khi getItem=null sẽ giữ nguyên state cũ trên RAM.
+  let nextCart = readCartSnapshotForOwner(nextOwner)
+
+  // Đăng nhập: gộp giỏ guest vào giỏ user (pattern marketplace).
+  if (prevOwner === GUEST_OWNER && nextOwner !== GUEST_OWNER && current.items.length > 0) {
+    nextCart = {
+      items: mergeCartItems(nextCart.items, current.items),
+      buyNowItems: nextCart.buyNowItems ?? current.buyNowItems,
+    }
+    writeCartSnapshotForOwner(GUEST_OWNER, { items: [], buyNowItems: null })
+  }
+
   useCartStore.setState({
     items: nextCart.items,
     buyNowItems: nextCart.buyNowItems,
+    selectedIds: nextCart.items.map((item) => item.productId),
   })
 }
 

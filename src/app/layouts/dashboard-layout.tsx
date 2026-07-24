@@ -8,6 +8,7 @@ import {
   Package,
   Receipt,
   Users,
+  Wallet,
   X,
 } from 'lucide-react'
 import { useProfileQuery } from '@/features/auth/hooks/use-auth'
@@ -32,6 +33,7 @@ const SELLER_NAV: NavItem[] = [
   { to: '/seller', label: 'Tổng quan', icon: LayoutDashboard, end: true },
   { to: '/seller/products', label: 'Sản phẩm', icon: Package },
   { to: '/seller/orders', label: 'Đơn hàng', icon: Receipt },
+  { to: '/seller/payments', label: 'Doanh thu', icon: Wallet },
 ]
 
 const ADMIN_NAV: NavItem[] = [
@@ -45,6 +47,7 @@ function pageTitle(pathname: string): string {
   if (pathname.startsWith('/admin')) return 'Người dùng'
   if (pathname.startsWith('/seller/account')) return 'Tài khoản'
   if (pathname.startsWith('/seller/products')) return 'Sản phẩm'
+  if (pathname.startsWith('/seller/payments')) return 'Doanh thu'
   if (/^\/seller\/orders\/[^/]+$/.test(pathname)) return 'Chi tiết đơn'
   if (pathname.startsWith('/seller/orders')) return 'Đơn hàng'
   if (pathname.startsWith('/seller')) return 'Tổng quan'

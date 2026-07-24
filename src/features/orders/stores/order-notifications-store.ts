@@ -27,6 +27,8 @@ export type OrderNotification = {
 }
 
 const MAX_NOTIFICATIONS = 40
+const STORAGE_KEY = 'easymart-order-notifications'
+const GUEST_OWNER = 'guest'
 /** Chống trùng CREATED lặp / STATUS đi kèm lúc vừa tạo đơn (burst vài giây). */
 export const ORDER_NOTIFY_DEDUPE_MS = 15_000
 
@@ -68,7 +70,39 @@ function makeId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
-/** Thông báo đơn hàng realtime (in-memory) — dùng chung mọi role trên navbar. */
+function readRoot(): Record<string, OrderNotification[]> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as unknown
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+    const root: Record<string, OrderNotification[]> = {}
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (Array.isArray(value)) root[key] = value as OrderNotification[]
+    }
+    return root
+  } catch {
+    return {}
+  }
+}
+
+function writeRoot(root: Record<string, OrderNotification[]>) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(root))
+  } catch {
+    /* ignore */
+  }
+}
+
+let activeOwner = GUEST_OWNER
+
+function persistNotifications(list: OrderNotification[]) {
+  const root = readRoot()
+  root[activeOwner] = list.slice(0, MAX_NOTIFICATIONS)
+  writeRoot(root)
+}
+
+/** Thông báo đơn hàng realtime — persist theo user trên trình duyệt. */
 export const useOrderNotificationsStore = create<OrderNotificationsState>((set, get) => ({
   notifications: [],
   add: (notification) => {
@@ -84,8 +118,8 @@ export const useOrderNotificationsStore = create<OrderNotificationsState>((set, 
     ) {
       return false
     }
-    set((state) => ({
-      notifications: [
+    set((state) => {
+      const notifications = [
         {
           ...notification,
           id: makeId(),
@@ -93,8 +127,10 @@ export const useOrderNotificationsStore = create<OrderNotificationsState>((set, 
           read: false,
         },
         ...state.notifications,
-      ].slice(0, MAX_NOTIFICATIONS),
-    }))
+      ].slice(0, MAX_NOTIFICATIONS)
+      persistNotifications(notifications)
+      return { notifications }
+    })
     return true
   },
   hasRecent: (orderId, options) => {
@@ -110,29 +146,51 @@ export const useOrderNotificationsStore = create<OrderNotificationsState>((set, 
   },
   dropRecentStatusUpdates: (orderId, withinMs = ORDER_NOTIFY_DEDUPE_MS) => {
     const cutoff = Date.now() - withinMs
-    set((state) => ({
-      notifications: state.notifications.filter((item) => {
+    set((state) => {
+      const notifications = state.notifications.filter((item) => {
         if (item.orderId !== orderId) return true
         if (item.type !== 'status-update') return true
         return new Date(item.createdAt).getTime() < cutoff
-      }),
-    }))
+      })
+      persistNotifications(notifications)
+      return { notifications }
+    })
   },
   updateProducts: (orderId, products) =>
-    set((state) => ({
-      notifications: state.notifications.map((item) =>
+    set((state) => {
+      const notifications = state.notifications.map((item) =>
         item.orderId === orderId ? { ...item, products } : item,
-      ),
-    })),
+      )
+      persistNotifications(notifications)
+      return { notifications }
+    }),
   markAllRead: () =>
-    set((state) => ({
-      notifications: state.notifications.map((item) => ({ ...item, read: true })),
-    })),
+    set((state) => {
+      const notifications = state.notifications.map((item) => ({ ...item, read: true }))
+      persistNotifications(notifications)
+      return { notifications }
+    }),
   markRead: (id) =>
-    set((state) => ({
-      notifications: state.notifications.map((item) =>
+    set((state) => {
+      const notifications = state.notifications.map((item) =>
         item.id === id ? { ...item, read: true } : item,
-      ),
-    })),
-  clear: () => set({ notifications: [] }),
+      )
+      persistNotifications(notifications)
+      return { notifications }
+    }),
+  clear: () => {
+    persistNotifications([])
+    set({ notifications: [] })
+  },
 }))
+
+/** Gắn chuông thông báo theo user (hoặc guest). */
+export function bindNotificationsToOwner(ownerId: string | null | undefined) {
+  const nextOwner = ownerId?.trim() || GUEST_OWNER
+  if (nextOwner === activeOwner) return
+
+  persistNotifications(useOrderNotificationsStore.getState().notifications)
+  activeOwner = nextOwner
+  const loaded = (readRoot()[nextOwner] ?? []).slice(0, MAX_NOTIFICATIONS)
+  useOrderNotificationsStore.setState({ notifications: loaded })
+}

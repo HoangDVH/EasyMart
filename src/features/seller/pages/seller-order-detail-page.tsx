@@ -13,6 +13,7 @@ import {
   isFulfillmentStatus,
   isOrderPaid,
 } from '@/features/orders/lib/fulfillment'
+import { OrderStatusTimeline } from '@/features/orders/components/order-status-timeline'
 import type { Order } from '@/features/orders/types/order.types'
 import { formatDateTime, formatVnd } from '@/features/seller/components/seller-formatters'
 import {
@@ -218,6 +219,12 @@ export function SellerOrderDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          <OrderStatusTimeline
+            status={order.status}
+            paymentMethod={order.paymentMethod}
+            fulfillmentStatus={fulfillment}
+          />
 
           <Card>
             <div className="border-b px-4 py-3">
